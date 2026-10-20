@@ -36,14 +36,15 @@ async function playUntil(page: Page, until: () => Promise<boolean>, opts: { bidS
     const partner = page.getByRole('button', { name: /^Partner with/ });
     const next = page.getByRole('button', { name: 'Next game' });
     const pass = page.getByRole('button', { name: 'Pass', exact: true });
-    const surprise = page.getByRole('button', { name: 'Surprise me' });
-    if (await surprise.isVisible()) await tap(surprise);
-    else if (await skip.isVisible()) await tap(skip);
+    const animal = page.locator('.picker .animal').first();
+    if (await animal.isVisible()) {
+      if (await tap(animal)) await tap(page.locator('.picker .element').first());
+    } else if (await skip.isVisible()) await tap(skip);
     else if (await partner.isVisible()) await tap(partner);
     else if ((await next.isVisible()) && (await next.isEnabled())) await tap(next);
     else if (await pass.isVisible()) {
       if (await tap(pass)) await tap(page.getByRole('button', { name: 'Confirm Pass' }));
-    } else if (await page.getByText('Your turn to play').isVisible()) {
+    } else if (await page.locator('.table[data-turn="my-play"]').isVisible()) {
       await dragToTable(page, page.locator('.hand .slot').filter({ has: page.locator('.card:not(.dim)') }).first());
       await page.waitForTimeout(200);
     } else await page.waitForTimeout(150);
@@ -86,7 +87,7 @@ test('a whole deal by dragging cards: every beat of the feel ladder fires', asyn
 test('Tap twice style: the second tap plays the raised card', async ({ page }) => {
   await page.addInitScript(() => localStorage.setItem('dark.main.settings', JSON.stringify({ playStyle: 'tap', v: 2 })));
   await page.goto('/practice.html');
-  await playUntil(page, () => page.getByText('Your turn to play').isVisible());
+  await playUntil(page, () => page.locator('.table[data-turn="my-play"]').isVisible());
   const before = await page.locator('.hand .slot').count();
   const card = page.locator('.hand .slot').filter({ has: page.locator('.card:not(.dim)') }).first();
   await card.click({ position: { x: 10, y: 30 } });
@@ -97,7 +98,7 @@ test('Tap twice style: the second tap plays the raised card', async ({ page }) =
 
 test('Drag style: a second tap does not play; it asks for a swipe', async ({ page }) => {
   await page.goto('/practice.html');
-  await playUntil(page, () => page.getByText('Your turn to play').isVisible());
+  await playUntil(page, () => page.locator('.table[data-turn="my-play"]').isVisible());
   const before = await page.locator('.hand .slot').count();
   const card = page.locator('.hand .slot').filter({ has: page.locator('.card:not(.dim)') }).first();
   await card.click({ position: { x: 10, y: 30 } });
@@ -108,20 +109,20 @@ test('Drag style: a second tap does not play; it asks for a swipe', async ({ pag
   await expect(page.locator('.hand .slot')).toHaveCount(before - 1);
 });
 
-test('avatars: pick an animal and element, then everyone flips together and shows on the table', async ({ page }) => {
+test('avatars: two animals, tap one and an element to lock in; the crest shows who is ready', async ({ page }) => {
   await page.goto('/practice.html');
   await expect(page.getByText('Who are you tonight?')).toBeVisible();
-  // Three animals on offer, no rerolls.
-  await expect(page.locator('.picker .animal')).toHaveCount(3);
-  await expect(page.getByRole('button', { name: /Show me three others/ })).toHaveCount(0);
+  // Two animals on offer; no names, no reroll, no confirm or "Surprise me" buttons.
+  await expect(page.locator('.picker .animal')).toHaveCount(2);
+  await expect(page.getByRole('button', { name: /Surprise me|Lock in|Show me/ })).toHaveCount(0);
+  // The bots fill their crest letters as they pick.
+  await expect(page.locator('.crest span.ready')).toHaveCount(3, { timeout: 10_000 });
 
   await page.locator('.picker .animal').first().tap();
-  await page.getByRole('button', { name: /Water/ }).tap();
-  await page.getByRole('button', { name: 'Lock in' }).tap();
-  // The bots pick too; then the four avatars flip. Avatars aren't named in words.
+  await page.getByRole('button', { name: 'Water' }).tap();
+  // That locks it in: the four avatars flip. Avatars aren't named in words.
   await expect(page.locator('.reveal .card')).toHaveCount(4, { timeout: 15_000 });
   const mine = page.locator('.reveal .card').filter({ hasText: 'Ryan' });
-  // The element lives inside the avatar circle (a water backdrop), not as text or a badge.
   await expect(mine.locator('.token.el-water')).toHaveCount(1);
   await expect(page.locator('.reveal')).not.toContainText('Water');
   const faces = await page.locator('.reveal .card .face').allTextContents();

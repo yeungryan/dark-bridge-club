@@ -8,18 +8,24 @@
   import { sound } from '../lib/juice/sound';
   import AvatarPicker from './AvatarPicker.svelte';
 
-  // Spec S15 (plain version): the DARK crest lights a letter as each friend arrives.
+  // Spec S15, cleaned up (Ryan): the DARK crest is the guest list. A letter is dim grey until
+  // its player arrives, lights up in their colour when they're here, and fills solid with a
+  // small check once they've picked their animal. No list, no counts, no extra words.
   let { conn, complete = false }: { conn: Connection; complete?: boolean } = $props();
 
   const room = $derived(conn.room!);
   const theme = $derived(themeOf(room.theme));
   const here = $derived(room.profiles.filter((p) => room.presence[p.id] === 'connected').length);
+  const picked = $derived(room.profiles.filter((p) => room.avatarReady?.[p.id]).length);
 
-  // A rising note each time a letter lights; a flourish when the crest is complete.
+  // A rising note each time a letter lights or fills; a flourish when the crest is complete.
   let lastHere = -1;
+  let lastPicked = -1;
   $effect(() => {
     if (lastHere >= 0 && here > lastHere) sound.pip(here * 3);
+    if (lastPicked >= 0 && picked > lastPicked) sound.count(picked * 2 + 4);
     lastHere = here;
+    lastPicked = picked;
   });
   // All four in and picked: the crest flares and everyone's avatar flips over at once,
   // each with its element's entrance (S24).
@@ -40,16 +46,26 @@
 </script>
 
 <main>
-  <div class="crest" class:complete aria-label="DARK crest">
+  <div class="crest" class:complete aria-label="Who's here">
     {#each room.profiles as p (p.id)}
-      <span class:lit={room.presence[p.id] === 'connected'} style="--c: {p.color}">{p.name[0]}</span>
+      {@const isHere = room.presence[p.id] === 'connected'}
+      {@const ready = !!room.avatarReady?.[p.id]}
+      <span
+        class:lit={isHere}
+        class:ready
+        style="--c: {p.color}"
+        title="{p.name}: {!isHere ? 'not here yet' : ready ? 'ready' : 'picking'}"
+        aria-label="{p.name}: {!isHere ? 'not here yet' : ready ? 'ready' : 'picking'}"
+      >
+        {p.name[0]}
+        {#if ready}<i class="check" aria-hidden="true">✓</i>{/if}
+      </span>
     {/each}
   </div>
   <h2>Bridge Club</h2>
   <p class="tonight">
     <span class="label">Tonight's table</span>
-    <strong class="display">{theme.name}</strong> <span class="place">{theme.place}</span>
-    <em>{theme.greeting}</em>
+    <strong class="display"><span class="flag">{theme.flag}</span> {theme.name}</strong>
   </p>
   {#if complete && room.avatars}
     <div class="reveal">
@@ -63,30 +79,18 @@
     </div>
   {:else}
     <AvatarPicker {conn} />
-    <ul class="players">
-      {#each room.profiles as p (p.id)}
-        {@const isHere = room.presence[p.id] === 'connected'}
-        {@const ready = isHere && room.avatarReady?.[p.id]}
-        <li class:here={isHere} class:ready style="--c: {p.color}">
-          <span class="dot" class:on={isHere}></span>
-          <span class="name">{p.name}</span>
-          <span class="status">{!isHere ? 'not here yet' : ready ? 'ready ✓' : 'picking…'}</span>
-        </li>
-      {/each}
-    </ul>
-    <p class="muted">{here}/4 here. The night starts when everyone is here and has picked.</p>
-    <p class="muted extras">
-      While you wait: <a href="lab.html" target="_blank">sound check</a> ·
-      <a href="practice.html" target="_blank">practice table</a>
+    <p class="extras">
+      <a href="lab.html" target="_blank">sound check</a> · <a href="practice.html" target="_blank">practice table</a>
     </p>
   {/if}
 </main>
 
 <style>
+  /* Everything starts below the theme's scene at the top, so nothing overlaps it. */
   main {
     max-width: 380px;
     margin: 0 auto;
-    padding: 40px 16px;
+    padding: 200px 16px 24px;
     text-align: center;
   }
   .crest {
@@ -94,22 +98,53 @@
     justify-content: center;
     gap: 10px;
   }
+  /* Not here: a dim grey outline. */
   .crest span {
+    position: relative;
     width: 56px;
     height: 64px;
     display: grid;
     place-items: center;
+    font-family: var(--font-display);
     font-size: 2rem;
     font-weight: 800;
     border: 2px solid var(--line);
     border-radius: 10px;
     color: var(--line);
-    transition: color 0.3s, border-color 0.3s;
+    background: var(--panel);
+    transition:
+      color 0.3s,
+      border-color 0.3s,
+      background-color 0.3s;
   }
+  /* Here: lit in their colour. */
   .crest span.lit {
     color: var(--c);
     border-color: var(--c);
     animation: light calc(380ms * var(--speed)) cubic-bezier(0.3, 1.6, 0.6, 1);
+  }
+  /* Picked: filled solid, with a small check. */
+  .crest span.ready {
+    color: #ffffff;
+    background: var(--c);
+    box-shadow: 0 0 16px color-mix(in srgb, var(--c) 55%, transparent);
+    animation: fill calc(420ms * var(--speed)) cubic-bezier(0.3, 1.6, 0.6, 1);
+  }
+  .check {
+    position: absolute;
+    right: -6px;
+    bottom: -6px;
+    display: grid;
+    place-items: center;
+    width: 20px;
+    height: 20px;
+    border-radius: 50%;
+    background: var(--sheet);
+    color: var(--good);
+    font-style: normal;
+    font-size: 12px;
+    font-weight: 800;
+    box-shadow: 0 0 0 2px var(--c);
   }
   @keyframes light {
     0% {
@@ -119,7 +154,13 @@
       transform: scale(1.18);
     }
   }
-  :global(.fx-reduced) .crest span.lit {
+  @keyframes fill {
+    40% {
+      transform: scale(1.14) rotate(-4deg);
+    }
+  }
+  :global(.fx-reduced) .crest span.lit,
+  :global(.fx-reduced) .crest span.ready {
     animation: fade-in calc(300ms * var(--speed));
   }
   /* All four here: the whole crest flares. */
@@ -147,7 +188,9 @@
     padding: 12px 6px;
     border-radius: 12px;
     background: var(--panel);
-    box-shadow: 0 0 0 1px var(--line), 0 0 18px color-mix(in srgb, var(--c) 35%, transparent);
+    box-shadow:
+      0 0 0 1px var(--line),
+      0 0 18px color-mix(in srgb, var(--c) 35%, transparent);
     animation: flip-in calc(600ms * var(--speed)) cubic-bezier(0.3, 1.4, 0.6, 1) calc(300ms * var(--speed)) backwards;
   }
   .card strong {
@@ -167,12 +210,12 @@
   h2 {
     font-weight: 400;
     color: var(--ink-dim);
-    margin: 10px 0 24px;
+    margin: 10px 0 20px;
   }
   .tonight {
     display: grid;
     gap: 2px;
-    margin: -14px 0 18px;
+    margin: -10px 0 22px;
   }
   .tonight .label {
     font-size: 11px;
@@ -181,72 +224,18 @@
     color: var(--ink-dim);
   }
   .tonight strong {
-    font-size: 1.25rem;
+    font-size: 1.3rem;
     color: var(--accent);
   }
-  .tonight .place {
+  .flag {
+    font-family: system-ui, sans-serif;
+  }
+  .extras {
+    margin-top: 24px;
     font-size: 13px;
     color: var(--ink-dim);
   }
-  .tonight em {
-    font-size: 14px;
-    color: var(--ink-dim);
-  }
-  .players {
-    list-style: none;
-    padding: 0;
-    margin: 0 0 12px;
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 8px;
-  }
-  .players li {
-    display: grid;
-    grid-template-columns: auto 1fr;
-    grid-template-rows: auto auto;
-    column-gap: 8px;
-    align-items: center;
-    text-align: left;
-    padding: 8px 10px;
-    border-radius: 12px;
-    background: var(--panel);
-    border: 1px solid var(--line);
-    opacity: 0.65;
-    transition: opacity calc(200ms * var(--speed)), border-color calc(200ms * var(--speed));
-  }
-  .players li.here {
-    opacity: 1;
-  }
-  .players li.ready {
-    border-color: var(--c);
-  }
-  .players .dot {
-    grid-row: span 2;
-  }
-  .players .name {
-    font-weight: 650;
-    color: var(--c);
-  }
-  .players .status {
-    font-size: 12px;
-    color: var(--ink-dim);
-  }
-  .players li.ready .status {
-    color: var(--good);
-  }
-  .extras {
-    font-size: 14px;
-  }
   .extras a {
-    color: var(--accent);
-  }
-  .dot {
-    width: 12px;
-    height: 12px;
-    border-radius: 50%;
-    border: 2px solid var(--c);
-  }
-  .dot.on {
-    background: var(--c);
+    color: var(--ink-dim);
   }
 </style>

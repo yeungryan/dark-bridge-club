@@ -33,7 +33,7 @@ describe('S24 avatar picks', () => {
       for (const p of PLAYERS) {
         const offers = PLAYERS.map((q) => lobby.picks[q]!.offered);
         expect(new Set(offers.flat()).size).toBe(offers.flat().length);
-        expect(lobby.picks[p]!.offered).toHaveLength(3);
+        expect(lobby.picks[p]!.offered).toHaveLength(2);
         expect(lobby.picks[p]!.offered).not.toContain(last[p]);
       }
       for (const [i, p] of PLAYERS.entries()) {
@@ -41,7 +41,7 @@ describe('S24 avatar picks', () => {
         lobby = ok(
           i % 2
             ? applyAvatarAction(lobby, p, { type: 'surprise' }, random)
-            : applyAvatarAction(lobby, p, { type: 'lock', animal: offered[night % 3]!, element: 'water' }, random),
+            : applyAvatarAction(lobby, p, { type: 'lock', animal: offered[night % 2]!, element: 'water' }, random),
         );
       }
       const animals = PLAYERS.map((p) => lobby.picks[p]!.avatar!.animal);

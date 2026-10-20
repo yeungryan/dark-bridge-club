@@ -159,7 +159,9 @@
     >
       {#key up ? nudge : 0}
         <div class="lift" class:nudge={up && nudge > 0}>
-          <Card {card} width={cardWidth} dim={myTurnToPlay && !isLegal(card)} highlight={up || held} />
+          <div class="glowable" class:playable={myTurnToPlay && isLegal(card) && !up && !held}>
+        <Card {card} width={cardWidth} dim={myTurnToPlay && !isLegal(card)} highlight={up || held} />
+      </div>
         </div>
       {/key}
     </button>
@@ -227,6 +229,14 @@
     40% {
       transform: translateY(-16px);
     }
+  }
+  /* Your turn: the cards you can play give off a soft glow. */
+  .glowable {
+    border-radius: 6px;
+    transition: box-shadow calc(250ms * var(--speed));
+  }
+  .glowable.playable {
+    box-shadow: 0 -2px 12px var(--accent-glow);
   }
   .ghost {
     position: fixed;

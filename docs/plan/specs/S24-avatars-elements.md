@@ -74,3 +74,8 @@ Tiger · Wolf · Bear · Fox · Otter · Owl · Eagle · Hawk · Badgermole · R
   | Earth | rock smash | metal |
 
   The clinch keeps the full element signature. A player with no avatar gets the plain glow or trump symbols.
+- **Round 4 (Ryan):**
+  - Element backdrops take a primary colour: red fire, yellow air, blue water, green earth.
+  - Two animals on offer, not three.
+  - The lobby picker has no words and no buttons: tapping an animal and an element locks you in, and tapping another changes it.
+  - Anyone who doesn't pick within 30 s of the others being ready is still auto-picked by the server.

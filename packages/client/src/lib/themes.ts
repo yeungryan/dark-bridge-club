@@ -8,8 +8,10 @@ import type { ThemeId } from '@dark/engine';
 export interface Theme {
   id: ThemeId;
   name: string;
-  /** The place it's for (flag + country), shown in the lobby. */
+  /** The place it's for (flag + country). */
   place: string;
+  /** Shown to the left of the theme's name in the lobby. */
+  flag: string;
   greeting: string;
   /** CSS custom properties applied to :root. */
   tokens: Record<string, string>;
@@ -30,6 +32,7 @@ const base = {
 export const THEMES: Record<ThemeId, Theme> = {
   clubhouse: {
     id: 'clubhouse',
+    flag: '♠',
     name: 'The Clubhouse',
     place: '♠ Home',
     greeting: 'Evening, gentlemen. The lamp is on.',
@@ -63,6 +66,7 @@ export const THEMES: Record<ThemeId, Theme> = {
   },
   marina: {
     id: 'marina',
+    flag: '🇸🇬',
     name: 'Marina Riviera',
     place: '🇸🇬 Singapore',
     greeting: 'Sunset over the bay. Orchids on the table.',
@@ -95,6 +99,7 @@ export const THEMES: Record<ThemeId, Theme> = {
   },
   shibuya: {
     id: 'shibuya',
+    flag: '🇯🇵',
     name: 'Shibuya Neon',
     place: '🇯🇵 Japan',
     greeting: 'Rain on the glass, neon on the felt.',
@@ -128,6 +133,7 @@ export const THEMES: Record<ThemeId, Theme> = {
   },
   berlin: {
     id: 'berlin',
+    flag: '🇩🇪',
     name: 'Berlin Midnight',
     place: '🇩🇪 Germany',
     greeting: 'A late set in a Berlin bar. Brass and smoke.',
@@ -161,6 +167,7 @@ export const THEMES: Record<ThemeId, Theme> = {
   },
   bali: {
     id: 'bali',
+    flag: '🇮🇩',
     name: 'Bali Batik',
     place: '🇮🇩 Indonesia',
     greeting: 'Teak table, frangipani, gamelan in the distance.',
@@ -193,6 +200,7 @@ export const THEMES: Record<ThemeId, Theme> = {
   },
   manila: {
     id: 'manila',
+    flag: '🇵🇭',
     name: 'Manila Sleepover',
     place: '🇵🇭 Your place',
     greeting: 'Lights low, cards on the bed. Like college.',

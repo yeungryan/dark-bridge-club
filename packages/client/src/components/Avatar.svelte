@@ -67,28 +67,29 @@
     color: var(--ink);
   }
 
-  /* The element, behind the animal: low-contrast, no outlines, nothing busy. */
+  /* The element, behind the animal, in its primary colour (red fire, yellow air, blue water,
+     green earth): low-contrast textures, no outlines, nothing busy. */
   .el-fire .face {
     background:
-      radial-gradient(ellipse 70% 45% at 50% 105%, rgba(255, 122, 47, 0.75), transparent 70%),
-      radial-gradient(ellipse 35% 30% at 30% 95%, rgba(255, 196, 77, 0.55), transparent 70%),
-      radial-gradient(ellipse 30% 28% at 72% 98%, rgba(232, 64, 42, 0.6), transparent 70%),
-      #2a1410;
-  }
-  .el-water .face {
-    background:
-      repeating-radial-gradient(circle at 50% 115%, rgba(120, 215, 255, 0.28) 0 1.5px, transparent 1.5px 6px),
-      linear-gradient(180deg, #0e2a3f 0%, #10476a 100%);
+      radial-gradient(ellipse 75% 50% at 50% 108%, rgba(255, 120, 60, 0.85), transparent 70%),
+      radial-gradient(ellipse 30% 28% at 28% 96%, rgba(255, 200, 80, 0.55), transparent 70%),
+      radial-gradient(ellipse 30% 28% at 74% 98%, rgba(255, 70, 50, 0.65), transparent 70%),
+      radial-gradient(circle at 50% 35%, #7a1414 0%, #4a0b0b 100%);
   }
   .el-air .face {
     background:
-      conic-gradient(from 30deg at 50% 50%, rgba(255, 246, 207, 0.05), rgba(255, 246, 207, 0.32), rgba(255, 246, 207, 0.05) 30%, rgba(255, 246, 207, 0.28) 55%, rgba(255, 246, 207, 0.05) 80%),
-      radial-gradient(circle at 50% 50%, #3a3f52 0%, #262a38 100%);
+      conic-gradient(from 30deg at 50% 50%, rgba(255, 250, 220, 0.04), rgba(255, 250, 220, 0.38), rgba(255, 250, 220, 0.04) 30%, rgba(255, 250, 220, 0.32) 55%, rgba(255, 250, 220, 0.04) 80%),
+      radial-gradient(circle at 50% 40%, #9a7a10 0%, #5e4a06 100%);
+  }
+  .el-water .face {
+    background:
+      repeating-radial-gradient(circle at 50% 115%, rgba(150, 215, 255, 0.3) 0 1.5px, transparent 1.5px 6px),
+      radial-gradient(circle at 50% 35%, #1a5fa8 0%, #0d3566 100%);
   }
   .el-earth .face {
     background:
-      linear-gradient(180deg, transparent 58%, rgba(138, 154, 75, 0.55) 58% 68%, rgba(122, 90, 54, 0.75) 68% 82%, rgba(91, 64, 38, 0.85) 82%),
-      #2b2418;
+      linear-gradient(180deg, transparent 58%, rgba(140, 200, 110, 0.45) 58% 67%, rgba(60, 120, 50, 0.7) 67% 81%, rgba(35, 80, 30, 0.85) 81%),
+      radial-gradient(circle at 50% 35%, #2f7a35 0%, #1b4a20 100%);
   }
 
   /* Whose turn: the ring glows. */

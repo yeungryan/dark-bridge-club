@@ -61,9 +61,9 @@ export function avatarName(a: Avatar): string {
   return `${ELEMENT_INFO[a.element].name} ${animalById(a.animal)?.name ?? a.animal}`;
 }
 
-/** One player's private pick (three animals on offer, no rerolls: Ryan kept it simple). */
+/** One player's private pick (two animals on offer, no rerolls: Ryan kept the choice small). */
 export interface AvatarPick {
-  /** The three animals on offer to this player (never overlapping anyone else's). */
+  /** The animals on offer to this player (never overlapping anyone else's). */
   readonly offered: readonly string[];
   /** Set once locked in. */
   readonly avatar: Avatar | null;
@@ -91,7 +91,10 @@ function draw(random: Random, pool: readonly string[], count: number): string[] 
   return out;
 }
 
-/** Fresh offers for a new night: three animals each, no overlaps, nobody's last animal again. */
+/** How many animals each player is offered: two, to keep the choice quick. */
+export const OFFER_SIZE = 2;
+
+/** Fresh offers for a new night: two animals each, no overlaps, nobody's last animal again. */
 export function newAvatarLobby(profiles: readonly ProfileId[], random: Random, last: Record<ProfileId, string | undefined> = {}): AvatarLobby {
   const taken = new Set<string>();
   const picks: Record<ProfileId, AvatarPick> = {};
@@ -99,7 +102,7 @@ export function newAvatarLobby(profiles: readonly ProfileId[], random: Random, l
     const offered = draw(
       random,
       ANIMALS.map((a) => a.id).filter((id) => !taken.has(id) && id !== last[p]),
-      3,
+      OFFER_SIZE,
     );
     offered.forEach((id) => taken.add(id));
     picks[p] = { offered, avatar: null };

@@ -63,22 +63,9 @@
   });
 </script>
 
-<div class="table" class:decider>
+<div class="table" class:decider data-turn={deal.turn === me ? (deal.phase === 'auction' ? 'my-call' : deal.phase === 'play' ? 'my-play' : '') : ''}>
   <header>
     <button class="ghost menu" aria-label="Menu" onclick={() => (menuOpen = !menuOpen)}>☰</button>
-    <div class="info">
-      {#if contract}
-        {#key director.contractPulse}
-          <button class="ghost contract" onclick={() => (showAuction = !showAuction)}>
-            <CallText call={{ type: 'bid', level: contract.level, strain: contract.strain }} /> by {nameAtSeat(view, profiles, contract.declarer)}
-            {#if director.contractPulse > 0}<span class="sold" aria-hidden="true">Sold!</span>{/if}
-          </button>
-        {/key}
-        <RaceMeters {deal} declarers={pairOf(contract.declarer)} defenders={pairOf(next(contract.declarer))} />
-      {:else}
-        <span class="muted">Game {view.dealNumber} · bidding · {nameAtSeat(view, profiles, deal.dealer)} deals</span>
-      {/if}
-    </div>
   </header>
 
   {#if menuOpen}
@@ -141,9 +128,22 @@
     {#if showAuction && deal.phase !== 'auction'}
       <AuctionStrip {conn} />
     {/if}
-    {#if view.phase === 'inDeal' && turnText}
-      <p class="turn" class:mine={deal.turn === me}>{turnText}</p>
-    {/if}
+    <!-- The contract and the race, where "X to play" used to be: the header stays clear for the theme. -->
+    <div class="info">
+      {#if contract}
+        {#key director.contractPulse}
+          <button class="ghost contract" onclick={() => (showAuction = !showAuction)}>
+            <CallText call={{ type: 'bid', level: contract.level, strain: contract.strain }} /> by {nameAtSeat(view, profiles, contract.declarer)}
+            {#if director.contractPulse > 0}<span class="sold" aria-hidden="true">Sold!</span>{/if}
+          </button>
+        {/key}
+        <RaceMeters {deal} declarers={pairOf(contract.declarer)} defenders={pairOf(next(contract.declarer))} />
+      {:else}
+        <span class="muted">Game {view.dealNumber} · bidding · {nameAtSeat(view, profiles, deal.dealer)} deals</span>
+      {/if}
+    </div>
+    <!-- Whose turn is shown on the seats themselves (S10); this line is for screen readers. -->
+    {#if view.phase === 'inDeal' && turnText}<p class="sr-only" aria-live="polite">{turnText}</p>{/if}
     {#if myTurnToCall}<BiddingBox {conn} />{/if}
     {#if view.phase === 'inDeal'}<Hand {conn} />{/if}
   </section>
@@ -160,21 +160,33 @@
     padding: 6px 16px max(8px, env(safe-area-inset-bottom));
     overflow: hidden;
   }
+  /* Just the menu button: the rest of the top belongs to the theme's scene (and, top-right,
+     to Messenger's floating video, S10). */
   header {
     display: flex;
-    gap: 8px;
-    align-items: flex-start;
-    /* Keep the top-right ~30% clear for Messenger's floating video (S10). */
-    padding-right: 30%;
-    min-height: 56px;
+    min-height: 48px;
   }
   .menu {
     font-size: 1.3rem;
     padding: 0 12px;
   }
   .info {
-    flex: 1;
+    display: grid;
+    justify-items: center;
+    gap: 2px;
     min-width: 0;
+    text-align: center;
+  }
+  .info :global(.meters) {
+    width: min(100%, 340px);
+  }
+  .sr-only {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip: rect(0 0 0 0);
+    white-space: nowrap;
   }
   .contract {
     animation: stamp calc(420ms * var(--speed)) cubic-bezier(0.3, 1.5, 0.6, 1);
@@ -383,19 +395,5 @@
     display: grid;
     gap: 6px;
     justify-items: stretch;
-  }
-  .turn {
-    display: flex;
-    flex-wrap: wrap;
-    justify-content: center;
-    gap: 0 6px;
-    text-align: center;
-    margin: 0;
-    color: var(--ink-dim);
-    font-size: 15px;
-  }
-  .turn.mine {
-    color: var(--accent);
-    font-weight: 700;
   }
 </style>

@@ -31,9 +31,10 @@ export function teamColor(conn: Link, seat: Seat): string {
 }
 
 /** Element ring colours for badges and cards. */
+/** Each element's primary colour (Ryan): red fire, yellow air, blue water, green earth. */
 export const ELEMENT_RING: Record<Element, string> = {
-  fire: '#ff7a2f',
-  air: '#f4e7a1',
-  water: '#2fa7d6',
-  earth: '#8a9a4b',
+  fire: '#e53935',
+  air: '#f5c518',
+  water: '#1e88e5',
+  earth: '#43a047',
 };

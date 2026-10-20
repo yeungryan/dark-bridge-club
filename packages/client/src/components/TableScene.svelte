@@ -57,7 +57,7 @@
         <line x1="238" y1="192" x2="262" y2="192" />
       </g>
     {:else if theme === 'shibuya'}
-      <!-- Towers with lit windows, and a neon sign: ブリッジ ("bridge"). -->
+      <!-- Towers with lit windows, and a neon sign hung on the edge building: ブリッジ ("bridge"). -->
       <defs>
         <filter id="neon" x="-50%" y="-50%" width="200%" height="200%">
           <feGaussianBlur stdDeviation="2.2" result="b" />
@@ -73,13 +73,13 @@
       <g fill="#ffd36b" opacity="0.25">
         {#each [0, 1, 2, 3, 4, 5] as r (r)}
           {#each [0, 1, 2] as c (c)}
-            {#if (r + c) % 3 !== 1}<rect x={8 + c * 15} y={56 + r * 18} width="7" height="9" />{/if}
+            {#if (r + c) % 3 !== 1}<rect x={66 + c * 13} y={96 + r * 18} width="6" height="9" />{/if}
           {/each}
         {/each}
       </g>
       <g filter="url(#neon)" fill="none" stroke-linecap="round">
-        <rect x="64" y="96" width="34" height="122" rx="5" stroke="#ff3ea5" stroke-width="2" opacity="0.8" />
-        <text x="81" y="120" fill="#ff7fc8" stroke="none" font-size="20" font-family="'Hiragino Sans', 'Noto Sans JP', sans-serif" text-anchor="middle" writing-mode="tb" opacity="0.95"
+        <rect x="10" y="52" width="32" height="136" rx="5" stroke="#ff3ea5" stroke-width="2" opacity="0.8" />
+        <text x="26" y="64" fill="#ff7fc8" stroke="none" font-size="20" font-family="'Hiragino Sans', 'Noto Sans JP', sans-serif" text-anchor="middle" writing-mode="tb" opacity="0.95"
           >ブリッジ</text
         >
       </g>

@@ -14,6 +14,11 @@
   const deal = $derived(view.deal);
   const profile = $derived(profileOf(conn.room!.profiles, view.seating?.[seat]));
   const presence = $derived(conn.room!.presence[profile.id]);
+  // Whose turn (Ryan's pick: a combo): their ring breathes and their name lights up; the other
+  // seats dim a little. On your own turn your seat also lifts.
+  const turn = $derived(deal?.turn === seat && (deal.phase === 'auction' || deal.phase === 'play'));
+  const waiting = $derived(deal?.turn !== null && deal?.turn !== undefined && !turn && (deal.phase === 'auction' || deal.phase === 'play'));
+  const mine = $derived(seat === view.mySeat);
   const role = $derived.by(() => {
     const c = deal?.contract;
     if (!c) return '';
@@ -21,13 +26,13 @@
   });
 </script>
 
-<div class="seat" data-badge-seat={seat} title={presence !== 'connected' ? `${profile.name} is ${presence}` : undefined}>
+<div class="seat" class:turn class:waiting class:mine data-badge-seat={seat} title={presence !== 'connected' ? `${profile.name} is ${presence}` : undefined}>
   <Avatar
     avatar={avatarAtSeat(conn, seat)}
     initial={profile.name[0]}
     ring={teamColor(conn, seat)}
     size={46}
-    turn={deal?.turn === seat}
+    {turn}
     away={presence !== 'connected'}
   />
   <span class="nameline">
@@ -84,6 +89,30 @@
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
+  }
+  .seat {
+    transition:
+      opacity calc(250ms * var(--speed)),
+      transform calc(250ms * var(--speed)) cubic-bezier(0.3, 1.5, 0.6, 1);
+  }
+  .seat.waiting {
+    opacity: 0.62;
+  }
+  .seat.turn .name {
+    color: var(--accent);
+    text-shadow: 0 0 10px var(--accent-glow);
+  }
+  :global(.fx-full) .seat.turn .name {
+    animation: name-pulse calc(1600ms * var(--speed)) ease-in-out infinite;
+  }
+  @keyframes name-pulse {
+    50% {
+      transform: scale(1.06);
+      text-shadow: 0 0 2px var(--accent-glow);
+    }
+  }
+  .seat.turn.mine {
+    transform: translateY(-4px);
   }
   .role {
     font-size: 9.5px;

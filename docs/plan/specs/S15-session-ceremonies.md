@@ -25,3 +25,8 @@ Make each night feel like an **event** (promise B), spending the big ceremonies 
 ## Acceptance criteria
 - [ ] First-ever session: the full ceremony. Later sessions: each step can be fast-forwarded with one tap.
 - [ ] From "all four connected" to the first card dealt ≤ 80 s without skipping (including the ~20 s avatar pick), ≤ 30 s skipping.
+
+## Lobby clean-up (Ryan, round 4)
+- **The DARK crest is the guest list.** A letter is dim grey while its player is away, lights in their colour when they arrive (with a chime), and fills solid with a check once they've picked their avatar. The player list, the "4/4 here" line and the theme's greeting are gone.
+- The theme's flag sits left of its name.
+- The lobby starts below the theme's scene, so nothing overlaps it.

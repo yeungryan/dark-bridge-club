@@ -26,3 +26,8 @@ A table you can read at a glance on a phone while faces are talking in a floatin
 - [ ] Works at 360 × 640 with no horizontal scrolling.
 - [ ] **Whose turn it is can be read in under 1 second** from arm's length (checked in playtest S23).
 - [ ] Nothing important is hidden under Messenger's floating window on your real phone.
+
+## Round 4 (Ryan)
+- The header holds only the menu button; the theme's scene owns the top of the screen.
+- The contract and the race to each side's target moved to where "X to play" was, above your hand. The "X to play" line is gone.
+- **Whose turn:** the active player's avatar ring breathes and their name lights in the accent colour, and the other seats dim slightly. On your own turn your seat lifts and the cards you can play glow. A hidden live region still announces the turn to screen readers.
