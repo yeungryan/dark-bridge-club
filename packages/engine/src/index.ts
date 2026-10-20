@@ -10,3 +10,6 @@ export * from './views';
 export * from './protocol';
 export * from './avatars';
 export * from './themes';
+export * from './moments';
+export * from './thinkclock';
+export * from './history';
