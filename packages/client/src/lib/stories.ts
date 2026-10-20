@@ -23,5 +23,8 @@ export function momentCaption(m: Moment, profiles: readonly ProfileInfo[]): stri
 
 export function awardText(a: Award, profiles: readonly ProfileInfo[]): { title: string; emoji: string; caption: string } {
   const def = AWARDS[a.kind];
-  return { title: def.title, emoji: def.emoji, caption: def.caption(a, namer(profiles)) };
+  const caption = def.caption(a, namer(profiles));
+  // The card already shows who won it (avatar and name), so drop a leading "Name: ".
+  const lead = `${profileOf(profiles, a.profile).name}: `;
+  return { title: def.title, emoji: def.emoji, caption: caption.startsWith(lead) ? caption.slice(lead.length) : caption };
 }

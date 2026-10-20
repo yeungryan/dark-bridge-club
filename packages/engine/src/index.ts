@@ -13,3 +13,5 @@ export * from './themes';
 export * from './moments';
 export * from './thinkclock';
 export * from './history';
+export * from './moments';
+export * from './captions';
