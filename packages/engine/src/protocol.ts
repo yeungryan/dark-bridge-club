@@ -1,5 +1,6 @@
 // Spec S06: messages between a browser and the table server. Types only.
 import type { Avatar, AvatarAction, AvatarPick } from './avatars';
+import type { Award, Moment } from './moments';
 import type { PlayerDealAction, ProfileId, SessionEvent } from './session';
 import type { ThemeId } from './themes';
 import type { TableView } from './views';
@@ -50,6 +51,10 @@ export interface RoomInfo {
   readonly surpriseAt: number | null;
   /** Tonight's theme (S18), rolled when the lobby opens. */
   readonly theme: ThemeId;
+  /** The latest finished game's moments (S19), for its reveal. */
+  readonly gameMoments: readonly Moment[];
+  /** Tonight's awards (S19), once the night has ended; null before then. */
+  readonly awards: readonly Award[] | null;
 }
 
 /** Session events with anything secret (deal seeds) removed. */

@@ -2,6 +2,15 @@ import {
   applyAvatarAction,
   applySessionAction,
   avatarsOf,
+  dealHistory,
+  dealMoments,
+  newThinkClock,
+  nightAwards,
+  tickThinkClock,
+  type Award,
+  type DealHistory,
+  type Moment,
+  type ThinkClock,
   ELEMENTS,
   lockedIn,
   newAvatarLobby,
@@ -53,6 +62,11 @@ export class PracticeTable extends Connection {
   private concessionAt: number | null = null;
   private timers = new Set<ReturnType<typeof setTimeout>>();
   private botTimer: ReturnType<typeof setTimeout> | null = null;
+  /** Moments and awards (S19), worked out here exactly as the server does. */
+  private clock: ThinkClock = newThinkClock();
+  private history: DealHistory[] = [];
+  private gameMoments: Moment[] = [];
+  private awards: Award[] | null = null;
 
   /** `fixedTheme`: practice in one theme every night (practice.html?theme=bali). */
   constructor(
@@ -76,6 +90,10 @@ export class PracticeTable extends Connection {
   private newNight(): void {
     this.clearTimers();
     this.session = newSession({ profiles: IDS, usualPartner: USUAL_PARTNER, seed: randomSeed() });
+    this.clock = newThinkClock();
+    this.history = [];
+    this.gameMoments = [];
+    this.awards = null;
     const last = this.avatars ? Object.fromEntries(IDS.map((id) => [id, this.avatars.picks[id]?.avatar?.animal])) : {};
     this.avatars = newAvatarLobby(IDS, Math.random, last);
     const roll = rollTheme(this.themeBag, Math.random, this.theme);
@@ -112,8 +130,24 @@ export class PracticeTable extends Connection {
     }
     this.session = outcome.state;
     this.reconcileTimers(outcome.events);
+    this.recordHistory(outcome.events);
     this.publish(outcome.events);
     this.scheduleBots();
+  }
+
+  /** Like the server: time each turn, keep each finished game, and award the night. */
+  private recordHistory(events: readonly SessionEvent[]): void {
+    const s = this.session;
+    this.clock = tickThinkClock(this.clock, s, false, Date.now());
+    if (!s.seating || !s.pairs) return;
+    const night = { seating: s.seating, pairs: s.pairs, deals: this.history };
+    for (const record of s.records.slice(this.history.length)) {
+      const full = s.deal && s.deal.phase === 'complete' && record.dealNumber === s.dealNumber ? s.deal : null;
+      const game = dealHistory(record, full, this.clock.dealNumber === record.dealNumber ? this.clock.totals : null);
+      this.history = [...this.history, game];
+      this.gameMoments = dealMoments(game, { ...night, deals: this.history });
+    }
+    if (events.some((e) => e.type === 'nightEnded')) this.awards = nightAwards({ ...night, deals: this.history });
   }
 
   private publish(events: readonly SessionEvent[]): void {
@@ -134,6 +168,8 @@ export class PracticeTable extends Connection {
         avatars: this.session.phase === 'lobby' ? null : avatarsOf(this.avatars),
         surpriseAt: null,
         theme: this.theme,
+        gameMoments: this.gameMoments,
+        awards: this.session.phase === 'ended' ? this.awards : null,
       },
       events: publicEvents,
       myAvatar: this.avatars.picks[this.me] ?? null,

@@ -2,6 +2,18 @@ import { DurableObject } from 'cloudflare:workers';
 import {
   applyAvatarAction,
   applySessionAction,
+  dealHistory,
+  dealMoments,
+  newThinkClock,
+  nightAwards,
+  nightMoments,
+  tickThinkClock,
+  type Award,
+  type AwardKind,
+  type DealHistory,
+  type DealRecord,
+  type Moment,
+  type ThinkClock,
   avatarsOf,
   lockedIn,
   newAvatarLobby,
@@ -62,6 +74,11 @@ interface Stored {
   /** Tonight's theme and the bag it was drawn from (S18). */
   theme: ThemeId;
   themeBag: ThemeBag;
+  /** Thinking time this game, per seat (S19, "That's 10 Dollars"). */
+  clock: ThinkClock;
+  /** The latest finished game's moments, and tonight's awards once it ends (S19). */
+  gameMoments: Moment[];
+  awards: Award[] | null;
 }
 
 const IN_PROGRESS = new Set(['partnerPick', 'inDeal', 'betweenDeals']);
@@ -111,6 +128,19 @@ export class TableRoom extends DurableObject<Env> {
     // Added in M3 (S18): which theme each night had, for history.
     const columns = this.sql.exec<{ name: string }>('PRAGMA table_info(sessions)').toArray().map((c) => c.name);
     if (!columns.includes('theme')) this.sql.exec('ALTER TABLE sessions ADD COLUMN theme TEXT');
+    // Added in M3 (S19): who sat where (so awards name the right people), thinking time per
+    // game, and the moments and awards themselves.
+    if (!columns.includes('seating_json')) this.sql.exec('ALTER TABLE sessions ADD COLUMN seating_json TEXT');
+    const dealColumns = this.sql.exec<{ name: string }>('PRAGMA table_info(deals)').toArray().map((c) => c.name);
+    if (!dealColumns.includes('think_json')) this.sql.exec('ALTER TABLE deals ADD COLUMN think_json TEXT');
+    this.sql.exec(`
+      CREATE TABLE IF NOT EXISTS moments (
+        session_id TEXT NOT NULL, deal_number INTEGER NOT NULL, kind TEXT NOT NULL, players_json TEXT NOT NULL,
+        payload_json TEXT NOT NULL);
+      CREATE TABLE IF NOT EXISTS awards (
+        session_id TEXT NOT NULL, kind TEXT NOT NULL, profile_id TEXT NOT NULL, score REAL NOT NULL,
+        payload_json TEXT NOT NULL, created_at INTEGER NOT NULL);
+    `);
   }
 
   private load(): Stored {
@@ -122,6 +152,10 @@ export class TableRoom extends DurableObject<Env> {
       // Saved before themes existed: tonight is the Clubhouse, and the next roll starts the bag.
       stored.theme ??= 'clubhouse';
       stored.themeBag ??= { remaining: [] };
+      // Saved before moments and awards existed (M3).
+      stored.clock ??= newThinkClock(stored.session.dealNumber);
+      stored.gameMoments ??= [];
+      stored.awards ??= null;
       return stored;
     }
     const presence = Object.fromEntries(PROFILE_IDS.map((id) => [id, { status: 'away', since: 0 }])) as Stored['presence'];
@@ -135,6 +169,9 @@ export class TableRoom extends DurableObject<Env> {
       avatars: newAvatarLobby(PROFILE_IDS, Math.random),
       theme: roll.theme,
       themeBag: roll.bag,
+      clock: newThinkClock(),
+      gameMoments: [],
+      awards: null,
     };
   }
 
@@ -295,6 +332,9 @@ export class TableRoom extends DurableObject<Env> {
       const roll = rollTheme(this.data.themeBag, Math.random, this.data.theme);
       this.data.theme = roll.theme;
       this.data.themeBag = roll.bag;
+      this.data.clock = newThinkClock();
+      this.data.gameMoments = [];
+      this.data.awards = null;
       return this.commit(this.maybeStartNight());
     }
 
@@ -455,6 +495,8 @@ export class TableRoom extends DurableObject<Env> {
   /** Save, schedule timers, write history, and send everyone their view. */
   private async commit(events: SessionEvent[]): Promise<void> {
     this.reconcileTimers(events);
+    // Credit the thinking time of the turn that just ended before saving the game.
+    this.data.clock = tickThinkClock(this.data.clock, this.data.session, this.isPaused(), Date.now());
     this.persistHistory(events);
     this.data.seq++;
     this.save();
@@ -484,23 +526,22 @@ export class TableRoom extends DurableObject<Env> {
       }
       if (event.type === 'partnerChosen') {
         this.sql.exec(
-          'INSERT OR IGNORE INTO sessions (id, started_at, pairs_json, theme) VALUES (?, ?, ?, ?)',
+          'INSERT OR IGNORE INTO sessions (id, started_at, pairs_json, theme, seating_json) VALUES (?, ?, ?, ?, ?)',
           id,
           now,
           JSON.stringify(event.pairs),
           this.data.theme,
+          JSON.stringify(session.seating),
         );
-      }
-      if (event.type === 'nightEnded') {
-        this.sql.exec('UPDATE sessions SET ended_at = ?, final_json = ? WHERE id = ?', now, JSON.stringify(event.final), id);
       }
     }
     // S09: every finished or passed-out deal, with enough detail to replay it exactly.
     for (const record of session.records.slice(this.data.persistedDeals)) {
       const full = session.deal && session.deal.phase === 'complete' && record.dealNumber === session.dealNumber ? session.deal : null;
+      const think = this.data.clock.dealNumber === record.dealNumber ? this.data.clock.totals : null;
       this.sql.exec(
-        `INSERT OR REPLACE INTO deals (session_id, deal_number, seed, dealer, record_json, auction_json, tricks_json, hands_json, completed_at)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        `INSERT OR REPLACE INTO deals (session_id, deal_number, seed, dealer, record_json, auction_json, tricks_json, hands_json, completed_at, think_json)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
         id,
         record.dealNumber,
         record.seed,
@@ -510,9 +551,86 @@ export class TableRoom extends DurableObject<Env> {
         full ? JSON.stringify(full.tricks) : null,
         full ? JSON.stringify(full.originalHands) : null,
         now,
+        think ? JSON.stringify(think) : null,
       );
+      // S19: this game's moments, for its reveal and for history.
+      const night = this.nightSoFar();
+      if (night) {
+        this.data.gameMoments = dealMoments(dealHistory(record, full, think), night);
+        this.saveMoments(id, this.data.gameMoments);
+      }
     }
     this.data.persistedDeals = session.records.length;
+
+    // The night is over: the night-level moments and the awards (S15, S19).
+    for (const event of events) {
+      if (event.type !== 'nightEnded') continue;
+      this.sql.exec('UPDATE sessions SET ended_at = ?, final_json = ? WHERE id = ?', now, JSON.stringify(event.final), id);
+      const night = this.nightSoFar();
+      if (!night) continue;
+      this.saveMoments(id, nightMoments(night));
+      this.data.awards = nightAwards(night, this.previousAwards(id));
+      for (const award of this.data.awards) {
+        this.sql.exec(
+          'INSERT INTO awards (session_id, kind, profile_id, score, payload_json, created_at) VALUES (?, ?, ?, ?, ?, ?)',
+          id,
+          award.kind,
+          award.profile,
+          award.score,
+          JSON.stringify(award.payload),
+          now,
+        );
+      }
+    }
+  }
+
+  /** Tonight's history so far, from the saved games (null before the pairs are set). */
+  private nightSoFar(): { seating: NonNullable<SessionState['seating']>; pairs: NonNullable<SessionState['pairs']>; deals: DealHistory[] } | null {
+    const session = this.data.session;
+    if (!session.seating || !session.pairs) return null;
+    const rows = this.sql
+      .exec<{ record_json: string; tricks_json: string | null; hands_json: string | null; think_json: string | null }>(
+        'SELECT record_json, tricks_json, hands_json, think_json FROM deals WHERE session_id = ? ORDER BY deal_number',
+        session.config.seed,
+      )
+      .toArray();
+    const deals = rows.map((r): DealHistory => {
+      const record = JSON.parse(r.record_json) as DealRecord;
+      return {
+        ...dealHistory(record, null, r.think_json ? JSON.parse(r.think_json) : null),
+        hands: r.hands_json ? JSON.parse(r.hands_json) : null,
+        tricks: r.tricks_json ? JSON.parse(r.tricks_json) : null,
+      };
+    });
+    return { seating: session.seating, pairs: session.pairs, deals };
+  }
+
+  private saveMoments(sessionId: string, moments: readonly Moment[]): void {
+    for (const m of moments) {
+      this.sql.exec(
+        'INSERT INTO moments (session_id, deal_number, kind, players_json, payload_json) VALUES (?, ?, ?, ?, ?)',
+        sessionId,
+        m.dealNumber,
+        m.kind,
+        JSON.stringify(m.players),
+        JSON.stringify(m.payload),
+      );
+    }
+  }
+
+  /** The awards given at the last night before this one (for variety, S19). */
+  private previousAwards(sessionId: string): AwardKind[] {
+    const last = this.sql
+      .exec<{ session_id: string }>(
+        'SELECT session_id FROM awards WHERE session_id != ? ORDER BY created_at DESC LIMIT 1',
+        sessionId,
+      )
+      .toArray()[0];
+    if (!last) return [];
+    return this.sql
+      .exec<{ kind: AwardKind }>('SELECT kind FROM awards WHERE session_id = ?', last.session_id)
+      .toArray()
+      .map((r) => r.kind);
   }
 
   // ------------------------------------------------------------------ sending
@@ -537,6 +655,8 @@ export class TableRoom extends DurableObject<Env> {
       avatars: this.data.session.phase === 'lobby' ? null : avatarsOf(this.data.avatars),
       surpriseAt: timer('surprise'),
       theme: this.data.theme,
+      gameMoments: this.data.gameMoments,
+      awards: this.data.session.phase === 'ended' ? this.data.awards : null,
     };
   }
 

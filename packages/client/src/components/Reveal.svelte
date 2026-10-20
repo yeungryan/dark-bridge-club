@@ -12,6 +12,7 @@
   import { TIMING } from '../lib/juice/timing';
   import CountUp from './CountUp.svelte';
   import CallText from './CallText.svelte';
+  import { MOMENT_EMOJI, momentCaption } from '../lib/stories';
   import Suit from './Suit.svelte';
 
   // Spec S14: the payoff for hidden hands. The result lands, the score ticks up, then the four
@@ -40,6 +41,10 @@
   let skipped = $state(!settings.animated);
   let banner = $state<HTMLElement>();
   const timers: ReturnType<typeof setTimeout>[] = [];
+
+  // S19: this game's moments, shown once the hands are all face up.
+  const moments = $derived((conn.room!.gameMoments ?? []).filter((m) => m.dealNumber === view.dealNumber));
+  const allFlipped = $derived(flipped.length === 4);
 
   // A big contract or a dramatic clinch gets a richer reveal.
   const dramatic = $derived(contract.level >= 5 || (director.clinch?.drama ?? 0) >= 2);
@@ -94,6 +99,14 @@
     declarers won {result.declarerTricks} sets, defenders {result.defenderTricks}
     {#if result.overUnder !== null}· {result.overUnder >= 0 ? `+${result.overUnder}` : `${result.overUnder}`}{/if}
   </p>
+
+  {#if moments.length > 0 && allFlipped}
+    <ul class="moments" aria-label="Moments">
+      {#each moments as m, i (m.kind + i)}
+        <li style="--i: {i}"><span aria-hidden="true">{MOMENT_EMOJI[m.kind]}</span> {momentCaption(m, profiles)}</li>
+      {/each}
+    </ul>
+  {/if}
 
   <div class="hands">
     {#each [view.mySeat!, partner(view.mySeat!), next(partner(view.mySeat!)), next(view.mySeat!)] as seat (seat)}
@@ -154,6 +167,33 @@
   h3 {
     margin: 0;
     font-size: 1.25rem;
+  }
+  /* Moments: little caption chips that spring in one after another. */
+  .moments {
+    display: grid;
+    gap: 6px;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+  .moments li {
+    padding: 6px 10px;
+    border-radius: 999px;
+    background: color-mix(in srgb, var(--accent) 16%, var(--panel));
+    border: 1px solid color-mix(in srgb, var(--accent) 45%, transparent);
+    font-size: 13.5px;
+    animation: chip calc(var(--spring-pop-ms, 400ms) * var(--speed)) var(--spring-pop, cubic-bezier(0.3, 1.6, 0.6, 1))
+      calc(var(--i) * 180ms * var(--speed)) backwards;
+  }
+  @keyframes chip {
+    from {
+      transform: translateY(8px) scale(0.85);
+      opacity: 0;
+    }
+  }
+  :global(.fx-reduced) .moments li,
+  :global(.fx-off) .moments li {
+    animation: fade-in calc(250ms * var(--speed)) backwards;
   }
   /* The result lands first. */
   .move .banner {
