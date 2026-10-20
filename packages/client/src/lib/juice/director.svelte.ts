@@ -1,8 +1,9 @@
-import { trumpSuit, type Seat, type Side, type Suit } from '@dark/engine';
+import { suitSymbol, trumpSuit, type Seat, type Side, type Suit } from '@dark/engine';
+import { elementAtSeat } from '../avatars';
 import type { Connection } from '../connection.svelte';
 import { buzz } from './haptics';
 import { intensityOf, momentsFrom, type Moment } from './moments';
-import { burst, comet } from './particles';
+import { comet, elementBurst, flash, glyphs, puff, ring, sparks } from './particles';
 import { settings } from './settings.svelte';
 import { sound } from './sound';
 import { DRAMA_BOOST, RESPONSES, TIMING, type Level } from './timing';
@@ -29,6 +30,9 @@ export interface TrickFx {
 }
 
 type Link = Pick<Connection, 'view' | 'room' | 'onEvents'>;
+
+/** Trump moments share one colour, so "that was a trump" reads at a glance. */
+const TRUMP_COLOR = '#c58bff';
 
 class Director {
   /** Current shake offset in px, applied to the trick area only. */
@@ -109,7 +113,11 @@ class Director {
         this.contractPulse++;
         sound.sold();
         buzz('sold');
-        setTimeout(() => this.burstAt('.contract', 26, [this.colorOf(conn, m.declarer), '#e8c25a', '#fbf8f0']), 60);
+        // An ink-stamp puff behind the contract as it slams into the header.
+        setTimeout(() => {
+          const c = this.centerOf('.contract');
+          if (c) puff(c.x, c.y, 12, '#d8c38f');
+        }, 60);
         break;
       case 'passedOut':
         this.going = 0;
@@ -120,15 +128,24 @@ class Director {
         setTimeout(() => {
           sound.card(m.mine);
           if (m.mine) buzz('card');
+          const at = this.centerOf(`.area [data-seat="${m.seat}"]`);
           if (m.trumpIn) {
+            // A shockwave and shards of the trump suit.
             sound.trumpIn();
             buzz('trumpIn');
             this.flashSuit(conn, false);
+            this.shake(RESPONSES[level].shakePx);
+            if (at) {
+              ring(at.x, at.y, TRUMP_COLOR, { radius: 80, width: 4 });
+              glyphs(at.x, at.y, 8, this.trumpGlyph(conn), [TRUMP_COLOR, '#f2e6ff'], 'shower');
+            }
           } else if (m.lead > 0 && !m.completes) {
+            // Quick sparks: it's ahead now.
             sound.lead(m.lead);
             if (m.mine) buzz('lead');
+            this.shake(RESPONSES[level].shakePx);
+            if (at) sparks(at.x, at.y, RESPONSES[level].particles, [this.colorOf(conn, m.seat), '#e8c25a', '#fff6d8']);
           }
-          if (m.lead > 0 && !m.completes) this.hit(level, `.area [data-seat="${m.seat}"]`, this.colorOf(conn, m.seat));
         }, fly);
         break;
       case 'trickWon':
@@ -179,20 +196,33 @@ class Director {
     setTimeout(() => {
       if (!alive()) return;
       this.trickFx = { ...this.trickFx!, phase: 'win' };
+      const at = this.centerOf(`.area [data-seat="${m.winner}"]`);
+      this.shake(RESPONSES[level].shakePx);
       if (kind === 'first') {
+        // The first trump trick: a big ring and a shower of the trump suit.
         sound.firstTrump();
         buzz('firstTrump');
         this.banner = { text: 'First trump!', id: ++this.fxId };
         this.flashSuit(conn, true);
+        if (at) {
+          ring(at.x, at.y, TRUMP_COLOR, { radius: 120, width: 5, frames: 30 });
+          glyphs(at.x, at.y, RESPONSES[level].particles / 2, this.trumpGlyph(conn), [TRUMP_COLOR, '#f2e6ff', '#e8c25a'], 'shower');
+        }
       } else if (kind === 'trump') {
+        // Won with a trump: the suit drifts up off the card.
         sound.trumpTrick();
         if (mineWon) buzz('trumpTrick');
         this.flashSuit(conn, true);
+        if (at) {
+          flash(at.x, at.y, TRUMP_COLOR, 46);
+          glyphs(at.x, at.y, 7, this.trumpGlyph(conn), [TRUMP_COLOR, '#f2e6ff'], 'rise');
+        }
       } else {
+        // The everyday win (13 a deal): just a warm glow. The sweep and orb carry the rest.
         sound.lead(2);
         if (mineWon) buzz('trick');
+        if (at) flash(at.x, at.y, '#e8c25a', 42);
       }
-      this.hit(level, `.area [data-seat="${m.winner}"]`, this.colorOf(conn, m.winner));
     }, fly + pause);
 
     setTimeout(() => {
@@ -241,19 +271,22 @@ class Director {
       sound.clinch(m.drama);
       buzz('clinch');
       this.shake(base.shakePx + DRAMA_BOOST.shakePx * m.drama);
-      this.burstAt(`.area [data-seat="${m.seat}"]`, base.particles + DRAMA_BOOST.particles * m.drama, [
-        this.colorOf(conn, m.seat),
-        '#e8c25a',
-        '#fbf8f0',
-      ]);
+      // The signature effect of whoever played the deciding card (S24): fire, air, water or earth.
+      const at = this.centerOf(`.area [data-seat="${m.seat}"]`);
+      if (!at) return;
+      const element = elementAtSeat(conn, m.seat);
+      if (element) elementBurst(element, at.x, at.y, m.drama);
+      else {
+        ring(at.x, at.y, '#e8c25a', { radius: 110, width: 5 });
+        sparks(at.x, at.y, base.particles, [this.colorOf(conn, m.seat), '#e8c25a', '#fbf8f0']);
+      }
     }, pause);
   }
 
-  /** The shared response for a level: shake the trick area and burst at an element. */
-  private hit(level: Level, selector: string, color: string): void {
-    const r = RESPONSES[level];
-    this.shake(r.shakePx);
-    this.burstAt(selector, r.particles, [color, '#e8c25a', '#fbf8f0']);
+  private trumpGlyph(conn: Link): string {
+    const contract = conn.view?.deal?.contract;
+    const suit = contract ? trumpSuit(contract.strain) : null;
+    return suit ? suitSymbol(suit) : '★';
   }
 
   private flashSuit(conn: Link, big: boolean): void {
@@ -272,11 +305,6 @@ class Director {
     if (!el) return null;
     const r = el.getBoundingClientRect();
     return { x: r.left + r.width / 2, y: r.top + r.height / 2 };
-  }
-
-  private burstAt(selector: string, count: number, colors: string[]): void {
-    const c = this.centerOf(selector);
-    if (c) burst(c.x, c.y, count, colors);
   }
 
   /** A decaying shake on the trick area (never on text you need to read or on your hand). */

@@ -1,4 +1,5 @@
 // Spec S06: messages between a browser and the table server. Types only.
+import type { Avatar, AvatarAction, AvatarPick } from './avatars';
 import type { PlayerDealAction, ProfileId, SessionEvent } from './session';
 import type { TableView } from './views';
 
@@ -15,7 +16,9 @@ export type ClientMessage =
   /** Ask for a full resend, e.g. after spotting a gap in `seq`. */
   | { type: 'snapshot' }
   /** After a night has ended: open a fresh lobby. */
-  | { type: 'newNight' };
+  | { type: 'newNight' }
+  /** In the lobby: reroll, lock in or change your avatar (S24). */
+  | { type: 'avatar'; action: AvatarAction };
 
 export type Presence = 'connected' | 'reconnecting' | 'away';
 
@@ -38,13 +41,19 @@ export interface RoomInfo {
   readonly concessionDeadline: number | null;
   /** The server's clock, so countdowns are correct even if a phone's clock is off. */
   readonly serverTime: number;
+  /** Who has locked in an avatar (S24). Choices stay private until the night starts. */
+  readonly avatarReady: Readonly<Record<ProfileId, boolean>>;
+  /** Everyone's avatar, once the night has started; null before then (or if none). */
+  readonly avatars: Readonly<Record<ProfileId, Avatar | null>> | null;
+  /** When a player who hasn't picked gets "Surprise me" (epoch ms), if that timer is running. */
+  readonly surpriseAt: number | null;
 }
 
 /** Session events with anything secret (deal seeds) removed. */
 export type PublicEvent = SessionEvent;
 
 export type ServerMessage =
-  | { type: 'state'; seq: number; view: TableView; room: RoomInfo; events: readonly PublicEvent[] }
+  | { type: 'state'; seq: number; view: TableView; room: RoomInfo; events: readonly PublicEvent[]; myAvatar: AvatarPick | null }
   | { type: 'error'; code: string; message: string }
   /** This profile connected from another device; this one should stop. */
   | { type: 'replaced' };

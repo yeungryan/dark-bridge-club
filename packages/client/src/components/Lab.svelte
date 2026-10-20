@@ -2,6 +2,8 @@
   import { buzz, type Haptic } from '../lib/juice/haptics';
   import { settings } from '../lib/juice/settings.svelte';
   import { sound } from '../lib/juice/sound';
+  import { elementBurst, flash, glyphs, puff, ribbons, ring, sparks, type Element } from '../lib/juice/particles';
+  import Particles from './Particles.svelte';
 
   // lab.html: every game sound (and vibration) on its own button, to check volume on your
   // phone, ideally while on a Messenger call: can the others hear it? Is anything annoying?
@@ -60,6 +62,28 @@
     },
   ];
 
+  // Effects play from the middle of the button you tapped.
+  type Fx = { label: string; play: (x: number, y: number) => void };
+  const effects: Fx[] = [
+    { label: 'Takes the lead (sparks)', play: (x, y) => (sound.lead(1), sparks(x, y, 12, ['#3fb27f', '#e8c25a', '#fff6d8'])) },
+    { label: 'Trick won (glow)', play: (x, y) => (sound.lead(2), flash(x, y, '#e8c25a', 42)) },
+    { label: 'Trumps in (shockwave)', play: (x, y) => (sound.trumpIn(), ring(x, y, '#c58bff', { radius: 80, width: 4 }), glyphs(x, y, 8, '♠', ['#c58bff', '#f2e6ff'], 'shower')) },
+    { label: 'Won with a trump', play: (x, y) => (sound.trumpTrick(), flash(x, y, '#c58bff', 46), glyphs(x, y, 7, '♥', ['#c58bff', '#f2e6ff'], 'rise')) },
+    { label: 'First trump!', play: (x, y) => (sound.firstTrump(), ring(x, y, '#c58bff', { radius: 120, width: 5, frames: 30 }), glyphs(x, y, 22, '♦', ['#c58bff', '#f2e6ff', '#e8c25a'], 'shower')) },
+    { label: 'Sold! (stamp puff)', play: (x, y) => (sound.sold(), puff(x, y, 12, '#d8c38f')) },
+    { label: 'Night won (confetti)', play: (x, y) => (sound.fanfare(), ribbons(x, y, 120, ['#3fb27f', '#3a8fe0', '#e8c25a', '#fbf8f0'])) },
+  ];
+  const elements: { element: Element; label: string }[] = [
+    { element: 'fire', label: '🔥 Fire clinch' },
+    { element: 'air', label: '🌬️ Air clinch' },
+    { element: 'water', label: '🌊 Water clinch' },
+    { element: 'earth', label: '🪨 Earth clinch' },
+  ];
+  const center = (e: MouseEvent) => {
+    const r = (e.currentTarget as HTMLElement).getBoundingClientRect();
+    return [r.left + r.width / 2, r.top + r.height / 2] as const;
+  };
+
   function run(item: Item) {
     item.play();
     if (item.haptic) buzz(item.haptic);
@@ -78,7 +102,7 @@
 </script>
 
 <main>
-  <h1>Sound check</h1>
+  <h1>Sound &amp; effects check</h1>
   <p class="muted">
     Tap anything to hear it. Best test: join a Messenger call with a friend and ask whether they can hear the game, and whether anything is
     annoying. On an iPhone, the silent switch mutes these sounds.
@@ -92,6 +116,26 @@
 
   <button class="primary demo" onclick={demo}>Play a whole trick</button>
 
+  <h2>Effects</h2>
+  <p class="muted small">Each moment has its own look; confetti is only for winning the night. Effects must be on Full.</p>
+  <div class="grid">
+    {#each effects as fx (fx.label)}
+      <button onclick={(e) => fx.play(...center(e))}>{fx.label}</button>
+    {/each}
+  </div>
+  <h2>Element clinches (your avatar's signature)</h2>
+  <div class="grid">
+    {#each elements as el (el.element)}
+      <button
+        onclick={(e) => {
+          sound.clinch(1);
+          buzz('clinch');
+          elementBurst(el.element, ...center(e), 1);
+        }}>{el.label}</button
+      >
+    {/each}
+  </div>
+
   {#each groups as g (g.title)}
     <h2>{g.title}</h2>
     <div class="grid">
@@ -103,6 +147,7 @@
 
   <p class="muted"><a href="practice.html">Practice table →</a> (you against three bots; nothing is recorded)</p>
 </main>
+<Particles />
 
 <style>
   main {
@@ -117,6 +162,10 @@
     font-size: 1rem;
     margin: 18px 0 8px;
     color: var(--accent);
+  }
+  .small {
+    font-size: 13px;
+    margin: 0 0 8px;
   }
   .grid {
     display: grid;

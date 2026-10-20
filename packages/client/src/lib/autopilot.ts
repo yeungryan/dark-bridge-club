@@ -1,6 +1,7 @@
 // Dev-only (spec S22): lets the four-seat test page fill seats with practice bots.
 // The bot sees exactly what its player sees, and acts through the same messages a person sends.
 // Bots never propose or answer concessions; an offer to a bot simply expires.
+import { ELEMENTS } from '@dark/engine';
 import { botCall, botCard } from '@dark/engine/bots';
 import type { Connection } from './connection.svelte';
 
@@ -20,6 +21,18 @@ export function startAutopilot(conn: Connection): () => void {
     if (key === lastKey) return;
 
     let act: (() => void) | null = null;
+    const pick = conn.myAvatar;
+    if (view.phase === 'lobby' && pick && !pick.avatar) {
+      // A bot picks a random animal from its offer and a random element (S24).
+      const avatarKey = `avatar:${pick.offered.join()}`;
+      if (lastKey === avatarKey) return;
+      lastKey = avatarKey;
+      const animal = pick.offered[Math.floor(Math.random() * pick.offered.length)]!;
+      const element = ELEMENTS[Math.floor(Math.random() * ELEMENTS.length)]!;
+      if (pending) clearTimeout(pending);
+      pending = setTimeout(() => conn.send({ type: 'avatar', action: { type: 'lock', animal, element } }), THINK_MS);
+      return;
+    }
     if (view.endNightVotes.length > 0 && !view.endNightVotes.includes(me)) {
       // A bot agrees when a person proposes ending the night.
       act = () => conn.intent({ type: 'voteEndNight' });

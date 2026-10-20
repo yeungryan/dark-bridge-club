@@ -1,5 +1,11 @@
 import {
+  applyAvatarAction,
   applySessionAction,
+  avatarsOf,
+  ELEMENTS,
+  lockedIn,
+  newAvatarLobby,
+  type AvatarLobby,
   newSession,
   randomSeed,
   seatToAct,
@@ -36,6 +42,7 @@ const think = (base: number) => base + Math.random() * base * 0.6;
 
 export class PracticeTable extends Connection {
   private session!: SessionState;
+  private avatars!: AvatarLobby;
   private version = 0;
   private clinchAt: number | null = null;
   private concessionAt: number | null = null;
@@ -54,14 +61,35 @@ export class PracticeTable extends Connection {
   override send(message: ClientMessage): void {
     if (message.type === 'intent') this.intent(message.intent);
     else if (message.type === 'newNight') this.newNight();
+    else if (message.type === 'avatar') this.avatar(this.me, message.action);
   }
 
   private newNight(): void {
     this.clearTimers();
     this.session = newSession({ profiles: IDS, usualPartner: USUAL_PARTNER, seed: randomSeed() });
+    const last = this.avatars ? Object.fromEntries(IDS.map((id) => [id, this.avatars.picks[id]?.avatar?.animal])) : {};
+    this.avatars = newAvatarLobby(IDS, Math.random, last);
     this.publish([]);
-    // Everyone is "here" at once: start the night.
-    this.later(600, () => this.apply({ type: 'start' }));
+    // The bots pick their avatars over a few seconds; the night starts when you've picked too.
+    IDS.filter((id) => id !== this.me).forEach((id, i) =>
+      this.later(900 + i * 700 + Math.random() * 600, () => {
+        const offered = this.avatars.picks[id]!.offered;
+        const element = ELEMENTS[Math.floor(Math.random() * ELEMENTS.length)]!;
+        this.avatar(id, { type: 'lock', animal: offered[Math.floor(Math.random() * offered.length)]!, element });
+      }),
+    );
+  }
+
+  private avatar(by: ProfileId, action: Parameters<typeof applyAvatarAction>[2]): void {
+    if (this.session.phase !== 'lobby') return;
+    const out = applyAvatarAction(this.avatars, by, action, Math.random);
+    if (!out.ok) {
+      if (by === this.me) this.receive({ type: 'error', code: out.error.code, message: out.error.message });
+      return;
+    }
+    this.avatars = out.state;
+    if (lockedIn(this.avatars).length === IDS.length) this.apply({ type: 'start' });
+    else this.publish([]);
   }
 
   private apply(action: SessionAction): void {
@@ -90,8 +118,12 @@ export class PracticeTable extends Connection {
         clinchDeadline: this.clinchAt,
         concessionDeadline: this.concessionAt,
         serverTime: Date.now(),
+        avatarReady: Object.fromEntries(IDS.map((id) => [id, !!this.avatars.picks[id]?.avatar])),
+        avatars: this.session.phase === 'lobby' ? null : avatarsOf(this.avatars),
+        surpriseAt: null,
       },
       events: publicEvents,
+      myAvatar: this.avatars.picks[this.me] ?? null,
     });
   }
 

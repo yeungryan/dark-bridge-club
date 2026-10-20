@@ -12,6 +12,7 @@
   import Reveal from './Reveal.svelte';
   import SeatBadge from './SeatBadge.svelte';
   import SettingsSheet from './SettingsSheet.svelte';
+  import { avatarOf, emojiOf, pairAvatarNames } from '../lib/avatars';
   import { director } from '../lib/juice/director.svelte';
   import { settings } from '../lib/juice/settings.svelte';
   import { TIMING } from '../lib/juice/timing';
@@ -100,9 +101,10 @@
           {#each view.pairs![pair] as id, j (id)}
             {@const p = profileOf(profiles, id)}
             {#if j === 1}<span class="amp">&</span>{/if}
-            <span class="pname {j === 0 ? 'from-left' : 'from-right'}" style="color: {p.color}">{p.name}</span>
+            <span class="pname {j === 0 ? 'from-left' : 'from-right'}" style="color: {p.color}">{emojiOf(avatarOf(conn, id))} {p.name}</span>
           {/each}
         </div>
+        {#if pairAvatarNames(conn, pair)}<div class="pavatars">{pairAvatarNames(conn, pair)}</div>{/if}
       {/each}
     </div>
   {/if}
@@ -143,7 +145,7 @@
       <AuctionStrip {conn} />
     {/if}
     <p class="turn" class:mine={deal.turn === me} style="--c: {profileOf(profiles, view.me).color}">
-      <span class="me" data-badge-seat={me}>{profileOf(profiles, view.me).name}{#if deal.dealer === me} <span class="chip">D</span>{/if}{#if myRole}{' · '}{myRole}{/if}</span>
+      <span class="me" data-badge-seat={me}>{emojiOf(avatarOf(conn, view.me))} {profileOf(profiles, view.me).name}{#if deal.dealer === me} <span class="chip">D</span>{/if}{#if myRole}{' · '}{myRole}{/if}</span>
       {#if view.phase === 'inDeal' && turnText}<span>— {turnText}</span>{/if}
     </p>
     {#if myTurnToCall}<BiddingBox {conn} />{/if}
@@ -258,6 +260,12 @@
     font-weight: 750;
     display: flex;
     gap: 8px;
+  }
+  .pavatars {
+    font-size: 0.85rem;
+    font-style: italic;
+    color: var(--ink-dim);
+    margin-top: -4px;
   }
   .vs,
   .amp {

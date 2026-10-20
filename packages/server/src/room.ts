@@ -1,6 +1,11 @@
 import { DurableObject } from 'cloudflare:workers';
 import {
+  applyAvatarAction,
   applySessionAction,
+  avatarsOf,
+  lockedIn,
+  newAvatarLobby,
+  type AvatarLobby,
   newSession,
   randomSeed,
   tableView,
@@ -27,8 +32,9 @@ const CONCESSION_MS = 15_000; // S04: concession offer expiry
 const AUTO_CLOSE_MS = 30 * 60_000; // R13: away this long → the night closes
 const MAX_FAILED_PINS = 5;
 const LOCKOUT_MS = 10 * 60_000;
+const SURPRISE_MS = 30_000; // S24: the last one to pick gets "Surprise me" after this long
 
-type TimerKind = 'clinch' | 'concession' | 'grace' | 'autoClose';
+type TimerKind = 'clinch' | 'concession' | 'grace' | 'autoClose' | 'surprise';
 interface Timer {
   kind: TimerKind;
   at: number;
@@ -47,6 +53,8 @@ interface Stored {
   presence: Record<ProfileId, PresenceEntry>;
   /** How many of session.records have been written to the deals table. */
   persistedDeals: number;
+  /** Tonight's avatar picks (S24). Cosmetic; kept apart from the rules engine's state. */
+  avatars: AvatarLobby;
 }
 
 const IN_PROGRESS = new Set(['partnerPick', 'inDeal', 'betweenDeals']);
@@ -85,6 +93,9 @@ export class TableRoom extends DurableObject<Env> {
       CREATE TABLE IF NOT EXISTS sessions (
         id TEXT PRIMARY KEY, started_at INTEGER NOT NULL, ended_at INTEGER,
         pairs_json TEXT, final_json TEXT);
+      CREATE TABLE IF NOT EXISTS session_avatars (
+        session_id TEXT NOT NULL, profile_id TEXT NOT NULL, animal TEXT NOT NULL, element TEXT NOT NULL,
+        offered_json TEXT NOT NULL, rerolled INTEGER NOT NULL, PRIMARY KEY (session_id, profile_id));
       CREATE TABLE IF NOT EXISTS deals (
         session_id TEXT NOT NULL, deal_number INTEGER NOT NULL, seed TEXT NOT NULL, dealer INTEGER NOT NULL,
         record_json TEXT NOT NULL, auction_json TEXT, tricks_json TEXT, hands_json TEXT, completed_at INTEGER NOT NULL,
@@ -94,9 +105,14 @@ export class TableRoom extends DurableObject<Env> {
 
   private load(): Stored {
     const row = this.sql.exec<{ v: string }>('SELECT v FROM kv WHERE k = ?', 'room').toArray()[0];
-    if (row) return JSON.parse(row.v) as Stored;
+    if (row) {
+      const stored = JSON.parse(row.v) as Stored;
+      // Saved before avatars existed (M3): a night already under way simply has none.
+      stored.avatars ??= newAvatarLobby(PROFILE_IDS, Math.random);
+      return stored;
+    }
     const presence = Object.fromEntries(PROFILE_IDS.map((id) => [id, { status: 'away', since: 0 }])) as Stored['presence'];
-    return { session: this.freshSession(), seq: 0, timers: [], presence, persistedDeals: 0 };
+    return { session: this.freshSession(), seq: 0, timers: [], presence, persistedDeals: 0, avatars: newAvatarLobby(PROFILE_IDS, Math.random) };
   }
 
   private freshSession(): SessionState {
@@ -251,6 +267,18 @@ export class TableRoom extends DurableObject<Env> {
       }
       this.data.session = this.freshSession();
       this.data.persistedDeals = 0;
+      const last = Object.fromEntries(PROFILE_IDS.map((id) => [id, this.data.avatars.picks[id]?.avatar?.animal]));
+      this.data.avatars = newAvatarLobby(PROFILE_IDS, Math.random, last);
+      return this.commit(this.maybeStartNight());
+    }
+
+    if (message.type === 'avatar') {
+      if (this.data.session.phase !== 'lobby') {
+        return send(ws, { type: 'error', code: 'NIGHT_STARTED', message: 'Avatars are picked before the night starts.' });
+      }
+      const outcome = applyAvatarAction(this.data.avatars, profile, message.action, Math.random);
+      if (!outcome.ok) return send(ws, { type: 'error', code: outcome.error.code, message: outcome.error.message });
+      this.data.avatars = outcome.state;
       return this.commit(this.maybeStartNight());
     }
 
@@ -322,8 +350,17 @@ export class TableRoom extends DurableObject<Env> {
             run({ type: 'autoClose' });
           }
           break;
+        case 'surprise':
+          if (session.phase === 'lobby') {
+            for (const id of PROFILE_IDS) {
+              const out = applyAvatarAction(this.data.avatars, id, { type: 'surprise' }, Math.random);
+              if (out.ok) this.data.avatars = out.state;
+            }
+          }
+          break;
       }
     }
+    events.push(...this.maybeStartNight());
     await this.commit(events);
   }
 
@@ -346,6 +383,12 @@ export class TableRoom extends DurableObject<Env> {
     if (!wantConcession) timers = timers.filter((t) => t.kind !== 'concession');
     else if (!timers.some((t) => t.kind === 'concession')) timers.push({ kind: 'concession', at: now + CONCESSION_MS });
 
+    // S24: once the other three are here and locked in, the last one has 30 s before "Surprise me".
+    const allHere = PROFILE_IDS.every((id) => this.data.presence[id]!.status === 'connected');
+    const wantSurprise = session.phase === 'lobby' && allHere && lockedIn(this.data.avatars).length === PROFILE_IDS.length - 1;
+    if (!wantSurprise) timers = timers.filter((t) => t.kind !== 'surprise');
+    else if (!timers.some((t) => t.kind === 'surprise')) timers.push({ kind: 'surprise', at: now + SURPRISE_MS });
+
     for (const id of PROFILE_IDS) {
       const presence = this.data.presence[id]!;
       const want = IN_PROGRESS.has(session.phase) && presence.status === 'away';
@@ -364,11 +407,12 @@ export class TableRoom extends DurableObject<Env> {
 
   // ------------------------------------------------------------------ session flow
 
-  /** The night starts once all four are connected (S05). */
+  /** The night starts once all four are connected (S05) and have locked in an avatar (S24). */
   private maybeStartNight(): SessionEvent[] {
     const session = this.data.session;
     const allHere = PROFILE_IDS.every((id) => this.data.presence[id]!.status === 'connected');
-    if (session.phase !== 'lobby' || !allHere) return [];
+    const allPicked = lockedIn(this.data.avatars).length === PROFILE_IDS.length;
+    if (session.phase !== 'lobby' || !allHere || !allPicked) return [];
     const outcome = applySessionAction(session, { type: 'start' });
     if (!outcome.ok) return [];
     this.data.session = outcome.state;
@@ -397,6 +441,21 @@ export class TableRoom extends DurableObject<Env> {
     const id = session.config.seed;
     const now = Date.now();
     for (const event of events) {
+      if (event.type === 'captainDrawn') {
+        for (const id of PROFILE_IDS) {
+          const pick = this.data.avatars.picks[id];
+          if (!pick?.avatar) continue;
+          this.sql.exec(
+            'INSERT OR REPLACE INTO session_avatars (session_id, profile_id, animal, element, offered_json, rerolled) VALUES (?, ?, ?, ?, ?, ?)',
+            session.config.seed,
+            id,
+            pick.avatar.animal,
+            pick.avatar.element,
+            JSON.stringify(pick.offered),
+            pick.rerolled ? 1 : 0,
+          );
+        }
+      }
       if (event.type === 'partnerChosen') {
         this.sql.exec(
           'INSERT OR IGNORE INTO sessions (id, started_at, pairs_json) VALUES (?, ?, ?)',
@@ -446,11 +505,22 @@ export class TableRoom extends DurableObject<Env> {
       clinchDeadline: timer('clinch'),
       concessionDeadline: timer('concession'),
       serverTime: Date.now(),
+      avatarReady: Object.fromEntries(PROFILE_IDS.map((id) => [id, !!this.data.avatars.picks[id]?.avatar])),
+      // Choices stay hidden until everyone flips together at the start of the night.
+      avatars: this.data.session.phase === 'lobby' ? null : avatarsOf(this.data.avatars),
+      surpriseAt: timer('surprise'),
     };
   }
 
   private stateMessage(profile: ProfileId, events: readonly PublicEvent[]): ServerMessage {
-    return { type: 'state', seq: this.data.seq, view: tableView(this.data.session, profile), room: this.roomInfo(), events };
+    return {
+      type: 'state',
+      seq: this.data.seq,
+      view: tableView(this.data.session, profile),
+      room: this.roomInfo(),
+      events,
+      myAvatar: this.data.avatars.picks[profile] ?? null,
+    };
   }
 
   private broadcast(events: readonly SessionEvent[]): void {

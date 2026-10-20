@@ -23,3 +23,17 @@ Fresh **presentation** every night without touching the rules (P1). This replace
 - [ ] Adding a theme = adding one data file plus assets. No component code changes.
 - [ ] Every theme passes the automated contrast check.
 - [ ] Assets for each theme are ≤ 400 KB and load lazily after the roll.
+
+## Ryan's picks (M3 input, 2026-10-20)
+Keep the four suggested looks, but tie them to the countries that matter to the four of you (Singapore, Germany, Indonesia, Japan), plus "Your Place". Proposed launch set (Ryan to confirm on the real table):
+
+| Theme | Country | Look |
+|---|---|---|
+| **The Clubhouse** | home | Green felt, brass lamp light, cream cards. The default and first night's theme. |
+| **Marina Riviera** | 🇸🇬 Singapore | Riviera, retuned: a sunset over the bay in coral and teal, with orchid accents. |
+| **Shibuya Neon** | 🇯🇵 Japan | Neon Parlor at night: magenta and cyan glow, a rain-slick sheen, koi accents. |
+| **Berlin Midnight** | 🇩🇪 Germany | Midnight Jazz in a Berlin bar: navy, brass, smoky gradients, vinyl crackle. |
+| **Bali Batik** | 🇮🇩 Indonesia | Teak wood and batik-pattern felt, frangipani, a gamelan-bell sound variant. |
+| ★ **Manila Sleepover** | 🇵🇭 Your Place | Bridge on a bed at a college sleepover in Manila: cards on a bedsheet, pillows, string lights. The rarest roll. |
+
+**UI polish:** Ryan wants the bidding box, the menu and the lobby improved. Because themes restyle every screen anyway, that pass rides with the themes PR (M3 part 2) rather than waiting for a later module.
