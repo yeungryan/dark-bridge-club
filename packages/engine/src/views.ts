@@ -1,6 +1,6 @@
 import { declarerTarget, defenderTarget, legalCalls, type AuctionCall } from './auction';
 import { seatToAct, type Clinch, type DealPhase, type DealResult, type PendingConcession } from './deal';
-import { legalPlays, type CompletedTrick, type PlayedCard } from './play';
+import { legalPlays, trumpSuit, type CompletedTrick, type PlayedCard } from './play';
 import { perSeat } from './seats';
 import { seatOf, type NightResult, type PairId, type ProfileId, type SessionPhase, type SessionState } from './session';
 import type { Call, Card, Contract, PerSeat, Seat } from './types';
@@ -26,6 +26,8 @@ export interface DealView {
   readonly lastTrick: CompletedTrick | null;
   readonly tricksPlayed: number;
   readonly tricksWon: { readonly declarers: number; readonly defenders: number };
+  /** Tricks so far won by a trump card (public: everyone saw them played). Drives "first trump" (S16). */
+  readonly trumpTricksWon: number;
   readonly clinch: Clinch | null;
   readonly playingOn: boolean;
   readonly concession: PendingConcession | null;
@@ -95,6 +97,7 @@ function dealView(state: SessionState, mySeat: Seat | null): DealView {
     lastTrick: deal.tricks[deal.tricks.length - 1] ?? null,
     tricksPlayed: deal.tricks.length,
     tricksWon: deal.tricksWon,
+    trumpTricksWon: contract ? deal.tricks.filter((t) => t.winningCard.suit === trumpSuit(contract.strain)).length : 0,
     clinch: deal.clinch,
     playingOn: deal.playingOn,
     concession: deal.concession,

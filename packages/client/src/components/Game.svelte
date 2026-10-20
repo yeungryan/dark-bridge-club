@@ -13,9 +13,11 @@
   import PauseBanner from './PauseBanner.svelte';
   import Table from './Table.svelte';
 
-  let { onSignedOut }: { onSignedOut: () => void } = $props();
+  // `link`: the practice table passes its own in-browser table; otherwise we connect to the server.
+  let { onSignedOut, link }: { onSignedOut: () => void; link?: Connection } = $props();
 
-  const conn = new Connection();
+  // svelte-ignore state_referenced_locally
+  const conn = link ?? new Connection();
   director.attach(conn);
   const stopBot = options.bot ? startAutopilot(conn) : null;
   onDestroy(() => stopBot?.());

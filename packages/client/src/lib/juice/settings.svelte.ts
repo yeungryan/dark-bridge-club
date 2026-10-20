@@ -5,9 +5,12 @@ import { SPEED } from './timing';
 //  - effects: full = everything; reduced = fades only (no shake, particles or movement); off = static.
 //  - speed:   fast plays every animation at 0.6×.
 //  - volume / muted: sound effects only; there is no music.
+//  - haptics: phone vibration on big moments (Android; iPhone browsers can't vibrate).
+//  - playStyle: drag a card to the table (default), or tap it twice.
 
 export type EffectsMode = 'full' | 'reduced' | 'off';
 export type SpeedMode = keyof typeof SPEED;
+export type PlayStyle = 'drag' | 'tap';
 
 const KEY = `dark.${options.slot}.settings`;
 
@@ -16,7 +19,13 @@ interface Saved {
   speed: SpeedMode;
   volume: number;
   muted: boolean;
+  haptics: boolean;
+  playStyle: PlayStyle;
+  /** Saved-settings version; v1 (M2) had a much quieter default volume. */
+  v: number;
 }
+
+const VERSION = 2;
 
 function prefersReducedMotion(): boolean {
   try {
@@ -27,9 +36,20 @@ function prefersReducedMotion(): boolean {
 }
 
 function load(): Saved {
-  const defaults: Saved = { effects: prefersReducedMotion() ? 'reduced' : 'full', speed: 'normal', volume: 0.4, muted: false };
+  const defaults: Saved = {
+    effects: prefersReducedMotion() ? 'reduced' : 'full',
+    speed: 'normal',
+    volume: 0.7,
+    muted: false,
+    haptics: true,
+    playStyle: 'drag',
+    v: VERSION,
+  };
   try {
-    return { ...defaults, ...(JSON.parse(localStorage.getItem(KEY) ?? '{}') as Partial<Saved>) };
+    const saved = JSON.parse(localStorage.getItem(KEY) ?? '{}') as Partial<Saved>;
+    // M2 saved its too-quiet default on every phone; start those over at the new volume.
+    if ((saved.v ?? 1) < VERSION) delete saved.volume;
+    return { ...defaults, ...saved, v: VERSION };
   } catch {
     return defaults;
   }
@@ -38,14 +58,25 @@ function load(): Saved {
 class Settings {
   effects = $state<EffectsMode>('full');
   speed = $state<SpeedMode>('normal');
-  volume = $state(0.4);
+  volume = $state(0.7);
   muted = $state(false);
+  haptics = $state(true);
+  playStyle = $state<PlayStyle>('drag');
 
   constructor() {
-    Object.assign(this, load());
+    const { v: _v, ...saved } = load();
+    Object.assign(this, saved);
     $effect.root(() => {
       $effect(() => {
-        const saved: Saved = { effects: this.effects, speed: this.speed, volume: this.volume, muted: this.muted };
+        const saved: Saved = {
+          effects: this.effects,
+          speed: this.speed,
+          volume: this.volume,
+          muted: this.muted,
+          haptics: this.haptics,
+          playStyle: this.playStyle,
+          v: VERSION,
+        };
         try {
           localStorage.setItem(KEY, JSON.stringify(saved));
         } catch {

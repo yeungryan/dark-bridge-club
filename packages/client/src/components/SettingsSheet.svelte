@@ -1,5 +1,6 @@
 <script lang="ts">
-  import { settings, type EffectsMode, type SpeedMode } from '../lib/juice/settings.svelte';
+  import { buzz } from '../lib/juice/haptics';
+  import { settings, type EffectsMode, type PlayStyle, type SpeedMode } from '../lib/juice/settings.svelte';
   import { sound } from '../lib/juice/sound';
 
   // Spec S16/S17: each player's own feel settings. Also used for the M2 side-by-side check
@@ -11,6 +12,11 @@
     { value: 'reduced', label: 'Calm' },
     { value: 'off', label: 'Off' },
   ];
+  const styles: { value: PlayStyle; label: string }[] = [
+    { value: 'drag', label: 'Drag up' },
+    { value: 'tap', label: 'Tap twice' },
+  ];
+  const canVibrate = typeof navigator !== 'undefined' && 'vibrate' in navigator;
   const speeds: { value: SpeedMode; label: string }[] = [
     { value: 'normal', label: 'Normal' },
     { value: 'fast', label: 'Fast' },
@@ -35,6 +41,28 @@
     </div>
   </div>
   <div class="row">
+    <span>Play cards</span>
+    <div class="seg">
+      {#each styles as p (p.value)}
+        <button class:on={settings.playStyle === p.value} onclick={() => (settings.playStyle = p.value)}>{p.label}</button>
+      {/each}
+    </div>
+  </div>
+  <div class="row">
+    <span>Vibrate</span>
+    <div class="seg">
+      <button
+        class:on={settings.haptics}
+        disabled={!canVibrate}
+        onclick={() => {
+          settings.haptics = true;
+          buzz('sold');
+        }}>On</button
+      >
+      <button class:on={!settings.haptics} disabled={!canVibrate} onclick={() => (settings.haptics = false)}>Off</button>
+    </div>
+  </div>
+  <div class="row">
     <span>Sound</span>
     <div class="sound">
       <input
@@ -45,12 +73,15 @@
         aria-label="Volume"
         bind:value={settings.volume}
         disabled={settings.muted}
-        onchange={() => sound.pip(4)}
+        onchange={() => sound.sold()}
       />
       <button class:on={settings.muted} onclick={() => (settings.muted = !settings.muted)}>{settings.muted ? 'Muted' : 'Mute'}</button>
     </div>
   </div>
-  <p class="muted">Calm keeps fades but no shaking or bursts. These settings are only for this device.</p>
+  <p class="muted">
+    Calm keeps fades but no shaking or bursts.{#if !canVibrate} This browser can't vibrate (iPhones can't).{/if} On an iPhone,
+    the silent switch also mutes game sounds. These settings are only for this device.
+  </p>
   <button class="ghost" onclick={onClose}>Close</button>
 </div>
 
@@ -62,7 +93,7 @@
   }
   .row {
     display: grid;
-    grid-template-columns: 4.5em 1fr;
+    grid-template-columns: 5.5em 1fr;
     align-items: center;
     gap: 8px;
   }

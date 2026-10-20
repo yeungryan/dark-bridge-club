@@ -10,6 +10,17 @@ export const TIMING = {
   cardFly: 220,
   /** How long a finished trick stays visible before sweeping to the winner. */
   trickHold: 650,
+  /** Extra hold for the first trump trick of a deal, so its banner can land. */
+  firstTrumpHold: 450,
+  /** A trick's glowing orb travelling to its side's score bar. */
+  orbFly: 380,
+  /** The last-trick peek: each card's flip, and the gap between cards. */
+  peekFlip: 260,
+  peekGap: 70,
+  /** A dragged card must travel this far up (px), or be flicked this fast (px/ms), to be played. */
+  dragToPlay: 70,
+  flickSpeed: 0.6,
+  flickMin: 24,
   /** The sweep of a finished trick toward its winner. */
   sweep: 280,
   /** A meter pip filling. */
@@ -36,12 +47,14 @@ export interface Response {
 }
 
 /** The intensity table (S16). Level 5 values grow further with drama (see clinchDrama). */
+//   1 a card or a call · 2 takes the lead, trick won · 3 trump-in, trump trick, contract set
+//   4 first trump trick, decider · 5 the clinch (and the end of the night)
 export const RESPONSES: Record<Level, Response> = {
   0: { hitPauseMs: 0, shakePx: 0, particles: 0 },
   1: { hitPauseMs: 0, shakePx: 0, particles: 0 },
-  2: { hitPauseMs: 0, shakePx: 0, particles: 0 },
-  3: { hitPauseMs: 60, shakePx: 0, particles: 0 },
-  4: { hitPauseMs: 0, shakePx: 0, particles: 0 },
+  2: { hitPauseMs: 0, shakePx: 2, particles: 12 },
+  3: { hitPauseMs: 40, shakePx: 4, particles: 26 },
+  4: { hitPauseMs: 90, shakePx: 6, particles: 45 },
   5: { hitPauseMs: 120, shakePx: 7, particles: 60 },
 };
 

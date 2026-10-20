@@ -16,3 +16,10 @@ Fast, misclick-proof bidding that turns the auction into a small story.
 - [ ] A typical bid takes ≤ 2 taps after deciding.
 - [ ] An insufficient bid can't be made at all.
 - [ ] The full auction can always be read again in one tap.
+
+## Changes after the first M2 playtest
+- **Levels and suits are always both showing,** and can be chosen in either order (some players think suit first). If a pick would make an illegal pair, the other half is dropped, and pairs that can't go together are shown faint.
+- Feel:
+  - Buttons press in with a soft click and a tiny vibration.
+  - Bids stamp into the auction harder as the level rises; passes slide in quietly.
+  - After a bid, passes count down on the top bid: "Going once…", "Going twice…". The third pass is **"Sold!"**: a gavel knock and chord, the contract slams into the header with sparks, and the score pips deal out.

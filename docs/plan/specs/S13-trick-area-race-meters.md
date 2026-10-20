@@ -25,3 +25,9 @@ This is the heart of the game's tension. It's the bridge version of Balatro's cl
 - [ ] At any moment, any player can answer "what's the contract and how close are we?" in under 1 second.
 - [ ] The meters always match the engine's trick counts exactly.
 - [ ] The last-trick peek works during the pause and while the clinch prompt is showing.
+
+## Changes after the first M2 playtest
+- The card currently winning the trick wears a gold ring and pops when it takes the lead; beaten cards dim. Anyone could work this out, so it's shown.
+- A finished trick sweeps into the winner's name badge. A glowing orb then flies from there to that side's score bar, and the pip pops when it arrives (with a rising bell).
+- Trump flourishes: a big translucent trump symbol flashes behind the trick on a trump-in and on a trick won by a trump. The **first trick of a deal won by a trump** gets a "First trump!" banner and a longer hold. "Won by a trump" means the winning card is a trump, including trump leads (decided by Ryan).
+- **Last-trick peek:** the four cards flip up one by one in play order, then the winner lights up; tap to turn them back down. The button always takes its space, so the trick area doesn't jump after trick 1.
