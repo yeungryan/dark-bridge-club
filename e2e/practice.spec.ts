@@ -135,14 +135,30 @@ test('avatars: two animals, tap one and an element to lock in; the crest shows w
 
 test('seats stay put from bidding to play; the newest set on the scoreboard opens the last set', async ({ page }) => {
   await page.goto('/practice.html');
-  const topSeat = page.locator('.seat-top .seat');
+  // Each seat's avatar (the badge itself is centred, so its edge moves a hair with the role
+  // tag or the card count; the avatar is what has to stay put).
+  const seats = ['top', 'left', 'right', 'me'];
+  // My seat's 4px lift on my turn is the turn cue, not layout: hold it still while measuring.
+  const centres = async () => {
+    const still = await page.addStyleTag({ content: '.seat { transform: none !important; transition: none !important; }' });
+    const out = await Promise.all(
+      seats.map(async (s) => {
+        const b = (await page.locator(`.seat-${s} .seat .token`).boundingBox())!;
+        return { x: b.x + b.width / 2, y: b.y + b.height / 2 };
+      }),
+    );
+    await still.evaluate((el) => el.remove());
+    return out;
+  };
   await playUntil(page, () => page.locator('.box .strains').isVisible());
-  const bidding = (await topSeat.boundingBox())!;
+  const bidding = await centres();
   // Play on until a set has been won.
   await playUntil(page, () => page.locator('.pip.latest').isVisible());
-  const playing = (await topSeat.boundingBox())!;
-  expect(Math.abs(playing.y - bidding.y)).toBeLessThanOrEqual(1);
-  expect(Math.abs(playing.x - bidding.x)).toBeLessThanOrEqual(1);
+  const playing = await centres();
+  playing.forEach((p, i) => {
+    expect(Math.abs(p.x - bidding[i].x), `${seats[i]} x`).toBeLessThanOrEqual(1);
+    expect(Math.abs(p.y - bidding[i].y), `${seats[i]} y`).toBeLessThanOrEqual(1);
+  });
   // No separate "Last set" button any more: the latest silhouette is the way in.
   await expect(page.getByRole('button', { name: /^Last set$/ })).toHaveCount(0);
   await page.locator('.pip.latest').tap();

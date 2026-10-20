@@ -52,8 +52,9 @@
     gap: 3px;
     min-width: 64px;
     max-width: 88px;
-    /* Room for the role tag even before there is one, so seats don't shift when it appears. */
-    min-height: 88px;
+    /* A fixed height with room for the role tag before there is one, so no seat shifts when
+       it appears (the side seats are centred on the table, so any growth would move them). */
+    height: 96px;
     align-content: start;
     padding: 6px 2px 4px;
     text-align: center;
