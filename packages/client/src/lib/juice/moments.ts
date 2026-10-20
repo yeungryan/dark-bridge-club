@@ -200,3 +200,15 @@ export function momentsFrom(events: readonly PublicEvent[], view: TableView): Mo
   }
   return moments;
 }
+
+/**
+ * How many sets in a row the side that won the latest set has now won (1 = just this one).
+ * Partners sit opposite, so a side is the seats with the same parity.
+ */
+export function streak(winners: readonly Seat[]): number {
+  const last = winners.at(-1);
+  if (last === undefined) return 0;
+  let n = 0;
+  for (let i = winners.length - 1; i >= 0 && winners[i]! % 2 === last % 2; i--) n++;
+  return n;
+}

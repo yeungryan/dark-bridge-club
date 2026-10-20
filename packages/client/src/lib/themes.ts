@@ -15,8 +15,8 @@ export interface Theme {
   greeting: string;
   /** CSS custom properties applied to :root. */
   tokens: Record<string, string>;
-  /** Sound variant: pitch multiplier, and an optional inharmonic bell partial (gamelan-like). */
-  sound: { pitch: number; bellPartial?: number };
+  /** Sound variant: pitch multiplier, an optional inharmonic bell partial (gamelan-like), and the room's reverb. */
+  sound: { pitch: number; bellPartial?: number; room?: SoundRoom };
 }
 
 const base = {
@@ -36,7 +36,7 @@ export const THEMES: Record<ThemeId, Theme> = {
     name: 'The Clubhouse',
     place: '♠ Home',
     greeting: 'Evening, gentlemen. The lamp is on.',
-    sound: { pitch: 1 },
+    sound: { pitch: 1, room: { decay: 0.6, bright: 0.45, wet: 1 } }, // wood-panelled card room
     tokens: {
       ...base,
       '--surface': "radial-gradient(circle at 50% 40%, #1d5a3e 0%, #154630 70%, #113a28 100%)",
@@ -70,7 +70,7 @@ export const THEMES: Record<ThemeId, Theme> = {
     name: 'Marina Riviera',
     place: '🇸🇬 Singapore',
     greeting: 'Sunset over the bay. Orchids on the table.',
-    sound: { pitch: 1.04 },
+    sound: { pitch: 1.04, room: { decay: 0.7, bright: 0.65, wet: 0.95 } }, // airy terrace
     tokens: {
       ...base,
       '--surface': "radial-gradient(circle at 50% 30%, rgba(122, 214, 230, 0.35), rgba(16, 80, 99, 0.65) 70%)",
@@ -103,7 +103,7 @@ export const THEMES: Record<ThemeId, Theme> = {
     name: 'Shibuya Neon',
     place: '🇯🇵 Japan',
     greeting: 'Rain on the glass, neon on the felt.',
-    sound: { pitch: 1.07 },
+    sound: { pitch: 1.07, room: { decay: 0.85, bright: 0.85, wet: 1.15 } }, // bright neon arcade
     tokens: {
       ...base,
       '--surface': "radial-gradient(circle, rgba(34, 22, 63, 0.85) 0%, rgba(19, 11, 38, 0.9) 100%)",
@@ -137,7 +137,7 @@ export const THEMES: Record<ThemeId, Theme> = {
     name: 'Berlin Midnight',
     place: '🇩🇪 Germany',
     greeting: 'A late set in a Berlin bar. Brass and smoke.',
-    sound: { pitch: 0.94 },
+    sound: { pitch: 0.94, room: { decay: 0.8, bright: 0.5, wet: 1.1 } }, // concrete club
     tokens: {
       ...base,
       '--surface': "radial-gradient(circle at 50% 35%, #2a1d14 0%, #1c130d 80%)",
@@ -171,7 +171,7 @@ export const THEMES: Record<ThemeId, Theme> = {
     name: 'Bali Batik',
     place: '🇮🇩 Indonesia',
     greeting: 'Teak table, frangipani, gamelan in the distance.',
-    sound: { pitch: 1, bellPartial: 2.76 },
+    sound: { pitch: 1, bellPartial: 2.76, room: { decay: 0.75, bright: 0.6, wet: 1.1 } }, // open pavilion
     tokens: {
       ...base,
       '--surface': "radial-gradient(circle, rgba(242, 193, 78, 0.12) 0 6px, transparent 7px) 0 0 / 22px 22px, radial-gradient(circle at 50% 40%, #5a3820 0%, #432914 80%)",
@@ -204,7 +204,7 @@ export const THEMES: Record<ThemeId, Theme> = {
     name: 'Manila Sleepover',
     place: '🇵🇭 Your place',
     greeting: 'Lights low, cards on the bed. Like college.',
-    sound: { pitch: 0.97 },
+    sound: { pitch: 0.97, room: { decay: 0.4, bright: 0.5, wet: 0.6 } }, // small, dry bedroom
     tokens: {
       ...base,
       '--surface': "repeating-linear-gradient(0deg, rgba(255, 255, 255, 0.07) 0 8px, transparent 8px 22px), repeating-linear-gradient(90deg, rgba(120, 140, 255, 0.1) 0 8px, transparent 8px 22px), #2b3466",
@@ -250,10 +250,22 @@ export function applyTheme(id: ThemeId | undefined | null): void {
   document.querySelector('meta[name="theme-color"]')?.setAttribute('content', theme.tokens['--felt']!);
   soundTheme.pitch = theme.sound.pitch;
   soundTheme.bellPartial = theme.sound.bellPartial ?? 2;
+  soundTheme.room = theme.sound.room ?? DEFAULT_ROOM;
 }
 
+/**
+ * A theme's room (reverb), kept small and short for phone speakers on a call:
+ * decay = seconds to fall 60 dB, bright = 0 (warm, damped) … 1 (sparkly), wet = reverb level multiplier.
+ */
+export interface SoundRoom {
+  decay: number;
+  bright: number;
+  wet: number;
+}
+const DEFAULT_ROOM: SoundRoom = { decay: 0.6, bright: 0.45, wet: 1 };
+
 /** Read by sound.ts: the current theme's sound variant. */
-export const soundTheme = { pitch: 1, bellPartial: 2 };
+export const soundTheme: { pitch: number; bellPartial: number; room: SoundRoom } = { pitch: 1, bellPartial: 2, room: DEFAULT_ROOM };
 
 /** A CSS colour token's current value (for canvas effects, which can't read CSS). */
 export function cssColor(name: string, fallback: string): string {

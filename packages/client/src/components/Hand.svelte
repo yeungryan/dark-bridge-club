@@ -67,7 +67,7 @@
     const isRaised = raised !== null && sameCard(raised, card);
     if (!isRaised) {
       raised = card;
-      sound.tap();
+      sound.pickup();
       buzz('tap');
       return;
     }
@@ -83,9 +83,26 @@
 
   // Drag: the card follows your finger. Let go far enough up (or flick it) to play it.
   const MOVE_SLOP = 8;
-  let drag = $state<{ card: CardT; x: number; y: number; dx: number; dy: number; moved: boolean; vy: number; t: number; lastY: number } | null>(
-    null,
-  );
+  let drag = $state<{
+    card: CardT;
+    x: number;
+    y: number;
+    dx: number;
+    dy: number;
+    moved: boolean;
+    vx: number;
+    vy: number;
+    t: number;
+    lastX: number;
+    lastY: number;
+  } | null>(null);
+  /**
+   * The held card leans in 3D (Balatro): toward your finger when you press it, and into the
+   * direction of travel while you drag it, catching the light as it turns.
+   */
+  let lean = $state<{ card: CardT; rx: number; ry: number } | null>(null);
+  const clamp = (v: number, m: number) => Math.max(-m, Math.min(m, v));
+  const leanOf = (card: CardT) => (settings.motion && lean !== null && sameCard(lean.card, card) ? lean : null);
 
   const playable = (card: CardT) => myTurnToPlay && isLegal(card);
   const willPlay = (d: NonNullable<typeof drag>) =>
@@ -97,8 +114,14 @@
 
   function down(e: PointerEvent, card: CardT) {
     if (!e.isPrimary || pending) return;
-    drag = { card, x: e.clientX, y: e.clientY, dx: 0, dy: 0, moved: false, vy: 0, t: e.timeStamp, lastY: e.clientY };
-    (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
+    drag = { card, x: e.clientX, y: e.clientY, dx: 0, dy: 0, moved: false, vx: 0, vy: 0, t: e.timeStamp, lastX: e.clientX, lastY: e.clientY };
+    const el = e.currentTarget as HTMLElement;
+    el.setPointerCapture(e.pointerId);
+    // Pressing a card tips it toward your finger, like pressing on a real card's edge.
+    const r = (el.querySelector('.card') ?? el).getBoundingClientRect();
+    const px = clamp(((e.clientX - r.left) / r.width) * 2 - 1, 1);
+    const py = clamp(((e.clientY - r.top) / r.height) * 2 - 1, 1);
+    lean = { card, rx: -py * 12, ry: px * 14 };
   }
 
   function move(e: PointerEvent) {
@@ -106,11 +129,15 @@
     const dx = e.clientX - drag.x;
     const dy = e.clientY - drag.y;
     if (Math.abs(dx) > MOVE_SLOP || Math.abs(dy) > MOVE_SLOP) drag.moved = true;
-    // Upward speed, smoothed (px/ms; negative is up).
+    // Speed, smoothed (px/ms; negative vy is up).
     const dt = Math.max(1, e.timeStamp - drag.t);
+    drag.vx = drag.vx * 0.4 + ((e.clientX - drag.lastX) / dt) * 0.6;
     drag.vy = drag.vy * 0.4 + ((e.clientY - drag.lastY) / dt) * 0.6;
     drag.t = e.timeStamp;
+    drag.lastX = e.clientX;
     drag.lastY = e.clientY;
+    // Dragged, it leans into its motion: moving right turns its face right, moving up tips it back.
+    if (drag.moved) lean = { card: drag.card, rx: clamp(-drag.vy * 22, 24), ry: clamp(drag.vx * 26, 24) };
     // A card you can play follows your finger freely; others resist.
     const free = playable(drag.card);
     drag.dx = free ? dx : dx * 0.15;
@@ -121,6 +148,7 @@
     if (!drag) return;
     const d = drag;
     drag = null;
+    lean = null;
     const el = e.currentTarget as HTMLElement;
     if (!d.moved) return tap(d.card, el);
     if (willPlay(d)) {
@@ -138,6 +166,7 @@
   {#each deal.hand as card, i (card.suit + card.rank)}
     {@const up = raised !== null && sameCard(raised, card)}
     {@const held = dragging(card)}
+    {@const l = leanOf(card)}
     <button
       class="slot"
       class:up
@@ -150,7 +179,10 @@
       onpointerdown={(e) => down(e, card)}
       onpointermove={move}
       onpointerup={release}
-      onpointercancel={() => (drag = null)}
+      onpointercancel={() => {
+        drag = null;
+        lean = null;
+      }}
       onclick={(e) => {
         // Keyboard activation only; pointer taps are handled in release().
         if (e.detail === 0) tap(card, e.currentTarget as HTMLElement, true);
@@ -158,10 +190,17 @@
       aria-label={up ? (tapStyle ? 'Tap again to play' : 'Swipe up to play') : 'Select card'}
     >
       {#key up ? nudge : 0}
-        <div class="lift" class:nudge={up && nudge > 0}>
-          <div class="glowable" class:playable={myTurnToPlay && isLegal(card) && !up && !held}>
-        <Card {card} width={cardWidth} dim={myTurnToPlay && !isLegal(card)} highlight={up || held} />
-      </div>
+        <div class="lift" class:nudge={up && nudge > 0} class:idle={up && !l && !held}>
+          <div
+            class="glowable"
+            class:playable={myTurnToPlay && isLegal(card) && !up && !held}
+            class:leaning={l !== null}
+            style="--rx: {l?.rx ?? 0}deg; --ry: {l?.ry ?? 0}deg; --sx: {50 + (l?.ry ?? 0) * 2.2}%; --sy: {50 - (l?.rx ?? 0) * 2.2}%"
+          >
+            <Card {card} width={cardWidth} dim={myTurnToPlay && !isLegal(card)} highlight={up || held} />
+            <!-- A sheen of light that slides across the face as the card turns. -->
+            {#if l}<span class="sheen" aria-hidden="true"></span>{/if}
+          </div>
         </div>
       {/key}
     </button>
@@ -194,6 +233,8 @@
     min-height: 0;
     touch-action: none;
     transition: transform calc(180ms * var(--speed)) cubic-bezier(0.34, 1.56, 0.64, 1);
+    transition-duration: calc(var(--spring-pop-ms, 180ms) * var(--speed));
+    transition-timing-function: var(--spring-pop, cubic-bezier(0.34, 1.56, 0.64, 1));
   }
   /* A lifted card rises, grows, and sits on top of its neighbours. */
   .slot.up {
@@ -230,10 +271,41 @@
       transform: translateY(-16px);
     }
   }
+  /* A raised card sways gently while it waits, as if held in a hand. */
+  :global(.fx-full) .lift.idle {
+    animation: sway calc(2600ms * var(--speed)) ease-in-out infinite;
+  }
+  @keyframes sway {
+    0%,
+    100% {
+      transform: perspective(600px) rotateZ(-1.2deg) rotateY(-6deg) translateY(0);
+    }
+    50% {
+      transform: perspective(600px) rotateZ(1.2deg) rotateY(6deg) translateY(-2px);
+    }
+  }
   /* Your turn: the cards you can play give off a soft glow. */
   .glowable {
+    position: relative;
     border-radius: 6px;
-    transition: box-shadow calc(250ms * var(--speed));
+    transform: perspective(600px) rotateX(var(--rx)) rotateY(var(--ry));
+    transition:
+      box-shadow calc(250ms * var(--speed)),
+      transform calc(var(--spring-wobble-ms, 300ms) * var(--speed)) var(--spring-wobble, ease-out);
+  }
+  /* While held, the lean follows the finger quickly; letting go springs it back with a wobble. */
+  .glowable.leaning {
+    transition:
+      box-shadow calc(250ms * var(--speed)),
+      transform 90ms ease-out;
+  }
+  .sheen {
+    position: absolute;
+    inset: 0;
+    border-radius: 6px;
+    pointer-events: none;
+    background: radial-gradient(circle at var(--sx) var(--sy), rgba(255, 255, 255, 0.55), rgba(255, 255, 255, 0.12) 30%, transparent 60%);
+    mix-blend-mode: soft-light;
   }
   .glowable.playable {
     box-shadow: 0 -2px 12px var(--accent-glow);

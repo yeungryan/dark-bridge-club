@@ -45,6 +45,8 @@
   .call {
     position: relative;
     animation: stamp-in calc(260ms * var(--speed)) cubic-bezier(0.3, 1.6, 0.6, 1) backwards;
+    animation-duration: calc(var(--spring-pop-ms, 320ms) * var(--speed));
+    animation-timing-function: var(--spring-pop, cubic-bezier(0.3, 1.6, 0.6, 1));
     display: inline-flex;
     flex-direction: column;
     align-items: center;
@@ -59,10 +61,6 @@
     0% {
       transform: scale(calc(1.3 + var(--weight) * 0.12)) translateY(-8px) rotate(calc(var(--weight) * -1deg));
       opacity: 0;
-    }
-    70% {
-      transform: scale(0.94);
-      opacity: 1;
     }
   }
   .call.pass {
