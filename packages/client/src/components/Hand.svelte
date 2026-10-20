@@ -13,9 +13,12 @@
   let wobble = $state<CardT | null>(null);
   let width = $state(360);
 
-  // A new state from the server (e.g. after playing) clears the selection.
+  // Clear the raised card only when the hand itself changes (a card was played or a new deal
+  // started). Other server updates (presence, someone else's move) must not drop it, or the
+  // second tap would just raise the card again.
+  const handKey = $derived(deal.hand.map((c) => c.suit + c.rank).join(','));
   $effect(() => {
-    void deal.hand.length;
+    void handKey;
     raised = null;
   });
 

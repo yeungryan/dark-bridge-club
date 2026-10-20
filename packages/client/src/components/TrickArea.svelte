@@ -11,6 +11,9 @@
   const view = $derived(conn.view!);
   const deal = $derived(view.deal!);
   let held = $state<CompletedTrick | null>(null);
+  // The area shrinks to fit between the side badges; cards scale with it so they never overlap them.
+  let size = $state(180);
+  const cardWidth = $derived(Math.max(34, Math.min(52, Math.floor(size * 0.29))));
   let lastSeen = 0;
 
   $effect(() => {
@@ -31,10 +34,10 @@
   const winner = $derived(deal.currentTrick && deal.currentTrick.cards.length > 0 ? null : (held?.winner ?? null));
 </script>
 
-<div class="area">
+<div class="area" bind:clientWidth={size}>
   {#each showing as play (play.seat)}
     <div class="spot {spotOf(play.seat, view.mySeat!)}">
-      <Card card={play.card} width={46} highlight={winner === play.seat} />
+      <Card card={play.card} width={cardWidth} highlight={winner === play.seat} />
     </div>
   {/each}
 </div>
@@ -42,8 +45,9 @@
 <style>
   .area {
     position: relative;
-    width: min(180px, 46vw);
-    height: min(180px, 46vw);
+    width: 100%;
+    max-width: 190px;
+    aspect-ratio: 1 / 1;
     margin: 0 auto;
   }
   .spot {

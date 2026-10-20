@@ -154,7 +154,7 @@
   }
   .middle {
     display: grid;
-    grid-template-columns: minmax(0, auto) minmax(0, 1fr) minmax(0, auto);
+    grid-template-columns: 88px minmax(0, 1fr) 88px;
     grid-template-rows: auto 1fr;
     grid-template-areas: 'top top top' 'left center right';
     align-items: center;
