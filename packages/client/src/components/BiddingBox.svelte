@@ -69,42 +69,53 @@
   const promptKey = $derived(selected ? JSON.stringify(selected) : `${level}:${strain}`);
 </script>
 
+<!-- Two rows (Ryan: compact enough to sit under the table): levels and Pass, then suits and
+     the confirm button. The line on top says what you're bidding over, or what's still missing. -->
 <div class="box">
   <p class="context">
-    {#if topBid}To beat: <strong><CallText call={topBid.call} /></strong> by {topBy}{:else}No bids yet: you can open{/if}
+    {#if level !== null && strain === null && !passing}{level}… now a suit
+    {:else if strain !== null && level === null}…<CallText {strain} /> now a level
+    {:else if topBid}To beat: <strong><CallText call={topBid.call} /></strong> by {topBy}
+    {:else}No bids yet: you can open{/if}
   </p>
-  <div class="row levels">
-    {#each LEVELS as l (l)}
-      <button
-        class="tile"
-        class:on={level === l}
-        class:faint={strain !== null && !isLegalBid(l, strain)}
-        disabled={!levelOpen(l)}
-        onclick={() => pickLevel(l)}>{l}</button
-      >
-    {/each}
-  </div>
-  <div class="row strains">
-    {#each STRAINS as s (s)}
-      <button
-        class="tile strain"
-        class:on={strain === s}
-                class:nt={s === 'NT'}
-        class:faint={level !== null && !isLegalBid(level, s)}
-        disabled={!strainOpen(s)}
-        onclick={() => pickStrain(s)}><CallText strain={s} red="var(--card-red)" /></button
-      >
-    {/each}
-  </div>
-  <div class="row actions">
+  <div class="row r1">
+    <div class="levels">
+      {#each LEVELS as l (l)}
+        <button
+          class="tile"
+          class:on={level === l}
+          class:faint={strain !== null && !isLegalBid(l, strain)}
+          disabled={!levelOpen(l)}
+          onclick={() => pickLevel(l)}>{l}</button
+        >
+      {/each}
+    </div>
     <button class="tile pass" class:on={passing} onclick={pickPass}>Pass</button>
+  </div>
+  <div class="row r2">
+    <div class="strains">
+      {#each STRAINS as s (s)}
+        <button
+          class="tile strain"
+          class:on={strain === s}
+          class:nt={s === 'NT'}
+          class:faint={level !== null && !isLegalBid(level, s)}
+          disabled={!strainOpen(s)}
+          onclick={() => pickStrain(s)}><CallText strain={s} red="var(--card-red)" /></button
+        >
+      {/each}
+    </div>
     {#key promptKey}
-      <button class="primary confirm" class:ready={selected !== null} disabled={!selected} onclick={confirm}>
-        {#if selected?.type === 'pass'}Confirm Pass
+      <button
+        class="primary confirm"
+        class:ready={selected !== null}
+        disabled={!selected}
+        aria-label={selected?.type === 'pass' ? 'Confirm Pass' : undefined}
+        onclick={confirm}
+      >
+        {#if selected?.type === 'pass'}Pass ✓
         {:else if selected}Bid <CallText call={selected} red="currentColor" />
-        {:else if level !== null}{level}… now a suit
-        {:else if strain !== null}…<CallText {strain} red="currentColor" /> now a level
-        {:else}Choose a call{/if}
+        {:else}Bid{/if}
       </button>
     {/key}
   </div>
@@ -113,36 +124,45 @@
 <style>
   .box {
     display: grid;
-    gap: 7px;
-    padding: 8px 10px 10px;
+    gap: 6px;
+    padding: 5px 8px 9px;
     border-radius: 16px;
     background: var(--panel);
     border: 1px solid var(--line);
     box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.05);
   }
   .context {
-    margin: 0 0 1px;
+    margin: 0;
     text-align: center;
-    font-size: 13px;
+    font-size: 12.5px;
+    line-height: 16px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
     color: var(--ink-dim);
   }
-  .row {
+  .row,
+  .levels,
+  .strains {
     display: grid;
-    gap: 6px;
+    gap: 5px;
+  }
+  .r1 {
+    grid-template-columns: minmax(0, 1fr) 64px;
+  }
+  .r2 {
+    grid-template-columns: minmax(0, 1fr) 104px;
   }
   .levels {
-    grid-template-columns: repeat(7, 1fr);
+    grid-template-columns: repeat(7, minmax(0, 1fr));
   }
   .strains {
-    grid-template-columns: repeat(5, 1fr);
-  }
-  .actions {
-    grid-template-columns: 1fr 2fr;
+    grid-template-columns: repeat(5, minmax(0, 1fr));
   }
   /* Little bidding cards: card-coloured, with a bit of thickness, and they press in. */
   .tile {
     padding: 0;
-    min-height: 40px;
+    min-height: 38px;
     border: 0;
     border-radius: 8px;
     background: var(--card);
@@ -192,14 +212,16 @@
   .tile.pass {
     background: #2f7d4f;
     color: #ffffff;
-    font-size: 1.05rem;
+    font-size: 0.9rem;
     letter-spacing: 0.04em;
     text-transform: uppercase;
   }
   .confirm {
-    min-height: 44px;
+    min-height: 38px;
+    padding: 0 6px;
     font-weight: 750;
-    font-size: 1.05rem;
+    font-size: 1rem;
+    white-space: nowrap;
   }
   :global(.fx-full) .confirm.ready {
     animation: ready calc(260ms * var(--speed)) cubic-bezier(0.3, 1.6, 0.6, 1);

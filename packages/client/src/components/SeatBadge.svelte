@@ -48,12 +48,13 @@
 <style>
   .seat {
     display: inline-grid;
+    /* One column that can't be widened by its text, so the avatar never drifts sideways. */
+    grid-template-columns: minmax(0, 1fr);
     justify-items: center;
     gap: 3px;
-    min-width: 64px;
-    max-width: 88px;
-    /* A fixed height with room for the role tag before there is one, so no seat shifts when
-       it appears (the side seats are centred on the table, so any growth would move them). */
+    /* A fixed size, with room for the role tag before there is one, so no seat shifts when
+       the tag appears or the card count changes (fonts differ from phone to phone). */
+    width: 84px;
     height: 96px;
     align-content: start;
     padding: 6px 2px 4px;
@@ -119,6 +120,10 @@
     transform: translateY(-4px);
   }
   .role {
+    max-width: 100%;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
     font-size: 9.5px;
     font-weight: 700;
     letter-spacing: 0.12em;

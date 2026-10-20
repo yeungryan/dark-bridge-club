@@ -65,7 +65,7 @@ test('a bid can be chosen suit first, then level', async ({ page }) => {
   await playUntil(page, () => page.locator('.box .strains').isVisible());
   const strain = page.locator('.strains button:not([disabled])').last();
   await strain.tap();
-  await expect(page.locator('.confirm')).toContainText('now a level');
+  await expect(page.locator('.box .context')).toContainText('now a level');
   await page.locator('.levels button:not([disabled]):not(.faint)').first().tap();
   await expect(page.locator('.confirm')).toContainText(/^Bid \d/);
   const label = ((await page.locator('.confirm').textContent()) ?? '').replace('Bid ', '').trim();

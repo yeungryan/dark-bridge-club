@@ -120,14 +120,19 @@
 
   <section class="bottom">
     <Prompts {conn} />
-    {#if showAuction && deal.phase !== 'auction'}
-      <AuctionStrip {conn} />
-    {/if}
-    <!-- The contract and the race, where "X to play" used to be: the header stays clear for the theme. -->
-    <Scoreboard {conn} onPeek={() => (peek = !peek)} onAuction={() => (showAuction = !showAuction)} />
+    <!-- The contract and the race, where "X to play" used to be: the header stays clear for the theme.
+         Its slot is the same height in bidding and play, and the bidding box and the auction
+         float up from it over the empty felt, so the table never moves (Ryan). -->
+    <div class="board" class:covered={myTurnToCall}>
+      <Scoreboard {conn} onPeek={() => (peek = !peek)} onAuction={() => (showAuction = !showAuction)} />
+      {#if myTurnToCall}
+        <div class="float"><BiddingBox {conn} /></div>
+      {:else if showAuction && deal.phase !== 'auction'}
+        <div class="float above"><AuctionStrip {conn} /></div>
+      {/if}
+    </div>
     <!-- Whose turn is shown on the seats themselves (S10); this line is for screen readers. -->
     {#if view.phase === 'inDeal' && turnText}<p class="sr-only" aria-live="polite">{turnText}</p>{/if}
-    {#if myTurnToCall}<BiddingBox {conn} />{/if}
     {#if view.phase === 'inDeal'}<Hand {conn} />{/if}
   </section>
 </div>
@@ -228,25 +233,24 @@
   :global(.fx-reduced) .pname {
     animation-name: fade-in !important;
   }
-  /* Anchored to the top, not centred: the seats stay exactly where they are when the bidding
-     box opens or closes below. */
+  /* Centred in the space between the header and the scoreboard, leaving room above for the
+     theme's scene. That space is the same in bidding and play, so the seats never move. */
   .middle {
     display: grid;
-    align-content: start;
+    align-content: center;
     min-height: 0;
-    padding-top: 2px;
   }
   /* A 3×3 grid around the table: one gap everywhere, so every seat is equally far from it. */
   .cluster {
     display: grid;
-    /* The table shrinks on short phones so everything still fits with the bidding box open. */
-    grid-template-columns: auto min(176px, calc(100vw - 236px), max(112px, calc(100dvh - 604px))) auto;
+    /* The table shrinks on short phones, so the bidding box never covers my seat. */
+    grid-template-columns: auto min(180px, calc(100vw - 236px), max(112px, calc(100dvh - 571px))) auto;
     grid-template-areas:
       '. top .'
       'left center right'
       '. me .';
     /* Clear of the table's rim, the same on all four sides. */
-    gap: 16px;
+    gap: 18px;
     justify-content: center;
     align-items: center;
   }
@@ -300,5 +304,33 @@
     display: grid;
     gap: 6px;
     justify-items: stretch;
+  }
+  /* The scoreboard's slot: one fixed height in every phase. */
+  .board {
+    position: relative;
+    display: grid;
+    align-items: center;
+    height: 64px;
+  }
+  /* Under the bidding box, the dealer line would show through: hide it. */
+  .board.covered > :global(.bug) {
+    visibility: hidden;
+  }
+  /* The bidding box sits on the slot and rises over the empty felt below my seat. */
+  .float {
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 5;
+  }
+  /* The auction, during play, opens above the scoreboard so the race stays visible. */
+  .float.above {
+    bottom: calc(100% + 6px);
+    padding: 8px;
+    border-radius: 12px;
+    background: var(--sheet);
+    border: 1px solid var(--line);
+    box-shadow: 0 6px 20px rgba(0, 0, 0, 0.45);
   }
 </style>
