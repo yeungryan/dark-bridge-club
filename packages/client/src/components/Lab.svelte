@@ -4,6 +4,15 @@
   import { sound } from '../lib/juice/sound';
   import { elementBurst, flash, glyphs, puff, ribbons, ring, sparks, type Element } from '../lib/juice/particles';
   import Particles from './Particles.svelte';
+  import { applyTheme, THEMES } from '../lib/themes';
+  import type { ThemeId } from '@dark/engine';
+
+  let previewing = $state<ThemeId>('clubhouse');
+  function preview(id: ThemeId) {
+    previewing = id;
+    applyTheme(id);
+    sound.sold();
+  }
 
   // lab.html: every game sound (and vibration) on its own button, to check volume on your
   // phone, ideally while on a Messenger call: can the others hear it? Is anything annoying?
@@ -116,6 +125,17 @@
 
   <button class="primary demo" onclick={demo}>Play a whole trick</button>
 
+  <h2>Themes</h2>
+  <p class="muted small">Tap to restyle this page (sounds retune too), or practise a whole night in one.</p>
+  <div class="grid">
+    {#each Object.values(THEMES) as t (t.id)}
+      <div class="theme" class:on={previewing === t.id}>
+        <button onclick={() => preview(t.id)}>{t.name}<br /><small>{t.place}</small></button>
+        <a href="practice.html?theme={t.id}">practise →</a>
+      </div>
+    {/each}
+  </div>
+
   <h2>Effects</h2>
   <p class="muted small">Each moment has its own look; confetti is only for winning the night. Effects must be on Full.</p>
   <div class="grid">
@@ -162,6 +182,21 @@
     font-size: 1rem;
     margin: 18px 0 8px;
     color: var(--accent);
+  }
+  .theme {
+    display: grid;
+    gap: 2px;
+    text-align: center;
+  }
+  .theme button {
+    min-height: 56px;
+    width: 100%;
+  }
+  .theme.on button {
+    outline: 3px solid var(--accent);
+  }
+  .theme a {
+    font-size: 13px;
   }
   .small {
     font-size: 13px;

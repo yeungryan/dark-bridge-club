@@ -6,6 +6,7 @@
   import { settings } from '../lib/juice/settings.svelte';
   import { TIMING } from '../lib/juice/timing';
   import { forgetLogin, options } from '../lib/session';
+  import { applyTheme } from '../lib/themes';
   import Lobby from './Lobby.svelte';
   import NightEnded from './NightEnded.svelte';
   import PartnerPick from './PartnerPick.svelte';
@@ -32,6 +33,11 @@
       setTimeout(() => (flaring = false), settings.ms(TIMING.ceremony.crestFlare));
     }
     lastPhase = phase;
+  });
+
+  // Tonight's theme (S18) restyles every screen.
+  $effect(() => {
+    if (conn.room) applyTheme(conn.room.theme);
   });
 
   $effect(() => {

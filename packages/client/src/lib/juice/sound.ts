@@ -1,3 +1,4 @@
+import { soundTheme } from '../themes';
 import { settings } from './settings.svelte';
 
 // Spec S17: call-friendly sound, generated with Web Audio (nothing to download).
@@ -65,8 +66,10 @@ function tone(freq: number, dur: number, gain: number, opts: ToneOptions = {}): 
   const osc = a.ctx.createOscillator();
   const g = a.ctx.createGain();
   osc.type = opts.type ?? 'sine';
-  osc.frequency.setValueAtTime(freq, t);
-  if (opts.glideTo) osc.frequency.exponentialRampToValueAtTime(opts.glideTo, t + dur);
+  // Each theme tunes the whole set slightly (S18): same sounds, different room.
+  const p = soundTheme.pitch;
+  osc.frequency.setValueAtTime(freq * p, t);
+  if (opts.glideTo) osc.frequency.exponentialRampToValueAtTime(opts.glideTo * p, t + dur);
   g.gain.setValueAtTime(0.0001, t);
   g.gain.exponentialRampToValueAtTime(gain, t + 0.005);
   g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
@@ -129,7 +132,8 @@ function play(name: string, make: () => void): void {
 function bell(step: number, dur: number, gain: number, delay = 0): void {
   const f = 1047 * 2 ** (step / 12);
   tone(f, dur, gain, { delay });
-  tone(f * 2, dur * 0.6, gain * 0.25, { delay });
+  // Usually an octave; Bali Batik uses an inharmonic partial for a gamelan-like ring.
+  tone(f * soundTheme.bellPartial, dur * 0.6, gain * (soundTheme.bellPartial === 2 ? 0.25 : 0.4), { delay });
 }
 
 /** A short wooden/card knock: the body of most of our sounds. */

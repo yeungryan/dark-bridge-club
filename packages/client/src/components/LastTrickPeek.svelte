@@ -65,7 +65,7 @@
   }
   .winner {
     border-radius: 6px;
-    box-shadow: 0 0 14px 2px rgba(232, 194, 90, 0.7);
+    box-shadow: 0 0 14px 2px var(--accent-glow);
   }
   :global(.fx-full) .winner {
     animation: lit calc(300ms * var(--speed)) cubic-bezier(0.3, 1.6, 0.6, 1);

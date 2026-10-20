@@ -147,7 +147,7 @@
   }
   .area.armed::before {
     border-color: var(--accent);
-    box-shadow: inset 0 0 30px rgba(232, 194, 90, 0.25), 0 0 18px rgba(232, 194, 90, 0.35);
+    box-shadow: inset 0 0 30px var(--accent-glow), 0 0 18px var(--accent-glow);
   }
   .spot {
     position: absolute;
@@ -201,7 +201,7 @@
     }
   }
   .face.win {
-    box-shadow: 0 0 16px 2px rgba(232, 194, 90, 0.75);
+    box-shadow: 0 0 16px 2px var(--accent-glow);
   }
   .face.trumpwin {
     box-shadow: 0 0 20px 4px rgba(197, 139, 255, 0.85);
@@ -214,7 +214,7 @@
     top: 50%;
     font-size: 110px;
     line-height: 1;
-    color: #c58bff;
+    color: var(--trump);
     pointer-events: none;
     opacity: 0;
     transform: translate(-50%, -50%);

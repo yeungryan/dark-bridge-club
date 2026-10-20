@@ -4,6 +4,7 @@
   import { pairNames, profileOf } from '../lib/format';
   import { pairAvatarNames } from '../lib/avatars';
   import { ribbons } from '../lib/juice/particles';
+  import { cssColor } from '../lib/themes';
   import { settings } from '../lib/juice/settings.svelte';
   import CountUp from './CountUp.svelte';
 
@@ -24,7 +25,7 @@
     const t = setTimeout(() => {
       const r = banner?.getBoundingClientRect();
       // The only real confetti in the game: paper ribbons for winning the night.
-      if (r) ribbons(r.left + r.width / 2, r.top + r.height / 2, 120, [...colors, '#e8c25a', '#fbf8f0']);
+      if (r) ribbons(r.left + r.width / 2, r.top + r.height / 2, 120, [...colors, cssColor('--accent', '#e8c25a'), cssColor('--card', '#fbf8f0')]);
     }, settings.ms(BANNER_LANDS));
     return () => clearTimeout(t);
   });

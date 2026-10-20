@@ -5,7 +5,11 @@ import {
   avatarsOf,
   lockedIn,
   newAvatarLobby,
+  FIRST_BAG,
+  rollTheme,
   type AvatarLobby,
+  type ThemeBag,
+  type ThemeId,
   newSession,
   randomSeed,
   tableView,
@@ -55,6 +59,9 @@ interface Stored {
   persistedDeals: number;
   /** Tonight's avatar picks (S24). Cosmetic; kept apart from the rules engine's state. */
   avatars: AvatarLobby;
+  /** Tonight's theme and the bag it was drawn from (S18). */
+  theme: ThemeId;
+  themeBag: ThemeBag;
 }
 
 const IN_PROGRESS = new Set(['partnerPick', 'inDeal', 'betweenDeals']);
@@ -101,6 +108,9 @@ export class TableRoom extends DurableObject<Env> {
         record_json TEXT NOT NULL, auction_json TEXT, tricks_json TEXT, hands_json TEXT, completed_at INTEGER NOT NULL,
         PRIMARY KEY (session_id, deal_number));
     `);
+    // Added in M3 (S18): which theme each night had, for history.
+    const columns = this.sql.exec<{ name: string }>('PRAGMA table_info(sessions)').toArray().map((c) => c.name);
+    if (!columns.includes('theme')) this.sql.exec('ALTER TABLE sessions ADD COLUMN theme TEXT');
   }
 
   private load(): Stored {
@@ -109,10 +119,23 @@ export class TableRoom extends DurableObject<Env> {
       const stored = JSON.parse(row.v) as Stored;
       // Saved before avatars existed (M3): a night already under way simply has none.
       stored.avatars ??= newAvatarLobby(PROFILE_IDS, Math.random);
+      // Saved before themes existed: tonight is the Clubhouse, and the next roll starts the bag.
+      stored.theme ??= 'clubhouse';
+      stored.themeBag ??= { remaining: [] };
       return stored;
     }
     const presence = Object.fromEntries(PROFILE_IDS.map((id) => [id, { status: 'away', since: 0 }])) as Stored['presence'];
-    return { session: this.freshSession(), seq: 0, timers: [], presence, persistedDeals: 0, avatars: newAvatarLobby(PROFILE_IDS, Math.random) };
+    const roll = rollTheme(FIRST_BAG, Math.random);
+    return {
+      session: this.freshSession(),
+      seq: 0,
+      timers: [],
+      presence,
+      persistedDeals: 0,
+      avatars: newAvatarLobby(PROFILE_IDS, Math.random),
+      theme: roll.theme,
+      themeBag: roll.bag,
+    };
   }
 
   private freshSession(): SessionState {
@@ -269,6 +292,9 @@ export class TableRoom extends DurableObject<Env> {
       this.data.persistedDeals = 0;
       const last = Object.fromEntries(PROFILE_IDS.map((id) => [id, this.data.avatars.picks[id]?.avatar?.animal]));
       this.data.avatars = newAvatarLobby(PROFILE_IDS, Math.random, last);
+      const roll = rollTheme(this.data.themeBag, Math.random, this.data.theme);
+      this.data.theme = roll.theme;
+      this.data.themeBag = roll.bag;
       return this.commit(this.maybeStartNight());
     }
 
@@ -458,10 +484,11 @@ export class TableRoom extends DurableObject<Env> {
       }
       if (event.type === 'partnerChosen') {
         this.sql.exec(
-          'INSERT OR IGNORE INTO sessions (id, started_at, pairs_json) VALUES (?, ?, ?)',
+          'INSERT OR IGNORE INTO sessions (id, started_at, pairs_json, theme) VALUES (?, ?, ?, ?)',
           id,
           now,
           JSON.stringify(event.pairs),
+          this.data.theme,
         );
       }
       if (event.type === 'nightEnded') {
@@ -509,6 +536,7 @@ export class TableRoom extends DurableObject<Env> {
       // Choices stay hidden until everyone flips together at the start of the night.
       avatars: this.data.session.phase === 'lobby' ? null : avatarsOf(this.data.avatars),
       surpriseAt: timer('surprise'),
+      theme: this.data.theme,
     };
   }
 

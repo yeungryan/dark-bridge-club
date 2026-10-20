@@ -103,6 +103,6 @@
     color: var(--ink-dim);
   }
   .red {
-    color: #ff8a7a;
+    color: var(--red-on-felt);
   }
 </style>

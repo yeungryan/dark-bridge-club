@@ -11,7 +11,7 @@
   import RaceMeters from './RaceMeters.svelte';
   import Reveal from './Reveal.svelte';
   import SeatBadge from './SeatBadge.svelte';
-  import SettingsSheet from './SettingsSheet.svelte';
+  import MenuSheet from './MenuSheet.svelte';
   import { avatarOf, emojiOf, pairAvatarNames } from '../lib/avatars';
   import { director } from '../lib/juice/director.svelte';
   import { settings } from '../lib/juice/settings.svelte';
@@ -42,7 +42,6 @@
       setTimeout(() => (showPairs = false), settings.ms(TIMING.ceremony.pairSnap));
     }
   });
-  let settingsOpen = $state(false);
   let peek = $state(false);
   let showAuction = $state(false);
 
@@ -82,16 +81,7 @@
   </header>
 
   {#if menuOpen}
-    <div class="menu-sheet panel">
-      <button disabled={!canConcede} onclick={() => { conn.intent({ type: 'deal', action: { type: 'proposeConcession' } }); menuOpen = false; }}>
-        Concede the rest of this deal
-      </button>
-      <button disabled={view.endNightVotes.includes(view.me)} onclick={() => { conn.intent({ type: 'voteEndNight' }); menuOpen = false; }}>
-        End the night
-      </button>
-      <button onclick={() => { settingsOpen = true; menuOpen = false; }}>Settings (effects, speed, sound)</button>
-      <button class="ghost" onclick={() => (menuOpen = false)}>Close</button>
-    </div>
+    <MenuSheet {conn} {canConcede} onClose={() => (menuOpen = false)} />
   {/if}
   {#if showPairs}
     <div class="pairs" aria-live="polite">
@@ -107,9 +97,6 @@
         {#if pairAvatarNames(conn, pair)}<div class="pavatars">{pairAvatarNames(conn, pair)}</div>{/if}
       {/each}
     </div>
-  {/if}
-  {#if settingsOpen}
-    <div class="settings-wrap"><SettingsSheet onClose={() => (settingsOpen = false)} /></div>
   {/if}
 
   {#if view.phase === 'betweenDeals' && deal.result && !director.revealHold}
@@ -249,7 +236,7 @@
     justify-items: center;
     padding: 16px;
     border-radius: var(--radius);
-    background: rgba(8, 20, 14, 0.9);
+    background: var(--sheet);
     border: 1px solid var(--line);
     z-index: 19;
     pointer-events: none;
@@ -292,22 +279,6 @@
   }
   :global(.fx-reduced) .pname {
     animation-name: fade-in !important;
-  }
-  .settings-wrap {
-    position: absolute;
-    top: 60px;
-    left: 16px;
-    right: 16px;
-    z-index: 21;
-  }
-  .menu-sheet {
-    position: absolute;
-    top: 60px;
-    left: 16px;
-    display: grid;
-    gap: 8px;
-    z-index: 20;
-    background: #0b1f16;
   }
   .middle {
     display: grid;

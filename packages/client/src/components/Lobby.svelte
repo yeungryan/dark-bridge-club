@@ -4,6 +4,7 @@
   import { tick } from 'svelte';
   import { avatarOf, ELEMENT_RING } from '../lib/avatars';
   import { elementBurst } from '../lib/juice/particles';
+  import { themeOf } from '../lib/themes';
   import { sound } from '../lib/juice/sound';
   import AvatarPicker from './AvatarPicker.svelte';
 
@@ -11,6 +12,7 @@
   let { conn, complete = false }: { conn: Connection; complete?: boolean } = $props();
 
   const room = $derived(conn.room!);
+  const theme = $derived(themeOf(room.theme));
   const here = $derived(room.profiles.filter((p) => room.presence[p.id] === 'connected').length);
 
   // A rising note each time a letter lights; a flourish when the crest is complete.
@@ -44,6 +46,11 @@
     {/each}
   </div>
   <h2>Bridge Club</h2>
+  <p class="tonight">
+    <span class="label">Tonight's table</span>
+    <strong class="display">{theme.name}</strong> <span class="place">{theme.place}</span>
+    <em>{theme.greeting}</em>
+  </p>
   {#if complete && room.avatars}
     <div class="reveal">
       {#each room.profiles as p, i (p.id)}
@@ -57,13 +64,14 @@
     </div>
   {:else}
     <AvatarPicker {conn} />
-    <ul>
+    <ul class="players">
       {#each room.profiles as p (p.id)}
         {@const isHere = room.presence[p.id] === 'connected'}
-        <li>
-          <span class="dot" style="--c: {p.color}" class:on={isHere}></span>
-          {p.name}
-          <span class="muted">{!isHere ? 'not here yet' : room.avatarReady?.[p.id] ? 'ready ✓' : 'picking…'}</span>
+        {@const ready = isHere && room.avatarReady?.[p.id]}
+        <li class:here={isHere} class:ready style="--c: {p.color}">
+          <span class="dot" class:on={isHere}></span>
+          <span class="name">{p.name}</span>
+          <span class="status">{!isHere ? 'not here yet' : ready ? 'ready ✓' : 'picking…'}</span>
         </li>
       {/each}
     </ul>
@@ -164,20 +172,70 @@
     color: var(--ink-dim);
     margin: 10px 0 24px;
   }
-  ul {
+  .tonight {
+    display: grid;
+    gap: 2px;
+    margin: -14px 0 18px;
+  }
+  .tonight .label {
+    font-size: 11px;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+    color: var(--ink-dim);
+  }
+  .tonight strong {
+    font-size: 1.25rem;
+    color: var(--accent);
+  }
+  .tonight .place {
+    font-size: 13px;
+    color: var(--ink-dim);
+  }
+  .tonight em {
+    font-size: 14px;
+    color: var(--ink-dim);
+  }
+  .players {
     list-style: none;
     padding: 0;
-    text-align: left;
+    margin: 0 0 12px;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
   }
-  li {
-    padding: 8px 0;
-    border-bottom: 1px solid var(--line);
-    display: flex;
-    gap: 10px;
+  .players li {
+    display: grid;
+    grid-template-columns: auto 1fr;
+    grid-template-rows: auto auto;
+    column-gap: 8px;
     align-items: center;
+    text-align: left;
+    padding: 8px 10px;
+    border-radius: 12px;
+    background: var(--panel);
+    border: 1px solid var(--line);
+    opacity: 0.65;
+    transition: opacity calc(200ms * var(--speed)), border-color calc(200ms * var(--speed));
   }
-  li .muted {
-    margin-left: auto;
+  .players li.here {
+    opacity: 1;
+  }
+  .players li.ready {
+    border-color: var(--c);
+  }
+  .players .dot {
+    grid-row: span 2;
+  }
+  .players .name {
+    font-weight: 650;
+    color: var(--c);
+  }
+  .players .status {
+    font-size: 12px;
+    color: var(--ink-dim);
+  }
+  .players li.ready .status {
+    color: var(--good);
   }
   .extras {
     font-size: 14px;

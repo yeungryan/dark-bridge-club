@@ -207,7 +207,7 @@
     filter: drop-shadow(0 10px 14px rgba(0, 0, 0, 0.5));
   }
   .slot.armed {
-    filter: drop-shadow(0 0 14px rgba(232, 194, 90, 0.9));
+    filter: drop-shadow(0 0 14px var(--accent-glow));
   }
   .slot.gone {
     visibility: hidden;
@@ -232,7 +232,7 @@
     position: fixed;
     z-index: 40;
     pointer-events: none;
-    filter: drop-shadow(0 0 14px rgba(232, 194, 90, 0.9));
+    filter: drop-shadow(0 0 14px var(--accent-glow));
   }
   .hint {
     text-align: center;

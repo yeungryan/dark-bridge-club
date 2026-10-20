@@ -6,6 +6,7 @@
   import { director } from '../lib/juice/director.svelte';
   import { avatarAtSeat, emojiOf } from '../lib/avatars';
   import { ring, sparks } from '../lib/juice/particles';
+  import { cssColor } from '../lib/themes';
   import { settings } from '../lib/juice/settings.svelte';
   import { sound } from '../lib/juice/sound';
   import { TIMING } from '../lib/juice/timing';
@@ -60,8 +61,9 @@
           // A big contract: a golden ring and sparks (confetti is kept for winning the night).
           const x = r.left + r.width / 2;
           const y = r.top + r.height / 2;
-          ring(x, y, '#e8c25a', { radius: 120, width: 4, frames: 28 });
-          sparks(x, y, 30, [...colors, '#e8c25a']);
+          const gold = cssColor('--accent', '#e8c25a');
+          ring(x, y, gold, { radius: 120, width: 4, frames: 28 });
+          sparks(x, y, 30, [...colors, gold]);
         }, settings.ms(TIMING.reveal.banner)),
       );
     }
@@ -175,7 +177,7 @@
     height: 5.2em;
     margin-top: 2px;
     border-radius: 6px;
-    background: repeating-linear-gradient(45deg, #1d4a36 0 6px, #16392a 6px 12px);
+    background: var(--card-back);
     border: 1px solid var(--line);
   }
   .move .flipped .face {
@@ -222,7 +224,7 @@
     color: var(--c);
   }
   .red {
-    color: #ff8a7a;
+    color: var(--red-on-felt);
   }
   .ready {
     display: flex;

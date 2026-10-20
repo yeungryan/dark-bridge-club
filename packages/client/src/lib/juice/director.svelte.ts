@@ -1,5 +1,6 @@
 import { suitSymbol, trumpSuit, type Seat, type Side, type Suit } from '@dark/engine';
 import { elementAtSeat } from '../avatars';
+import { cssColor } from '../themes';
 import type { Connection } from '../connection.svelte';
 import { buzz } from './haptics';
 import { intensityOf, momentsFrom, type Moment } from './moments';
@@ -33,6 +34,8 @@ type Link = Pick<Connection, 'view' | 'room' | 'onEvents'>;
 
 /** Trump moments share one colour, so "that was a trump" reads at a glance. */
 const TRUMP_COLOR = '#c58bff';
+/** The theme's accent (gold in the Clubhouse). */
+const gold = () => cssColor('--accent', '#e8c25a');
 
 class Director {
   /** Current shake offset in px, applied to the trick area only. */
@@ -144,7 +147,7 @@ class Director {
             sound.lead(m.lead);
             if (m.mine) buzz('lead');
             this.shake(RESPONSES[level].shakePx);
-            if (at) sparks(at.x, at.y, RESPONSES[level].particles, [this.colorOf(conn, m.seat), '#e8c25a', '#fff6d8']);
+            if (at) sparks(at.x, at.y, RESPONSES[level].particles, [this.colorOf(conn, m.seat), gold(), '#fff6d8']);
           }
         }, fly);
         break;
@@ -206,7 +209,7 @@ class Director {
         this.flashSuit(conn, true);
         if (at) {
           ring(at.x, at.y, TRUMP_COLOR, { radius: 120, width: 5, frames: 30 });
-          glyphs(at.x, at.y, RESPONSES[level].particles / 2, this.trumpGlyph(conn), [TRUMP_COLOR, '#f2e6ff', '#e8c25a'], 'shower');
+          glyphs(at.x, at.y, RESPONSES[level].particles / 2, this.trumpGlyph(conn), [TRUMP_COLOR, '#f2e6ff', gold()], 'shower');
         }
       } else if (kind === 'trump') {
         // Won with a trump: the suit drifts up off the card.
@@ -221,7 +224,7 @@ class Director {
         // The everyday win (13 a deal): just a warm glow. The sweep and orb carry the rest.
         sound.lead(2);
         if (mineWon) buzz('trick');
-        if (at) flash(at.x, at.y, '#e8c25a', 42);
+        if (at) flash(at.x, at.y, gold(), 42);
       }
     }, fly + pause);
 
@@ -277,8 +280,8 @@ class Director {
       const element = elementAtSeat(conn, m.seat);
       if (element) elementBurst(element, at.x, at.y, m.drama);
       else {
-        ring(at.x, at.y, '#e8c25a', { radius: 110, width: 5 });
-        sparks(at.x, at.y, base.particles, [this.colorOf(conn, m.seat), '#e8c25a', '#fbf8f0']);
+        ring(at.x, at.y, gold(), { radius: 110, width: 5 });
+        sparks(at.x, at.y, base.particles, [this.colorOf(conn, m.seat), gold(), '#fbf8f0']);
       }
     }, pause);
   }
@@ -297,7 +300,7 @@ class Director {
 
   private colorOf(conn: Link, seat: Seat): string {
     const id = conn.view?.seating?.[seat];
-    return conn.room?.profiles.find((p) => p.id === id)?.color ?? '#e8c25a';
+    return conn.room?.profiles.find((p) => p.id === id)?.color ?? gold();
   }
 
   private centerOf(selector: string): { x: number; y: number } | null {

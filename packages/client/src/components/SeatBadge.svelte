@@ -57,7 +57,7 @@
   }
   .badge.turn {
     border-color: var(--accent);
-    box-shadow: 0 0 12px rgba(232, 194, 90, 0.5);
+    box-shadow: 0 0 12px var(--accent-glow);
   }
   .name {
     font-weight: 650;
