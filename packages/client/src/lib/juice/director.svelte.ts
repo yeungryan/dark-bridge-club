@@ -48,6 +48,11 @@ class Director {
   flash = $state<{ suit: Suit; big: boolean; id: number } | null>(null);
   /** A stamped word across the trick area ("First trump!"). */
   banner = $state<{ text: string; id: number } | null>(null);
+  /**
+   * The deal was settled on its very last trick, so it ended in the same moment: keep the
+   * table up long enough for the clinch to land before the reveal takes over.
+   */
+  revealHold = $state(false);
   /** Score-bar pips shown, per side, while a trick's orb is still flying there. */
   pipHold = $state<Record<Side, number | null>>({ declarers: null, defenders: null });
 
@@ -65,6 +70,11 @@ class Director {
       const moments = momentsFrom(events, conn.view);
       const settles = moments.some((m) => m.kind === 'clinch');
       for (const m of moments) this.respond(m, conn, settles);
+      if (settles && moments.some((m) => m.kind === 'dealComplete') && settings.animated) {
+        this.revealHold = true;
+        const fly = settings.ms(TIMING.cardFly);
+        setTimeout(() => (this.revealHold = false), fly + settings.ms(RESPONSES[5].hitPauseMs + TIMING.clinchShow));
+      }
       if (events.some((e) => e.type === 'dealStarted')) this.reset();
     });
   }

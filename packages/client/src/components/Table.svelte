@@ -110,7 +110,7 @@
     <div class="settings-wrap"><SettingsSheet onClose={() => (settingsOpen = false)} /></div>
   {/if}
 
-  {#if view.phase === 'betweenDeals' && deal.result}
+  {#if view.phase === 'betweenDeals' && deal.result && !director.revealHold}
     <section class="reveal-area"><Reveal {conn} /></section>
   {:else}
     <section class="middle">

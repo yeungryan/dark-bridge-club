@@ -73,6 +73,8 @@ test('a bid can be chosen suit first, then level', async ({ page }) => {
 test('a whole deal by dragging cards: every beat of the feel ladder fires', async ({ page }) => {
   await page.goto('/practice.html');
   await playUntil(page, () => page.getByRole('button', { name: 'Next deal' }).isVisible());
+  // A deal settled on its last trick ends at once; its clinch lands a moment later.
+  await expect.poll(async () => (await sounds(page)).includes('clinch'), { timeout: 3000 }).toBe(true);
   const heard = new Set(await sounds(page));
   for (const beat of ['card', 'pass', 'sold', 'sweep', 'pip', 'clinch']) expect(heard, `missing "${beat}"`).toContain(beat);
   // Somebody took the lead of a trick at some point in 13 tricks... unless every trick was won by its opening lead.
