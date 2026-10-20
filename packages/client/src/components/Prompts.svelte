@@ -26,7 +26,7 @@
 
 {#if deal?.phase === 'awaitingPlayOn' && deal.clinch}
   <div class="prompt panel clinch-prompt" role="status">
-    <strong>{deal.clinch.side === 'declarers' ? 'Contract made!' : 'Contract set!'}</strong>
+    <strong>{deal.clinch.side === 'declarers' ? 'Contract made!' : 'Contract defeated!'}</strong>
     <span>Play the rest out?</span>
     <div class="bar"><i style="width: {fraction(room.clinchDeadline, 5000) * 100}%"></i></div>
     <button class="primary" onclick={() => conn.intent({ type: 'deal', action: { type: 'playOn' } })}>
@@ -38,7 +38,7 @@
 {#if concession}
   <div class="prompt panel" role="status">
     {#if iAnswer}
-      <strong>{nameAtSeat(view, profiles, concession.by)} wants to concede the rest of this deal.</strong>
+      <strong>{nameAtSeat(view, profiles, concession.by)} wants to concede the rest of this game.</strong>
       <span class="muted">If you agree, the other side wins this deal.</span>
       <div class="bar"><i style="width: {fraction(room.concessionDeadline, 15000) * 100}%"></i></div>
       <div class="two">
@@ -56,7 +56,7 @@
 {#if view.endNightVotes.length > 0}
   <div class="prompt panel" role="status">
     <strong>End the night? {view.endNightVotes.length}/4 agreed</strong>
-    <span class="muted">Everyone has to agree. An unfinished deal won't count.</span>
+    <span class="muted">Everyone has to agree. An unfinished game won't count.</span>
     <div class="two">
       <button onclick={() => conn.intent({ type: 'cancelEndNight' })}>Keep playing</button>
       {#if !votedEnd}<button class="primary" onclick={() => conn.intent({ type: 'voteEndNight' })}>Agree</button>{/if}

@@ -4,7 +4,7 @@ import { cssColor } from '../themes';
 import type { Connection } from '../connection.svelte';
 import { buzz } from './haptics';
 import { intensityOf, momentsFrom, type Moment } from './moments';
-import { comet, elementBurst, flash, glyphs, puff, ring, sparks } from './particles';
+import { comet, elementBurst, elementStrike, elementWin, flash, glyphs, puff, ring, sparks } from './particles';
 import { settings } from './settings.svelte';
 import { sound } from './sound';
 import { DRAMA_BOOST, RESPONSES, TIMING, type Level } from './timing';
@@ -201,30 +201,36 @@ class Director {
       this.trickFx = { ...this.trickFx!, phase: 'win' };
       const at = this.centerOf(`.area [data-seat="${m.winner}"]`);
       this.shake(RESPONSES[level].shakePx);
+      // The winner's element plays out on the winning card (S24): its everyday form (fireball,
+      // tornado, tsunami, rock smash) for a normal win; its sub-element (lightning, sound, ice,
+      // metal) for a win by trumping a different suit. No avatar: the plain versions.
+      const element = elementAtSeat(conn, m.winner);
+      const signature = (power: number) => {
+        if (!at) return;
+        if (!element) return m.trumpOver ? glyphs(at.x, at.y, 7, this.trumpGlyph(conn), [TRUMP_COLOR, '#f2e6ff'], 'rise') : flash(at.x, at.y, gold(), 42);
+        if (m.trumpOver) elementStrike(element, at.x, at.y, power);
+        else elementWin(element, at.x, at.y);
+      };
       if (kind === 'first') {
-        // The first trump trick: a big ring and a shower of the trump suit.
+        // The first trump set: the banner, a big ring and a shower of the trump suit, on top.
         sound.firstTrump();
         buzz('firstTrump');
         this.banner = { text: 'First trump!', id: ++this.fxId };
         this.flashSuit(conn, true);
+        signature(2);
         if (at) {
           ring(at.x, at.y, TRUMP_COLOR, { radius: 120, width: 5, frames: 30 });
-          glyphs(at.x, at.y, RESPONSES[level].particles / 2, this.trumpGlyph(conn), [TRUMP_COLOR, '#f2e6ff', gold()], 'shower');
+          glyphs(at.x, at.y, RESPONSES[level].particles / 3, this.trumpGlyph(conn), [TRUMP_COLOR, '#f2e6ff', gold()], 'shower');
         }
       } else if (kind === 'trump') {
-        // Won with a trump: the suit drifts up off the card.
         sound.trumpTrick();
         if (mineWon) buzz('trumpTrick');
         this.flashSuit(conn, true);
-        if (at) {
-          flash(at.x, at.y, TRUMP_COLOR, 46);
-          glyphs(at.x, at.y, 7, this.trumpGlyph(conn), [TRUMP_COLOR, '#f2e6ff'], 'rise');
-        }
+        signature(0);
       } else {
-        // The everyday win (13 a deal): just a warm glow. The sweep and orb carry the rest.
         sound.lead(2);
         if (mineWon) buzz('trick');
-        if (at) flash(at.x, at.y, gold(), 42);
+        signature(0);
       }
     }, fly + pause);
 

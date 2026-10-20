@@ -39,3 +39,20 @@ Keep the four suggested looks, but tie them to the countries that matter to the 
 **UI polish:** Ryan wants the bidding box, the menu and the lobby improved. Because themes restyle every screen anyway, that pass rides with the themes PR (M3 part 2) rather than waiting for a later module.
 - **Fonts:** each theme sets the player-name and card-rank fonts as well (Google Fonts, with system fallbacks): Clubhouse Playfair/Baskerville, Marina Poppins, Shibuya Orbitron/Space Mono, Berlin Bodoni, Bali Marcellus, Manila Patrick Hand/Nunito.
 - **Suits are drawn, not typed:** one SVG per suit at the digits' cap height, used on cards, in the bidding box, the auction, the header and the reveal, so they're the same size as the numbers on every phone.
+- **Wording (Ryan):** on screen, a trick is a **set** and a deal is a **game**. So a defeated contract says **"Defeated"**, never "set". The code and these specs keep the bridge terms.
+- **Character without clutter (round 3):**
+  - Each theme has a scene along the top of the screen, faded out before it reaches the cards:
+    - Clubhouse: a banker's lamp and its pool of light.
+    - Marina: the three towers with the ship on top, Supertrees and a sunset.
+    - Shibuya: towers with lit windows and a neon ブリッジ sign.
+    - Berlin: the TV tower, the Brandenburg Gate and a crescent moon.
+    - Bali: a split temple gate, a palm and frangipani.
+    - Manila: string lights, a pillow and the electric fan.
+  - The table in the middle is themed too:
+    - Clubhouse: felt with a wood rim.
+    - Marina: an infinity pool with a stone edge.
+    - Shibuya: a neon ring.
+    - Berlin: walnut with brass.
+    - Bali: carved teak.
+    - Manila: a bedsheet.
+- **Layout:** the four seats sit in a 3×3 grid around the table with one gap, so all four are the same distance from it.

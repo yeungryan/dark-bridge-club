@@ -27,14 +27,14 @@ async function dragToTable(page: Page, card: Locator): Promise<void> {
   await page.mouse.up();
 }
 
-/** Move along (captain draw, partner pick, Next deal, passing) until `until` is true. */
+/** Move along (captain draw, partner pick, Next game, passing) until `until` is true. */
 async function playUntil(page: Page, until: () => Promise<boolean>, opts: { bidSuitFirst?: boolean } = {}): Promise<void> {
   const deadline = Date.now() + 150_000;
   while (!(await until())) {
     if (Date.now() > deadline) throw new Error('Practice table got stuck');
     const skip = page.getByRole('button', { name: 'Skip the captain draw' });
     const partner = page.getByRole('button', { name: /^Partner with/ });
-    const next = page.getByRole('button', { name: 'Next deal' });
+    const next = page.getByRole('button', { name: 'Next game' });
     const pass = page.getByRole('button', { name: 'Pass', exact: true });
     const surprise = page.getByRole('button', { name: 'Surprise me' });
     if (await surprise.isVisible()) await tap(surprise);
@@ -74,7 +74,7 @@ test('a bid can be chosen suit first, then level', async ({ page }) => {
 
 test('a whole deal by dragging cards: every beat of the feel ladder fires', async ({ page }) => {
   await page.goto('/practice.html');
-  await playUntil(page, () => page.getByRole('button', { name: 'Next deal' }).isVisible());
+  await playUntil(page, () => page.getByRole('button', { name: 'Next game' }).isVisible());
   // A deal settled on its last trick ends at once; its clinch lands a moment later.
   await expect.poll(async () => (await sounds(page)).includes('clinch'), { timeout: 3000 }).toBe(true);
   const heard = new Set(await sounds(page));
@@ -121,11 +121,13 @@ test('avatars: pick an animal and element, then everyone flips together and show
   // The bots pick too; then the four avatars flip. Avatars aren't named in words.
   await expect(page.locator('.reveal .card')).toHaveCount(4, { timeout: 15_000 });
   const mine = page.locator('.reveal .card').filter({ hasText: 'Ryan' });
-  await expect(mine.locator('.element')).toHaveText('🌊');
+  // The element lives inside the avatar circle (a water backdrop), not as text or a badge.
+  await expect(mine.locator('.token.el-water')).toHaveCount(1);
   await expect(page.locator('.reveal')).not.toContainText('Water');
   const faces = await page.locator('.reveal .card .face').allTextContents();
   expect(new Set(faces.map((f) => f.trim())).size).toBe(4);
-  // At the table, each seat shows its avatar with an element badge and cards left.
+  // At the table, all four seats (yours too) show the avatar with its element and cards left.
   await playUntil(page, () => page.locator('[data-badge-seat] .count').first().isVisible());
-  await expect(page.locator('.seat .element').first()).toBeVisible();
+  await expect(page.locator('.seat .token[class*="el-"]')).toHaveCount(4);
+  await expect(page.locator('.seat .count')).toHaveCount(4);
 });

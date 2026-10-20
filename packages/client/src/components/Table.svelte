@@ -13,8 +13,7 @@
   import Reveal from './Reveal.svelte';
   import SeatBadge from './SeatBadge.svelte';
   import MenuSheet from './MenuSheet.svelte';
-  import { avatarOf, emojiOf, teamColor } from '../lib/avatars';
-  import Avatar from './Avatar.svelte';
+  import { avatarOf, emojiOf } from '../lib/avatars';
   import { director } from '../lib/juice/director.svelte';
   import { settings } from '../lib/juice/settings.svelte';
   import { TIMING } from '../lib/juice/timing';
@@ -77,7 +76,7 @@
         {/key}
         <RaceMeters {deal} declarers={pairOf(contract.declarer)} defenders={pairOf(next(contract.declarer))} />
       {:else}
-        <span class="muted">Deal {view.dealNumber} · bidding</span>
+        <span class="muted">Game {view.dealNumber} · bidding · {nameAtSeat(view, profiles, deal.dealer)} deals</span>
       {/if}
     </div>
   </header>
@@ -104,20 +103,30 @@
     <section class="reveal-area"><Reveal {conn} /></section>
   {:else}
     <section class="middle">
-      <div class="top"><SeatBadge {conn} seat={seatAt('top', me)} /></div>
-      <div class="left"><SeatBadge {conn} seat={seatAt('left', me)} /></div>
-      <div class="center">
-        {#if deal.phase === 'auction'}
-          <AuctionStrip {conn} />
-        {:else}
-          <TrickArea {conn} />
-          <!-- Always takes its space, so the trick area doesn't jump when the first trick ends. -->
-          <button class="ghost peek" class:open={peek} class:none={!deal.lastTrick} disabled={!deal.lastTrick} onclick={() => (peek = !peek)}>
-            <span class="stack" aria-hidden="true"><i></i><i></i><i></i></span>{peek ? 'Hide last trick' : 'Last trick'}
-          </button>
+      <!-- All four seats sit the same distance from the table in the middle (Ryan's rule). -->
+      <div class="cluster">
+        <div class="seat-top"><SeatBadge {conn} seat={seatAt('top', me)} /></div>
+        <div class="seat-left"><SeatBadge {conn} seat={seatAt('left', me)} /></div>
+        <div class="center">
+          {#if deal.phase === 'auction'}
+            <AuctionStrip {conn} />
+          {:else}
+            <!-- The table itself, in tonight's theme (felt and wood, an infinity pool, neon...). -->
+            <div class="surface" aria-hidden="true"></div>
+            <TrickArea {conn} />
+          {/if}
+        </div>
+        <div class="seat-right"><SeatBadge {conn} seat={seatAt('right', me)} /></div>
+        <div class="seat-me"><SeatBadge {conn} seat={me} /></div>
+        {#if deal.phase !== 'auction'}
+          <div class="peek-slot">
+            <!-- Always takes its space, so nothing jumps when the first set ends. -->
+            <button class="ghost peek" class:open={peek} class:none={!deal.lastTrick} disabled={!deal.lastTrick} onclick={() => (peek = !peek)}>
+              <span class="stack" aria-hidden="true"><i></i><i></i><i></i></span>{peek ? 'Hide' : 'Last set'}
+            </button>
+          </div>
         {/if}
       </div>
-      <div class="right"><SeatBadge {conn} seat={seatAt('right', me)} /></div>
     </section>
   {/if}
 
@@ -132,21 +141,9 @@
     {#if showAuction && deal.phase !== 'auction'}
       <AuctionStrip {conn} />
     {/if}
-    <div class="turn" class:mine={deal.turn === me}>
-      <span class="me" data-badge-seat={me}>
-        <Avatar
-          avatar={avatarOf(conn, view.me)}
-          initial={profileOf(profiles, view.me).name[0]}
-          ring={teamColor(conn, me)}
-          size={30}
-          dealer={deal.dealer === me}
-          turn={deal.turn === me}
-        />
-        <span class="myname">{profileOf(profiles, view.me).name}</span>
-        {#if myRole}<span class="myrole">{myRole}</span>{/if}
-      </span>
-      {#if view.phase === 'inDeal' && turnText}<span class="what">{turnText}</span>{/if}
-    </div>
+    {#if view.phase === 'inDeal' && turnText}
+      <p class="turn" class:mine={deal.turn === me}>{turnText}</p>
+    {/if}
     {#if myTurnToCall}<BiddingBox {conn} />{/if}
     {#if view.phase === 'inDeal'}<Hand {conn} />{/if}
   </section>
@@ -289,37 +286,70 @@
   }
   .middle {
     display: grid;
-    grid-template-columns: 88px minmax(0, 1fr) 88px;
-    grid-template-rows: auto 1fr;
-    grid-template-areas: 'top top top' 'left center right';
-    align-items: center;
-    gap: 4px;
+    align-content: center;
     min-height: 0;
+  }
+  /* A 3×3 grid around the table: one gap everywhere, so every seat is equally far from it. */
+  .cluster {
+    display: grid;
+    grid-template-columns: auto min(180px, calc(100vw - 236px)) auto;
+    grid-template-areas:
+      '. top .'
+      'left center right'
+      '. me peek';
+    /* Clear of the table's rim, the same on all four sides. */
+    gap: 18px;
+    justify-content: center;
+    align-items: center;
   }
   .reveal-area {
     min-height: 0;
     overflow-y: auto;
     padding-top: 4px;
   }
-  .top {
+  .seat-top {
     grid-area: top;
     justify-self: center;
+    align-self: end;
   }
-  .left {
+  .seat-left {
     grid-area: left;
+    justify-self: end;
   }
-  .right {
+  .seat-right {
     grid-area: right;
+    justify-self: start;
+  }
+  .seat-me {
+    grid-area: me;
+    justify-self: center;
+    align-self: start;
+  }
+  .peek-slot {
+    grid-area: peek;
+    align-self: start;
+    justify-self: start;
   }
   .center {
     grid-area: center;
+    position: relative;
     display: grid;
     justify-items: center;
-    gap: 4px;
+    min-width: 0;
+  }
+  .surface {
+    position: absolute;
+    inset: 0;
+    border-radius: var(--surface-radius, 50%);
+    background: var(--surface, rgba(0, 0, 0, 0.15));
+    box-shadow: var(--surface-rim, none);
+    pointer-events: none;
   }
   .peek {
+    white-space: nowrap;
     min-height: 32px;
-    font-size: 14px;
+    padding: 0 8px;
+    font-size: 13px;
     display: inline-flex;
     align-items: center;
     gap: 8px;
@@ -364,29 +394,7 @@
     color: var(--ink-dim);
     font-size: 15px;
   }
-  .turn {
-    align-items: center;
-  }
-  .turn .me {
-    display: inline-flex;
-    align-items: center;
-    gap: 8px;
-  }
-  .myname {
-    font-family: var(--font-name);
-    font-weight: 700;
-    color: var(--ink);
-  }
-  .myrole {
-    font-size: 9.5px;
-    font-weight: 700;
-    letter-spacing: 0.12em;
-    text-transform: uppercase;
-  }
-  .what::before {
-    content: '— ';
-  }
-  .turn.mine span:last-child {
+  .turn.mine {
     color: var(--accent);
     font-weight: 700;
   }

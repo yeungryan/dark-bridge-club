@@ -13,6 +13,7 @@
   import Particles from './Particles.svelte';
   import PauseBanner from './PauseBanner.svelte';
   import Table from './Table.svelte';
+  import TableScene from './TableScene.svelte';
 
   // `link`: the practice table passes its own in-browser table; otherwise we connect to the server.
   let { onSignedOut, link }: { onSignedOut: () => void; link?: Connection } = $props();
@@ -73,6 +74,7 @@
 
 {#if conn.error}<div class="toast" role="alert">{conn.error}</div>{/if}
 <Particles />
+{#if conn.room}<TableScene theme={conn.room.theme} />{/if}
 
 <style>
   .center {

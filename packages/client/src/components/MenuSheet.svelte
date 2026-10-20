@@ -41,7 +41,7 @@
 
     <button class="row" disabled={!canConcede} onclick={() => act(() => conn.intent({ type: 'deal', action: { type: 'proposeConcession' } }))}>
       <span class="icon" aria-hidden="true">🏳️</span>
-      <span class="text"><strong>Concede the rest of this deal</strong><small>{canConcede ? 'Your partner has to agree' : 'Only while cards are being played'}</small></span>
+      <span class="text"><strong>Concede the rest of this game</strong><small>{canConcede ? 'Your partner has to agree' : 'Only while cards are being played'}</small></span>
     </button>
 
     {#if voted}

@@ -9,6 +9,9 @@
   --accent-glow: rgba(232, 194, 90, 0.6);
   --trump: #c58bff;
   --silver: #c9ced6;
+  --surface: radial-gradient(circle at 50% 40%, #1d5a3e 0%, #154630 70%, #113a28 100%);
+  --surface-rim: 0 0 0 7px #5a3a22, 0 10px 30px rgba(0, 0, 0, 0.45);
+  --surface-radius: 50%;
   --card-back: repeating-linear-gradient(45deg, #1d4a35 0 6px, #16392a 6px 12px);
   --font: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
   --font-display: Georgia, 'Times New Roman', serif;
@@ -57,13 +60,18 @@ html,
 body {
   margin: 0;
   height: 100%;
-  background: var(--felt-bg);
-  background-color: var(--felt);
-  background-attachment: fixed;
   color: var(--ink);
   font: 16px/1.35 var(--font);
   -webkit-tap-highlight-color: transparent;
   overscroll-behavior: none;
+}
+
+/* The theme's backdrop sits on <html>; <body> stays clear so the theme scene (z-index -1)
+   shows between the backdrop and the table. */
+html {
+  background: var(--felt-bg);
+  background-color: var(--felt);
+  background-attachment: fixed;
 }
 
 #app {

@@ -36,6 +36,9 @@ export const THEMES: Record<ThemeId, Theme> = {
     sound: { pitch: 1 },
     tokens: {
       ...base,
+      '--surface': "radial-gradient(circle at 50% 40%, #1d5a3e 0%, #154630 70%, #113a28 100%)",
+      '--surface-rim': '0 0 0 7px #5a3a22, 0 0 0 8px rgba(201, 164, 92, 0.6), 0 10px 30px rgba(0, 0, 0, 0.45)',
+      '--surface-radius': '50%',
       '--font-name': "'Playfair Display', Georgia, serif",
       '--font-card': "'Libre Baskerville', Georgia, serif",
       '--felt': '#0f2a1e',
@@ -66,6 +69,9 @@ export const THEMES: Record<ThemeId, Theme> = {
     sound: { pitch: 1.04 },
     tokens: {
       ...base,
+      '--surface': "radial-gradient(circle at 50% 30%, rgba(122, 214, 230, 0.35), rgba(16, 80, 99, 0.65) 70%)",
+      '--surface-rim': '0 0 0 6px #e8dccb, 0 0 0 7px rgba(255, 143, 107, 0.5), 0 10px 30px rgba(0, 0, 0, 0.4)',
+      '--surface-radius': '50%',
       '--font-name': "'Poppins', 'Avenir Next', system-ui, sans-serif",
       '--font-card': "'Poppins', 'Avenir Next', system-ui, sans-serif",
       '--felt': '#0c3440',
@@ -95,6 +101,9 @@ export const THEMES: Record<ThemeId, Theme> = {
     sound: { pitch: 1.07 },
     tokens: {
       ...base,
+      '--surface': "radial-gradient(circle, rgba(34, 22, 63, 0.85) 0%, rgba(19, 11, 38, 0.9) 100%)",
+      '--surface-rim': '0 0 0 2px #35f2ff, 0 0 14px 2px rgba(53, 242, 255, 0.55), 0 0 0 7px rgba(255, 62, 165, 0.35), 0 0 30px 6px rgba(255, 62, 165, 0.25)',
+      '--surface-radius': '50%',
       '--font-name': "'Orbitron', 'Avenir Next', system-ui, sans-serif",
       '--font-card': "'Space Mono', 'SF Mono', Menlo, monospace",
       '--felt': '#130b26',
@@ -125,6 +134,9 @@ export const THEMES: Record<ThemeId, Theme> = {
     sound: { pitch: 0.94 },
     tokens: {
       ...base,
+      '--surface': "radial-gradient(circle at 50% 35%, #2a1d14 0%, #1c130d 80%)",
+      '--surface-rim': '0 0 0 3px #c9a45c, 0 0 0 9px #141d3a, 0 0 0 10px rgba(201, 164, 92, 0.5), 0 10px 30px rgba(0, 0, 0, 0.5)',
+      '--surface-radius': '50%',
       '--font-name': "'Bodoni Moda', Didot, Georgia, serif",
       '--font-card': "'Bodoni Moda', Didot, Georgia, serif",
       '--felt': '#0d1630',
@@ -155,6 +167,9 @@ export const THEMES: Record<ThemeId, Theme> = {
     sound: { pitch: 1, bellPartial: 2.76 },
     tokens: {
       ...base,
+      '--surface': "radial-gradient(circle, rgba(242, 193, 78, 0.12) 0 6px, transparent 7px) 0 0 / 22px 22px, radial-gradient(circle at 50% 40%, #5a3820 0%, #432914 80%)",
+      '--surface-rim': '0 0 0 5px #6b3a1c, 0 0 0 7px #f2c14e, 0 0 0 11px #4e321d, 0 10px 30px rgba(0, 0, 0, 0.45)',
+      '--surface-radius': '50%',
       '--font-name': "'Marcellus', Optima, Georgia, serif",
       '--font-card': "'Marcellus', Optima, Georgia, serif",
       '--felt': '#3a2414',
@@ -184,6 +199,9 @@ export const THEMES: Record<ThemeId, Theme> = {
     sound: { pitch: 0.97 },
     tokens: {
       ...base,
+      '--surface': "repeating-linear-gradient(0deg, rgba(255, 255, 255, 0.07) 0 8px, transparent 8px 22px), repeating-linear-gradient(90deg, rgba(120, 140, 255, 0.1) 0 8px, transparent 8px 22px), #2b3466",
+      '--surface-rim': '0 8px 0 -2px rgba(255, 255, 255, 0.08), 0 12px 26px rgba(0, 0, 0, 0.45)',
+      '--surface-radius': '22%',
       '--font-name': "'Patrick Hand', 'Comic Sans MS', system-ui, sans-serif",
       '--font-card': "'Nunito', 'Arial Rounded MT Bold', system-ui, sans-serif",
       '--felt': '#1c2140',

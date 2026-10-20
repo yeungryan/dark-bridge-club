@@ -5,9 +5,9 @@
   import { profileOf } from '../lib/format';
   import Avatar from './Avatar.svelte';
 
-  // Spec S10, redesigned: the avatar is the hero. Team-coloured ring, element badge and cards
-  // left on its corners, dealer chip on top; name in the theme's name font underneath, and a
-  // small role tag once the contract is set. Whose turn it is: the ring glows.
+  // Spec S10, redesigned: the avatar is the hero (team-coloured ring, element inside it), then
+  // one line with cards left (a tiny card) and the name, then a small role tag once the
+  // contract is set. Whose turn it is: the ring glows. Used for all four seats, you included.
   let { conn, seat }: { conn: Connection; seat: Seat } = $props();
 
   const view = $derived(conn.view!);
@@ -26,13 +26,17 @@
     avatar={avatarAtSeat(conn, seat)}
     initial={profile.name[0]}
     ring={teamColor(conn, seat)}
-    size={44}
-    count={deal ? deal.handCounts[seat] : null}
-    dealer={deal?.dealer === seat}
+    size={46}
     turn={deal?.turn === seat}
     away={presence !== 'connected'}
   />
-  <span class="name">{profile.name}</span>
+  <span class="nameline">
+    {#if deal}
+      {@const n = deal.handCounts[seat]}
+      <span class="count" aria-label="{n} {n === 1 ? 'card' : 'cards'} left">{n}</span>
+    {/if}
+    <span class="name">{profile.name}</span>
+  </span>
   {#if role}<span class="role" class:decl={role === 'Declarer'}>{role}</span>{/if}
 </div>
 
@@ -41,13 +45,36 @@
     display: inline-grid;
     justify-items: center;
     gap: 3px;
-    width: 88px;
-    max-width: 100%;
+    min-width: 64px;
+    max-width: 88px;
     padding: 6px 2px 4px;
     text-align: center;
   }
+  .nameline {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    max-width: 100%;
+    margin-top: 4px;
+  }
+  /* Cards left: a tiny card with the number on it, the height of the name. */
+  .count {
+    display: grid;
+    place-items: center;
+    flex: none;
+    min-width: 13px;
+    height: 17px;
+    padding: 0 2px;
+    border-radius: 2.5px;
+    background: var(--card);
+    color: var(--card-ink);
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.45);
+    font-family: var(--font-card);
+    font-weight: 700;
+    font-size: 10.5px;
+    line-height: 1;
+  }
   .name {
-    margin-top: 3px;
     font-family: var(--font-name);
     font-weight: 700;
     font-size: 15px;

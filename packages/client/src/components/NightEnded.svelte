@@ -41,7 +41,7 @@
   {:else}
     <h2 bind:this={banner} class="banner">{pairNames(view, profiles, final.winner)} win the night</h2>
   {/if}
-  {#if final.discardedDeal}<p class="muted">The unfinished last deal didn't count.</p>{/if}
+  {#if final.discardedDeal}<p class="muted">The unfinished last game didn't count.</p>{/if}
   <button class="primary" onclick={() => conn.send({ type: 'newNight' })}>Start a new night</button>
 </main>
 

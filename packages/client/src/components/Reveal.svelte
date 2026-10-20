@@ -16,7 +16,8 @@
 
   // Spec S14: the payoff for hidden hands. The result lands, the score ticks up, then the four
   // hands flip one by one (from declarer's right, in play order) with their HCP counting up.
-  // Tap the panel to skip to the end. It then waits for all four to tap "Next deal".
+  // Tap the panel to skip to the end. It then waits for all four to tap "Next game".
+  // Wording (Ryan): a trick is a "set", a deal is a "game", so a defeated contract is "Defeated".
   let { conn }: { conn: Connection } = $props();
 
   const view = $derived(conn.view!);
@@ -29,7 +30,7 @@
     seatsFrom(contract.declarer).find((s) => sideOf(s, contract) === result.winner)!,
   );
   const winningPair = $derived(view.pairs!.A.includes(view.seating![winningSeat]) ? 'A' : 'B');
-  const verdict = $derived(result.reason === 'conceded' ? 'Conceded' : result.winner === 'declarers' ? 'Made' : 'Set');
+  const verdict = $derived(result.reason === 'conceded' ? 'Conceded' : result.winner === 'declarers' ? 'Made' : 'Defeated');
   const ready = $derived(view.readyForNext.includes(view.me));
 
   // Hands flip in play order, starting from declarer's right.
@@ -90,7 +91,7 @@
   <p class="muted">
     <CallText call={{ type: 'bid', level: contract.level, strain: contract.strain }} /> by
     {profileOf(profiles, view.seating![contract.declarer]).name} ·
-    declarers took {result.declarerTricks}, defenders {result.defenderTricks}
+    declarers won {result.declarerTricks} sets, defenders {result.defenderTricks}
     {#if result.overUnder !== null}· {result.overUnder >= 0 ? `+${result.overUnder}` : `${result.overUnder}`}{/if}
   </p>
 
@@ -134,7 +135,7 @@
       conn.intent({ type: 'readyForNext' });
     }}
   >
-    {ready ? 'Waiting for the others…' : 'Next deal'}
+    {ready ? 'Waiting for the others…' : 'Next game'}
   </button>
   <div class="ready">
     {#each view.profiles as id (id)}

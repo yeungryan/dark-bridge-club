@@ -2,15 +2,13 @@
   import { animalById, ELEMENT_INFO, type Avatar } from '@dark/engine';
 
   // A player's avatar as a token: the animal in a circle ringed in `ring` (team colour during
-  // play, personal colour in the lobby), the element as a small badge on its bottom-right
-  // corner, and optionally cards left (a tiny card, bottom-left) and the dealer chip (top-right).
+  // play, personal colour in the lobby). The element lives inside the circle as a quiet
+  // backdrop behind the animal (embers below, ripples, a swirl, rock strata), not as a badge.
   let {
     avatar,
     initial = '?',
     ring = 'var(--line)',
     size = 44,
-    count = null,
-    dealer = false,
     turn = false,
     away = false,
   }: {
@@ -18,20 +16,21 @@
     initial?: string;
     ring?: string;
     size?: number;
-    count?: number | null;
-    dealer?: boolean;
     turn?: boolean;
     away?: boolean;
   } = $props();
 </script>
 
-<span class="token" class:turn class:away style="--size: {size}px; --ring: {ring}">
+<span
+  class="token {avatar ? `el-${avatar.element}` : ''}"
+  class:turn
+  class:away
+  style="--size: {size}px; --ring: {ring}"
+  title={avatar ? ELEMENT_INFO[avatar.element].name : undefined}
+>
   <span class="face">
-    {#if avatar}{animalById(avatar.animal)?.emoji}{:else}<span class="initial">{initial}</span>{/if}
+    {#if avatar}<span class="animal">{animalById(avatar.animal)?.emoji}</span>{:else}<span class="initial">{initial}</span>{/if}
   </span>
-  {#if avatar}<span class="element" title={ELEMENT_INFO[avatar.element].name}>{ELEMENT_INFO[avatar.element].glyph}</span>{/if}
-  {#if count !== null}<span class="count" aria-label="{count} {count === 1 ? 'card' : 'cards'} left">{count}</span>{/if}
-  {#if dealer}<span class="dealer" title="Dealer">D</span>{/if}
 </span>
 
 <style>
@@ -44,16 +43,22 @@
     flex: none;
   }
   .face {
+    position: relative;
     display: grid;
     place-items: center;
     width: 100%;
     height: 100%;
     border-radius: 50%;
-    background: var(--panel);
+    overflow: hidden;
+    background-color: var(--panel);
     box-shadow: 0 0 0 2.5px var(--ring);
+    transition: box-shadow calc(200ms * var(--speed));
+  }
+  .animal {
+    position: relative;
     font-size: calc(var(--size) * 0.56);
     line-height: 1;
-    transition: box-shadow calc(200ms * var(--speed));
+    filter: drop-shadow(0 1px 1px rgba(0, 0, 0, 0.35));
   }
   .initial {
     font-family: var(--font-name);
@@ -61,6 +66,31 @@
     font-size: calc(var(--size) * 0.42);
     color: var(--ink);
   }
+
+  /* The element, behind the animal: low-contrast, no outlines, nothing busy. */
+  .el-fire .face {
+    background:
+      radial-gradient(ellipse 70% 45% at 50% 105%, rgba(255, 122, 47, 0.75), transparent 70%),
+      radial-gradient(ellipse 35% 30% at 30% 95%, rgba(255, 196, 77, 0.55), transparent 70%),
+      radial-gradient(ellipse 30% 28% at 72% 98%, rgba(232, 64, 42, 0.6), transparent 70%),
+      #2a1410;
+  }
+  .el-water .face {
+    background:
+      repeating-radial-gradient(circle at 50% 115%, rgba(120, 215, 255, 0.28) 0 1.5px, transparent 1.5px 6px),
+      linear-gradient(180deg, #0e2a3f 0%, #10476a 100%);
+  }
+  .el-air .face {
+    background:
+      conic-gradient(from 30deg at 50% 50%, rgba(255, 246, 207, 0.05), rgba(255, 246, 207, 0.32), rgba(255, 246, 207, 0.05) 30%, rgba(255, 246, 207, 0.28) 55%, rgba(255, 246, 207, 0.05) 80%),
+      radial-gradient(circle at 50% 50%, #3a3f52 0%, #262a38 100%);
+  }
+  .el-earth .face {
+    background:
+      linear-gradient(180deg, transparent 58%, rgba(138, 154, 75, 0.55) 58% 68%, rgba(122, 90, 54, 0.75) 68% 82%, rgba(91, 64, 38, 0.85) 82%),
+      #2b2418;
+  }
+
   /* Whose turn: the ring glows. */
   .turn .face {
     box-shadow:
@@ -82,53 +112,5 @@
   .away .face {
     filter: grayscale(1) opacity(0.5);
     box-shadow: 0 0 0 2.5px var(--bad);
-  }
-  /* Element badge, bottom-right. */
-  .element {
-    position: absolute;
-    right: -4px;
-    bottom: -3px;
-    display: grid;
-    place-items: center;
-    width: calc(var(--size) * 0.44);
-    height: calc(var(--size) * 0.44);
-    border-radius: 50%;
-    background: var(--sheet);
-    box-shadow: 0 0 0 1.5px var(--ring);
-    font-size: calc(var(--size) * 0.26);
-    line-height: 1;
-  }
-  /* Cards left, bottom-left: a tiny card with the number on it. */
-  .count {
-    position: absolute;
-    left: -6px;
-    bottom: -4px;
-    display: grid;
-    place-items: center;
-    min-width: calc(var(--size) * 0.38);
-    height: calc(var(--size) * 0.5);
-    padding: 0 2px;
-    border-radius: 3px;
-    background: var(--card);
-    color: var(--card-ink);
-    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.5);
-    font-family: var(--font-card);
-    font-weight: 700;
-    font-size: calc(var(--size) * 0.26);
-    line-height: 1;
-  }
-  .dealer {
-    position: absolute;
-    top: -5px;
-    right: -6px;
-    display: grid;
-    place-items: center;
-    width: 17px;
-    height: 17px;
-    border-radius: 50%;
-    background: var(--ink);
-    color: var(--felt);
-    font-size: 10px;
-    font-weight: 800;
   }
 </style>

@@ -114,7 +114,7 @@ async function playAsHuman(player: Player, deals: number): Promise<void> {
       await tap(partnerButton);
       continue;
     }
-    const nextDeal = page.getByRole('button', { name: 'Next deal' });
+    const nextDeal = page.getByRole('button', { name: 'Next game' });
     if ((await nextDeal.isVisible()) && (await isEnabledNow(nextDeal))) {
       await tap(nextDeal);
       continue;
@@ -135,14 +135,14 @@ async function playAsHuman(player: Player, deals: number): Promise<void> {
   }
 }
 
-/** Moves Ryan along (partner pick, Next deal, Pass) until it's his turn to play a card. */
+/** Moves Ryan along (partner pick, Next game, Pass) until it's his turn to play a card. */
 async function reachMyTurnToPlay(player: Player): Promise<void> {
   const page = player.page;
   const deadline = Date.now() + 90_000;
   while (!(await page.getByText('Your turn to play').isVisible())) {
     if (Date.now() > deadline) throw new Error(`Never reached Ryan's turn. Last state: ${describeState(player.frames)}`);
     const partnerButton = page.getByRole('button', { name: /^Partner with/ });
-    const nextDeal = page.getByRole('button', { name: 'Next deal' });
+    const nextDeal = page.getByRole('button', { name: 'Next game' });
     const pass = page.getByRole('button', { name: 'Pass', exact: true });
     const surprise = page.getByRole('button', { name: 'Surprise me' });
     if (await surprise.isVisible()) await tap(surprise);

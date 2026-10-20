@@ -36,7 +36,7 @@
   });
 </script>
 
-<button class="peek-sheet panel" aria-label="Last trick (tap to close)" onclick={onClose}>
+<button class="peek-sheet panel" aria-label="Last set (tap to close)" onclick={onClose}>
   {#each trick.cards as play, i (play.seat)}
     <div class="peek-card" in:flip={{ delay: i * (TIMING.peekGap + TIMING.peekFlip / 2) }} out:flip={{ delay: 0 }}>
       <div class:winner={lit && play.seat === trick.winner}>
