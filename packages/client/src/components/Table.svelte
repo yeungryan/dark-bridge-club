@@ -10,6 +10,10 @@
   import RaceMeters from './RaceMeters.svelte';
   import Reveal from './Reveal.svelte';
   import SeatBadge from './SeatBadge.svelte';
+  import SettingsSheet from './SettingsSheet.svelte';
+  import { director } from '../lib/juice/director.svelte';
+  import { settings } from '../lib/juice/settings.svelte';
+  import { TIMING } from '../lib/juice/timing';
   import TrickArea from './TrickArea.svelte';
 
   // Spec S10: you at the bottom, partner on top, the next player (counter-clockwise) on your right.
@@ -25,9 +29,29 @@
   const pairOf = (seat: Seat) => `${nameAtSeat(view, profiles, seat)} & ${nameAtSeat(view, profiles, partner(seat))}`;
 
   let menuOpen = $state(false);
+
+  // The pairs for the night are announced as the first deal starts; it doesn't block bidding.
+  let showPairs = $state(false);
+  let announced = false;
+  $effect(() => {
+    if (!announced && view.dealNumber === 1 && deal.phase === 'auction' && deal.calls.length === 0 && settings.animated) {
+      announced = true;
+      showPairs = true;
+      setTimeout(() => (showPairs = false), settings.ms(TIMING.ceremony.pairSnap));
+    }
+  });
+  let settingsOpen = $state(false);
   let peek = $state(false);
   let showAuction = $state(false);
 
+  // Both sides one trick away: the table lights dim for the decider (S13, intensity 4).
+  const decider = $derived(
+    deal.phase === 'play' &&
+      !deal.clinch &&
+      contract !== null &&
+      deal.declarerTarget! - deal.tricksWon.declarers === 1 &&
+      deal.defenderTarget! - deal.tricksWon.defenders === 1,
+  );
   const canConcede = $derived(deal.phase === 'play' && !deal.clinch && !deal.concession && !deal.playingOn);
   const myRole = $derived(contract ? (me === contract.declarer ? 'Declarer' : me === partner(contract.declarer) ? 'Declarer’s partner' : 'Defender') : '');
   const turnText = $derived.by(() => {
@@ -37,14 +61,16 @@
   });
 </script>
 
-<div class="table">
+<div class="table" class:decider>
   <header>
     <button class="ghost menu" aria-label="Menu" onclick={() => (menuOpen = !menuOpen)}>☰</button>
     <div class="info">
       {#if contract}
+        {#key director.contractPulse}
         <button class="ghost contract" onclick={() => (showAuction = !showAuction)}>
           {callLabel({ type: 'bid', level: contract.level, strain: contract.strain })} by {nameAtSeat(view, profiles, contract.declarer)}
         </button>
+        {/key}
         <RaceMeters {deal} declarers={pairOf(contract.declarer)} defenders={pairOf(next(contract.declarer))} />
       {:else}
         <span class="muted">Deal {view.dealNumber} · bidding</span>
@@ -60,8 +86,26 @@
       <button disabled={view.endNightVotes.includes(view.me)} onclick={() => { conn.intent({ type: 'voteEndNight' }); menuOpen = false; }}>
         End the night
       </button>
+      <button onclick={() => { settingsOpen = true; menuOpen = false; }}>Settings (effects, speed, sound)</button>
       <button class="ghost" onclick={() => (menuOpen = false)}>Close</button>
     </div>
+  {/if}
+  {#if showPairs}
+    <div class="pairs" aria-live="polite">
+      {#each ['A', 'B'] as const as pair, i (pair)}
+        {#if i === 1}<span class="vs">vs</span>{/if}
+        <div class="pair">
+          {#each view.pairs![pair] as id, j (id)}
+            {@const p = profileOf(profiles, id)}
+            {#if j === 1}<span class="amp">&</span>{/if}
+            <span class="pname {j === 0 ? 'from-left' : 'from-right'}" style="color: {p.color}">{p.name}</span>
+          {/each}
+        </div>
+      {/each}
+    </div>
+  {/if}
+  {#if settingsOpen}
+    <div class="settings-wrap"><SettingsSheet onClose={() => (settingsOpen = false)} /></div>
   {/if}
 
   {#if view.phase === 'betweenDeals' && deal.result}
@@ -137,11 +181,83 @@
     min-width: 0;
   }
   .contract {
+    animation: stamp calc(420ms * var(--speed)) cubic-bezier(0.3, 1.5, 0.6, 1);
     min-height: 0;
     border: 0;
     padding: 2px 0;
     font-weight: 700;
     font-size: 1.05rem;
+  }
+  @keyframes stamp {
+    0% {
+      transform: scale(1.35);
+      opacity: 0;
+    }
+  }
+  :global(.fx-reduced) .contract {
+    animation: fade-in calc(300ms * var(--speed));
+  }
+  /* The decider: everything but the trick area dims a little. */
+  .table {
+    transition: background-color calc(500ms * var(--speed));
+  }
+  .table.decider {
+    background: radial-gradient(circle at 50% 42%, transparent 0 22%, rgba(0, 0, 0, 0.38) 60%);
+  }
+  .pairs {
+    position: absolute;
+    top: 30%;
+    left: 16px;
+    right: 16px;
+    display: grid;
+    gap: 6px;
+    justify-items: center;
+    padding: 16px;
+    border-radius: var(--radius);
+    background: rgba(8, 20, 14, 0.9);
+    border: 1px solid var(--line);
+    z-index: 19;
+    pointer-events: none;
+    animation: fade-in calc(200ms * var(--speed)) backwards;
+  }
+  .pair {
+    font-size: 1.4rem;
+    font-weight: 750;
+    display: flex;
+    gap: 8px;
+  }
+  .vs,
+  .amp {
+    color: var(--ink-dim);
+    font-weight: 400;
+  }
+  .pname.from-left {
+    animation: snap-left calc(500ms * var(--speed)) cubic-bezier(0.3, 1.5, 0.6, 1) backwards;
+  }
+  .pname.from-right {
+    animation: snap-right calc(500ms * var(--speed)) cubic-bezier(0.3, 1.5, 0.6, 1) backwards;
+  }
+  @keyframes snap-left {
+    0% {
+      transform: translateX(-60px);
+      opacity: 0;
+    }
+  }
+  @keyframes snap-right {
+    0% {
+      transform: translateX(60px);
+      opacity: 0;
+    }
+  }
+  :global(.fx-reduced) .pname {
+    animation-name: fade-in !important;
+  }
+  .settings-wrap {
+    position: absolute;
+    top: 60px;
+    left: 16px;
+    right: 16px;
+    z-index: 21;
   }
   .menu-sheet {
     position: absolute;

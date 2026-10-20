@@ -26,7 +26,7 @@
   </span>
   {#if deal}
     {#if role}<span class="role">{role}</span>{/if}
-    <span class="role">{deal.handCounts[seat]} cards</span>
+    <span class="role">{deal.handCounts[seat]} {deal.handCounts[seat] === 1 ? 'card' : 'cards'}</span>
   {/if}
 </div>
 

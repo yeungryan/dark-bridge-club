@@ -16,7 +16,7 @@ One place that decides **how big each moment feels**, so effects stay proportion
 
 **Signature effect:** the level-5 clinch particles and colors come from the **element of the player who played the clinching card** (S24). The timing and intensity stay the same for every element.
 
-**Drama modifiers** (+1, capped at 5): the clinch came on the decider trick; contract at level 6–7; the clinch was by a trump-over; the declarers had fewer HCP than the defenders ("Robbery"). Values are tuned at the M2 checkpoint.
+**Drama modifiers** (+1, capped at 5): the clinch came on the decider trick; contract at level 6–7; the clinch was by a trump-over; the declarers had fewer HCP than the defenders ("Robbery"). *(M2: Robbery isn't used for the clinch, because hands aren't known until the reveal. It returns as a reveal caption in M3, S19.)* Values are tuned at the M2 checkpoint.
 
 ## Core tools
 - **Springs and tweens** (a small in-house library or Svelte's `spring`/`tweened`), with all timing values in **one config file**.

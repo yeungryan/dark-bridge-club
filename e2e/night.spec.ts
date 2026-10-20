@@ -24,6 +24,13 @@ const SEATS = [
 
 async function openPlayer(browser: Browser, seat: (typeof SEATS)[number]): Promise<Player> {
   const context = await browser.newContext();
+  // E2E_EFFECTS=off|reduced plays the night with that Effects setting (default: full).
+  if (process.env.E2E_EFFECTS) {
+    await context.addInitScript((effects) => {
+      const slot = new URLSearchParams(location.search).get('slot') ?? 'main';
+      localStorage.setItem(`dark.${slot}.settings`, JSON.stringify({ effects }));
+    }, process.env.E2E_EFFECTS);
+  }
   const page = await context.newPage();
   // E2E_CPU_SLOWDOWN=6 imitates a slow CI machine or an old phone.
   const slowdown = Number(process.env.E2E_CPU_SLOWDOWN ?? 1);
@@ -158,6 +165,31 @@ test.describe.serial('a night at the DARK table', () => {
     await expect(page.locator('.hand .slot.up')).toHaveCount(1);
 
     await page.locator('.hand .slot.up').click({ position: { x: 10, y: 30 } });
+    await expect(page.locator('.hand .slot')).toHaveCount(before - 1);
+  });
+
+  test('dragging a playable card upward plays it; a short drag springs back', async () => {
+    const page = ryan().page;
+    await reachMyTurnToPlay(ryan());
+    const before = await page.locator('.hand .slot').count();
+    const card = page.locator('.hand .slot').filter({ has: page.locator('.card:not(.dim)') }).first();
+    const box = (await card.boundingBox())!;
+    const x = box.x + 10;
+    const y = box.y + 30;
+
+    // A short drag (not past the line) leaves the card in the hand.
+    await page.mouse.move(x, y);
+    await page.mouse.down();
+    await page.mouse.move(x, y - 30, { steps: 4 });
+    await page.mouse.up();
+    await page.waitForTimeout(400);
+    await expect(page.locator('.hand .slot')).toHaveCount(before);
+
+    // A long drag plays it.
+    await page.mouse.move(x, y);
+    await page.mouse.down();
+    await page.mouse.move(x, y - 120, { steps: 6 });
+    await page.mouse.up();
     await expect(page.locator('.hand .slot')).toHaveCount(before - 1);
   });
 

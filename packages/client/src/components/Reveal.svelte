@@ -1,9 +1,18 @@
 <script lang="ts">
   import { hcp, next, partner, seatsFrom, sideOf, type Seat } from '@dark/engine';
   import type { Connection } from '../lib/connection.svelte';
+  import { onMount } from 'svelte';
   import { cardText, isRed, pairNames, profileOf } from '../lib/format';
+  import { director } from '../lib/juice/director.svelte';
+  import { burst } from '../lib/juice/particles';
+  import { settings } from '../lib/juice/settings.svelte';
+  import { sound } from '../lib/juice/sound';
+  import { TIMING } from '../lib/juice/timing';
+  import CountUp from './CountUp.svelte';
 
-  // Spec S14 (plain version): result, all four original hands with HCP, then wait for all four.
+  // Spec S14: the payoff for hidden hands. The result lands, the score ticks up, then the four
+  // hands flip one by one (from declarer's right, in play order) with their HCP counting up.
+  // Tap the panel to skip to the end. It then waits for all four to tap "Next deal".
   let { conn }: { conn: Connection } = $props();
 
   const view = $derived(conn.view!);
@@ -19,13 +28,55 @@
   const verdict = $derived(result.reason === 'conceded' ? 'Conceded' : result.winner === 'declarers' ? 'Made' : 'Set');
   const ready = $derived(view.readyForNext.includes(view.me));
 
+  // Hands flip in play order, starting from declarer's right.
+  const flipOrder = $derived(seatsFrom(next(contract.declarer)));
+  // svelte-ignore state_referenced_locally
+  let flipped = $state<Seat[]>(settings.animated ? [] : [0, 1, 2, 3]);
+  let skipped = $state(!settings.animated);
+  let banner = $state<HTMLElement>();
+  const timers: ReturnType<typeof setTimeout>[] = [];
+
+  // A big contract or a dramatic clinch gets a richer reveal.
+  const dramatic = $derived(contract.level >= 5 || (director.clinch?.drama ?? 0) >= 2);
+
+  onMount(() => {
+    if (skipped) return;
+    const { firstFlip, flipGap } = TIMING.reveal;
+    flipOrder.forEach((seat, i) => {
+      timers.push(
+        setTimeout(() => {
+          flipped = [...flipped, seat];
+          sound.flip();
+        }, settings.ms(firstFlip + i * flipGap)),
+      );
+    });
+    if (dramatic && settings.motion) {
+      timers.push(
+        setTimeout(() => {
+          const r = banner?.getBoundingClientRect();
+          const colors = view.pairs![winningPair].map((id) => profileOf(profiles, id).color);
+          if (r) burst(r.left + r.width / 2, r.top + r.height / 2, 70, [...colors, '#e8c25a']);
+        }, settings.ms(TIMING.reveal.banner)),
+      );
+    }
+    return () => timers.forEach(clearTimeout);
+  });
+
+  function skip() {
+    if (skipped) return;
+    skipped = true;
+    timers.forEach(clearTimeout);
+    flipped = [0, 1, 2, 3];
+  }
+
   function suitLine(seat: Seat, suit: 'S' | 'H' | 'D' | 'C') {
     return hands[seat].filter((c) => c.suit === suit).map((c) => cardText(c).rank).join(' ') || '—';
   }
 </script>
 
-<div class="reveal panel">
-  <h3>{verdict}: {pairNames(view, profiles, winningPair)} +1</h3>
+<!-- svelte-ignore a11y_click_events_have_key_events, a11y_no_static_element_interactions -->
+<div class="reveal panel" class:skipped class:move={settings.motion} onclick={skip}>
+  <h3 bind:this={banner} class="banner {result.winner}">{verdict}: {pairNames(view, profiles, winningPair)} +1</h3>
   <p class="muted">
     {contract.level}{contract.strain === 'NT' ? 'NT' : cardText({ suit: contract.strain, rank: 2 }).suit} by
     {profileOf(profiles, view.seating![contract.declarer]).name} ·
@@ -36,18 +87,43 @@
   <div class="hands">
     {#each [view.mySeat!, partner(view.mySeat!), next(partner(view.mySeat!)), next(view.mySeat!)] as seat (seat)}
       {@const p = profileOf(profiles, view.seating![seat])}
-      <div class="hand" style="--c: {p.color}">
-        <div class="who">{p.name}{seat === view.mySeat ? ' (you)' : ''} <span class="muted">· {hcp(hands[seat])} HCP</span></div>
-        {#each ['S', 'H', 'D', 'C'] as const as suit (suit)}
-          <div class:red={isRed({ suit, rank: 2 })}>{cardText({ suit, rank: 2 }).suit} {suitLine(seat, suit)}</div>
-        {/each}
+      <div class="hand" class:flipped={flipped.includes(seat)} style="--c: {p.color}">
+        <div class="who">
+          {p.name}{seat === view.mySeat ? ' (you)' : ''}
+          <span class="muted">·
+            {#if flipped.includes(seat)}<CountUp value={hcp(hands[seat])} />{:else}?{/if} HCP</span>
+        </div>
+        {#if flipped.includes(seat)}
+          <div class="face">
+            {#each ['S', 'H', 'D', 'C'] as const as suit (suit)}
+              <div class:red={isRed({ suit, rank: 2 })}>{cardText({ suit, rank: 2 }).suit} {suitLine(seat, suit)}</div>
+            {/each}
+          </div>
+        {:else}
+          <div class="back" aria-label="Face down"></div>
+        {/if}
       </div>
     {/each}
   </div>
 
-  <p class="tally">Tonight: {pairNames(view, profiles, 'A')} {view.wins.A} · {view.wins.B} {pairNames(view, profiles, 'B')}</p>
+  <p class="tally">
+    Tonight: {pairNames(view, profiles, 'A')}
+    <strong class:scored={winningPair === 'A'}><CountUp value={view.wins.A} from={winningPair === 'A' ? view.wins.A - 1 : view.wins.A} delay={TIMING.reveal.banner} ticks /></strong>
+    ·
+    <strong class:scored={winningPair === 'B'}><CountUp value={view.wins.B} from={winningPair === 'B' ? view.wins.B - 1 : view.wins.B} delay={TIMING.reveal.banner} ticks /></strong>
+    {pairNames(view, profiles, 'B')}
+  </p>
+  {#if !skipped}<p class="skip muted">Tap to skip</p>{/if}
 
-  <button class="primary" disabled={ready} onclick={() => conn.intent({ type: 'readyForNext' })}>
+  <button
+    class="primary"
+    disabled={ready}
+    onclick={(e) => {
+      e.stopPropagation();
+      skip();
+      conn.intent({ type: 'readyForNext' });
+    }}
+  >
     {ready ? 'Waiting for the others…' : 'Next deal'}
   </button>
   <div class="ready">
@@ -67,6 +143,56 @@
   h3 {
     margin: 0;
     font-size: 1.25rem;
+  }
+  /* The result lands first. */
+  .move .banner {
+    animation: drop calc(450ms * var(--speed)) cubic-bezier(0.3, 1.5, 0.6, 1) backwards;
+  }
+  .reveal:not(.move) .banner {
+    animation: fade-in calc(300ms * var(--speed)) backwards;
+  }
+  @keyframes drop {
+    0% {
+      transform: scale(1.7);
+      opacity: 0;
+    }
+  }
+  .banner.declarers,
+  .banner.defenders {
+    color: var(--accent);
+  }
+  .skipped .banner {
+    animation: none;
+  }
+  /* Face-down until each hand's turn, then it flips over. */
+  .back {
+    height: 5.2em;
+    margin-top: 2px;
+    border-radius: 6px;
+    background: repeating-linear-gradient(45deg, #1d4a36 0 6px, #16392a 6px 12px);
+    border: 1px solid var(--line);
+  }
+  .move .flipped .face {
+    animation: flip calc(320ms * var(--speed)) ease-out backwards;
+    transform-origin: left center;
+  }
+  .reveal:not(.move) .flipped .face {
+    animation: fade-in calc(250ms * var(--speed)) backwards;
+  }
+  .skipped .flipped .face {
+    animation: none;
+  }
+  @keyframes flip {
+    0% {
+      transform: perspective(400px) rotateY(80deg);
+      opacity: 0;
+    }
+  }
+  .scored {
+    color: var(--accent);
+  }
+  .skip {
+    font-size: 12px;
   }
   p {
     margin: 0;

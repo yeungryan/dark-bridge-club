@@ -2,18 +2,35 @@
   import { onDestroy } from 'svelte';
   import { startAutopilot } from '../lib/autopilot';
   import { Connection } from '../lib/connection.svelte';
+  import { director } from '../lib/juice/director.svelte';
+  import { settings } from '../lib/juice/settings.svelte';
+  import { TIMING } from '../lib/juice/timing';
   import { forgetLogin, options } from '../lib/session';
   import Lobby from './Lobby.svelte';
   import NightEnded from './NightEnded.svelte';
   import PartnerPick from './PartnerPick.svelte';
+  import Particles from './Particles.svelte';
   import PauseBanner from './PauseBanner.svelte';
   import Table from './Table.svelte';
 
   let { onSignedOut }: { onSignedOut: () => void } = $props();
 
   const conn = new Connection();
+  director.attach(conn);
   const stopBot = options.bot ? startAutopilot(conn) : null;
   onDestroy(() => stopBot?.());
+
+  // When the night starts, the lobby stays up a moment so the completed crest can flare (S15).
+  let flaring = $state(false);
+  let lastPhase: string | null = null;
+  $effect(() => {
+    const phase = conn.view?.phase ?? null;
+    if (lastPhase === 'lobby' && phase !== 'lobby' && settings.animated) {
+      flaring = true;
+      setTimeout(() => (flaring = false), settings.ms(TIMING.ceremony.crestFlare));
+    }
+    lastPhase = phase;
+  });
 
   $effect(() => {
     if (conn.status === 'signedOut') {
@@ -35,8 +52,8 @@
   {#if conn.status === 'reconnecting'}<div class="status">Reconnecting…</div>{/if}
   <PauseBanner {conn} />
 
-  {#if conn.view.phase === 'lobby'}
-    <Lobby {conn} />
+  {#if conn.view.phase === 'lobby' || flaring}
+    <Lobby {conn} complete={flaring} />
   {:else if conn.view.phase === 'partnerPick'}
     <PartnerPick {conn} />
   {:else if conn.view.phase === 'ended'}
@@ -47,6 +64,7 @@
 {/if}
 
 {#if conn.error}<div class="toast" role="alert">{conn.error}</div>{/if}
+<Particles />
 
 <style>
   .center {

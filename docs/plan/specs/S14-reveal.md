@@ -9,7 +9,7 @@ Balatro's lesson: **if you hide something, the reveal has to be worth it.** Hand
 2. **Sequence (~2.5 s total, can be skipped):**
    - The result banner lands first: **"MADE"** or **"SET"**, in the winning pair's colors, and that pair's session tally ticks up +1 with a satisfying count-up.
    - Then the four hands **flip face-up in turn**, starting from declarer's right (`next()` order). Each flip has a soft card-turn sound (S17), and its **HCP badge counts up** from 0.
-   - Small automatic captions highlight anything notable (from S19): *"Kim held 21 HCP and never declared"*, *"Robbery: Adrian & Ryan made it with 14 HCP between them."*
+   - Small automatic captions highlight anything notable (from S19): *"Kim held 21 HCP and never declared"*, *"Robbery: Adrian & Ryan made it with 14 HCP between them."* *(M3: captions arrive with S19.)*
 3. **Then it stays on screen.** The reveal **remains until everyone taps "Next deal"** (a small avatar fills in for each player who's ready). *No timer.* This is the banter pause.
 4. You can tap a hand to view it larger. The full trick-by-trick history of the deal is a tap away in history (S20).
 
