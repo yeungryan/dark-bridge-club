@@ -268,7 +268,8 @@ class Director {
       }
       // A combo: the same side again. A rising chime on top, and more light each time.
       if (run >= 2) {
-        sound.combo(run - 1);
+        // A beat after the set-win sound, so the ladder reads as separate notes.
+        setTimeout(() => sound.combo(run - 1), 90);
         if (at) lightBurst(at.x, at.y, [this.colorOf(conn, m.winner), gold(), '#fff6d8'], Math.min(3, run - 2));
       }
     }, fly + pause);

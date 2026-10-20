@@ -66,7 +66,7 @@
       title: 'Juice',
       items: [
         { label: 'Pick up a card', play: () => sound.pickup() },
-        { label: 'Combo ×2 → ×6', play: () => [1, 2, 3, 4, 5].forEach((n, i) => after(i * 420, () => (sound.lead(2), sound.combo(n)))) },
+        { label: 'Combo ×2 → ×6', play: () => [1, 2, 3, 4, 5].forEach((n, i) => after(i * 420, () => (sound.lead(2), after(90, () => sound.combo(n))))) },
         { label: 'Impact (small)', play: () => sound.impact(0) },
         { label: 'Impact (big)', play: () => sound.impact(3), haptic: 'clinch' },
         { label: 'Tension (decider)', play: () => sound.riser(0.9) },
@@ -98,7 +98,7 @@
         [1, 2, 3, 4, 5].forEach((n, i) =>
           after(i * 420, () => {
             sound.lead(2);
-            sound.combo(n);
+            after(90, () => sound.combo(n));
             lightBurst(x, y, ['#e8c25a', '#fff6d8', '#ff9a3a'], Math.min(3, n - 1));
           }),
         ),
