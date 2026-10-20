@@ -75,6 +75,8 @@ interface Wash {
   strength: number;
   frames: number;
   life: number;
+  /** Where the light comes from (the hit), in px; the screen's centre if not given. */
+  at: { x: number; y: number } | null;
 }
 
 export type Element = 'fire' | 'air' | 'water' | 'earth';
@@ -101,8 +103,12 @@ let lastNow = 0;
 let frameEma = 16.7;
 let lite = false;
 
-export function attachParticleCanvas(el: HTMLCanvasElement): () => void {
+/** The layer the screen wash is drawn on (screen-blended, so it only ever brightens). */
+let washEl: HTMLElement | null = null;
+
+export function attachParticleCanvas(el: HTMLCanvasElement, washLayer?: HTMLElement): () => void {
   canvas = el;
+  washEl = washLayer ?? null;
   const resize = () => {
     dpr = Math.min(2, devicePixelRatio || 1);
     el.width = innerWidth * dpr;
@@ -113,8 +119,9 @@ export function attachParticleCanvas(el: HTMLCanvasElement): () => void {
   addEventListener('resize', resize);
   return () => {
     removeEventListener('resize', resize);
-    el.style.backgroundColor = '';
+    (washEl ?? el).style.background = '';
     canvas = null;
+    washEl = null;
   };
 }
 
@@ -233,15 +240,16 @@ export function flash(x: number, y: number, color: string, radius = 50): void {
 }
 
 /**
- * A full-canvas wash of light that fades out over `frames`: for big hits. `strength` 0–1
- * (capped at 0.5 alpha). A new wash replaces a weaker one.
+ * A wash of light bursting from the hit (`at`) and fading out over `frames`: for big hits.
+ * `strength` 0–1 (capped at 0.5 alpha). A new wash replaces a weaker one. It fades to
+ * nothing toward the screen's edges, so it lights the table up instead of greying it out.
  */
-export function screenFlash(color: string, strength = 0.35, frames = 10): void {
+export function screenFlash(color: string, strength = 0.35, frames = 10, at?: { x: number; y: number }): void {
   if (!canvas || !settings.motion) return;
   const s = Math.max(0, Math.min(MAX_WASH, strength));
   const f = Math.max(1, Math.round(frames));
   if (wash && wash.strength * (wash.life / wash.frames) > s) return;
-  wash = { rgb: toRgb(hotter(color, 0.35)).join(','), strength: s, frames: f, life: f };
+  wash = { rgb: toRgb(hotter(color, 0.35)).join(','), strength: s, frames: f, life: f, at: at ?? null };
   start();
 }
 
@@ -593,14 +601,18 @@ function drawComets(c: CanvasRenderingContext2D, now: number, frozen: boolean): 
  * every pixel each frame is the single most expensive thing a phone canvas can do, while a
  * background colour is free for the compositor. Light drawn this frame still sits on top.
  */
-function drawWash(el: HTMLCanvasElement, w: Wash | null): void {
+function drawWash(el: HTMLElement, w: Wash | null): void {
   if (!w) {
-    if (el.style.backgroundColor) el.style.backgroundColor = '';
+    if (el.style.background) el.style.background = '';
     return;
   }
   const f = w.life / w.frames;
   const a = Math.min(MAX_WASH, w.strength * Math.pow(f, 1.5));
-  el.style.backgroundColor = `rgba(${w.rgb},${a.toFixed(3)})`;
+  const x = w.at ? `${Math.round(w.at.x)}px` : '50%';
+  const y = w.at ? `${Math.round(w.at.y)}px` : '45%';
+  // The glow spreads out from the hit as it fades.
+  const reach = Math.round(38 + (1 - f) * 30);
+  el.style.background = `radial-gradient(circle at ${x} ${y}, rgba(${w.rgb},${a.toFixed(3)}), rgba(${w.rgb},${(a * 0.35).toFixed(3)}) ${Math.round(reach * 0.45)}vmax, transparent ${reach}vmax)`;
 }
 
 function move(p: Particle): void {
@@ -981,7 +993,7 @@ function step(): void {
   }
   flushStrokes(c);
   drawComets(c, now, frozen);
-  drawWash(canvas, wash);
+  drawWash(washEl ?? canvas, wash);
   if (wash && !frozen) {
     wash.life -= 1;
     if (wash.life <= 0) wash = null;

@@ -103,12 +103,12 @@ class Director {
    * A hit-stop (Balatro): on a big impact everything holds for a beat on the brightest frame,
    * with a punchy thump, then bursts on. `power` 0–3. Input is never frozen.
    */
-  private impact(power: number, color?: string): void {
+  private impact(power: number, color?: string, at?: { x: number; y: number } | null): void {
     sound.impact(power);
     if (!settings.motion) return;
     const ms = settings.ms([55, 75, 100, 130][Math.max(0, Math.min(3, power))]!);
     freeze(ms);
-    if (color && power >= 2) screenFlash(color, 0.14 + power * 0.07);
+    if (color && power >= 2) screenFlash(color, 0.18 + power * 0.08, 10, at ?? undefined);
     this.frozen = true;
     clearTimeout(this.unfreeze);
     this.unfreeze = setTimeout(() => (this.frozen = false), ms);
@@ -254,7 +254,7 @@ class Director {
           ring(at.x, at.y, TRUMP_COLOR, { radius: 120, width: 5, frames: 30 });
           glyphs(at.x, at.y, RESPONSES[level].particles / 3, this.trumpGlyph(conn), [TRUMP_COLOR, '#f2e6ff', gold()], 'shower');
         }
-        this.impact(2, TRUMP_COLOR);
+        this.impact(2, TRUMP_COLOR, at);
       } else if (kind === 'trump') {
         sound.trumpTrick();
         if (mineWon) buzz('trumpTrick');
@@ -321,10 +321,10 @@ class Director {
       this.holding = false;
       sound.clinch(m.drama);
       buzz('clinch');
-      this.impact(Math.min(3, 1 + m.drama), gold());
-      this.shake(base.shakePx + DRAMA_BOOST.shakePx * m.drama);
       // The signature effect of whoever played the deciding card (S24): fire, air, water or earth.
       const at = this.centerOf(`.area [data-seat="${m.seat}"]`);
+      this.impact(Math.min(3, 1 + m.drama), gold(), at);
+      this.shake(base.shakePx + DRAMA_BOOST.shakePx * m.drama);
       if (!at) return;
       const element = elementAtSeat(conn, m.seat);
       lightBurst(at.x, at.y, [this.colorOf(conn, m.seat), gold(), '#fffbe8'], Math.min(3, 1 + m.drama));
