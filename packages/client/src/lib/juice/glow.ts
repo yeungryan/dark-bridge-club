@@ -8,6 +8,11 @@ export type GlowKind = 'hot' | 'soft' | 'star';
 const MAX_ENTRIES = 64;
 /** Sprite resolutions (radius, in device pixels). Sprites are scaled when drawn; gradients survive it. */
 const BUCKETS = [12, 32, 96] as const;
+/**
+ * Small glows are drawn at their sprite's native size, snapped to device pixels: no scaling
+ * filter per pixel, which roughly halves their cost on a software canvas. Steps of ~√2.
+ */
+const NATIVE = [3, 4, 6, 9, 13, 19, 27, 38, 48] as const;
 
 /** A finished sprite: an ImageBitmap where possible (drawing from a live canvas makes the browser snapshot it every time). */
 export type Sprite = ImageBitmap | HTMLCanvasElement;
@@ -124,18 +129,33 @@ function paint(g: CanvasRenderingContext2D | OffscreenCanvasRenderingContext2D, 
 /** A cached sprite for drawing a glow of `radius` CSS px; draw it into a (2·radius)² box. */
 export function glowSprite(kind: GlowKind, color: string, radius: number, dpr = 1): Sprite {
   const want = radius * dpr;
-  const res: number = BUCKETS.find((b) => b >= want) ?? 96;
+  return spriteAt(kind, color, BUCKETS.find((b) => b >= want) ?? 96);
+}
+
+function spriteAt(kind: GlowKind, color: string, res: number): Sprite {
   const key = `${kind}|${color}|${res}`;
   let s = cache.get(key);
-  if (!s) {
-    if (cache.size >= MAX_ENTRIES) {
-      for (const old of cache.values()) if ('close' in old) old.close();
-      cache.clear();
+  if (s) return s;
+  if (cache.size >= MAX_ENTRIES) {
+    // Evict the oldest entry (a Map keeps insertion order) rather than everything, so a
+    // colourful moment can't thrash the cache by re-rendering sprites every frame.
+    const oldest = cache.keys().next().value;
+    if (oldest !== undefined) {
+      const old = cache.get(oldest);
+      if (old && 'close' in old) old.close();
+      cache.delete(oldest);
     }
-    s = render(kind, color, res);
-    cache.set(key, s);
   }
+  s = render(kind, color, res);
+  cache.set(key, s);
   return s;
+}
+
+/** The native sprite radius closest (by ratio) to `want` device px. */
+function nativeRes(want: number): number {
+  let best: number = NATIVE[0];
+  for (const r of NATIVE) if (Math.abs(Math.log(r / want)) < Math.abs(Math.log(best / want))) best = r;
+  return best;
 }
 
 /** Unit-radius gradients (scaled by the transform when drawn), for big glows. */
@@ -163,7 +183,15 @@ export function drawGlow(c: CanvasRenderingContext2D, kind: GlowKind, color: str
     c.restore();
     return;
   }
-  c.drawImage(glowSprite(kind, color, radius, dpr), x - radius, y - radius, radius * 2, radius * 2);
+  if (kind === 'star') {
+    c.drawImage(glowSprite(kind, color, radius, dpr), x - radius, y - radius, radius * 2, radius * 2);
+    return;
+  }
+  // Native size at whole device pixels (given the context's plain devicePixelRatio
+  // transform), so no per-pixel scaling filter runs.
+  const res = nativeRes(radius * dpr);
+  const d = (2 * res) / dpr;
+  c.drawImage(spriteAt(kind, color, res), (Math.round(x * dpr) - res) / dpr, (Math.round(y * dpr) - res) / dpr, d, d);
 }
 
 /** For tests and debugging. */

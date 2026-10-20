@@ -93,6 +93,13 @@ let dpr = 1;
 /** Hit-stop: nothing advances until this time (performance.now() ms). */
 let frozenUntil = 0;
 let lastNow = 0;
+/**
+ * Frame-time governor: a smoothed frame time, and `lite` when the device is falling behind.
+ * Lite keeps every effect's shape, timing and the big blooms/rings/bolts, but drops the
+ * per-particle glow sprites (the costliest part on a slow phone) back to plain additive dots.
+ */
+let frameEma = 16.7;
+let lite = false;
 
 export function attachParticleCanvas(el: HTMLCanvasElement): () => void {
   canvas = el;
@@ -247,8 +254,8 @@ export function lightBurst(x: number, y: number, colors: readonly string[], powe
   const main = colors[0] ?? '#ffffff';
   const core = 30 + pw * 12;
   add([
-    { shape: 'flash', x, y, size: core * 1.7, max: 14 + pw * 2, alpha: 0.4, color: main },
-    { shape: 'flash', x, y, size: core, max: 10 + pw * 2, alpha: 0.95, color: main, glow: 'hot' },
+    { shape: 'flash', x, y, size: core * 1.45, max: 14 + pw * 2, alpha: 0.4, color: main },
+    { shape: 'flash', x, y, size: core * 0.85, max: 10 + pw * 2, alpha: 0.95, color: main, glow: 'hot' },
   ]);
   ringFx(x, y, pick(colors, 1), { radius: 58 + pw * 22, width: 3 + pw * 0.6, frames: 18 + pw * 2 });
   const n = 14 + Math.round(pw * 8);
@@ -312,6 +319,8 @@ export function elementBurst(element: Element, x: number, y: number, power = 0):
           size: rand(2.5, 5.5),
           color: pick(c, i),
           wobble: 1,
+          // A trail on every third ember: enough to read as motion, a third of the cost.
+          trailLen: i % 3 === 0 ? 3 : 0,
         })),
       );
       break;
@@ -522,6 +531,7 @@ function start(): void {
   if (!running) {
     running = true;
     lastNow = performance.now();
+    frameEma = 16.7;
     requestAnimationFrame(step);
   }
 }
@@ -749,8 +759,10 @@ function drawLight(c: CanvasRenderingContext2D, p: Particle): void {
   if (!p.light) {
     // Highlights on matter: a glint on ice/metal, a light rim on water droplets.
     if (p.shape === 'shard') {
-      c.globalAlpha = a * 0.3;
-      drawGlow(c, 'soft', p.color, p.x, p.y, p.size * 1.9, dpr);
+      if (!lite) {
+        c.globalAlpha = a * 0.3;
+        drawGlow(c, 'soft', p.color, p.x, p.y, p.size * 1.9, dpr);
+      }
       const g = Math.sin(p.life * 0.35 + p.max * 7);
       if (g > 0.5) {
         const tipX = p.x + Math.sin(p.rot) * p.size * 1.2;
@@ -758,7 +770,7 @@ function drawLight(c: CanvasRenderingContext2D, p: Particle): void {
         c.globalAlpha = a * ((g - 0.5) / 0.5);
         drawGlow(c, 'star', '#ffffff', tipX, tipY, p.size * 2.2, dpr);
       }
-    } else if (p.shape === 'dot') {
+    } else if (p.shape === 'dot' && !lite) {
       c.globalAlpha = a * 0.55;
       drawGlow(c, 'hot', p.color, p.x - p.size * 0.35, p.y - p.size * 0.35, p.size * 1.3, dpr);
     }
@@ -773,18 +785,18 @@ function drawLight(c: CanvasRenderingContext2D, p: Particle): void {
         // Air swirls come in dense swarms of near-white: keep each one airy so the swarm adds
         // up to light rather than blowing out to a white blob.
         queueStroke(p, p.color, a * 0.75, p.size * 0.8);
-        c.globalAlpha = a * 0.3;
-        drawGlow(c, 'soft', p.color, p.x, p.y, p.size * 2.8, dpr);
-      } else {
-        queueStroke(p, p.hot, a, p.size * 0.85);
-        const tr = p.trail;
-        if (tr && tr.length >= 4) {
-          const m = (tr.length >> 2) << 1;
+        if (!lite) {
           c.globalAlpha = a * 0.3;
-          drawGlow(c, 'soft', p.color, (tr[m]! + p.x) / 2, (tr[m + 1]! + p.y) / 2, p.size * 3.4, dpr);
+          drawGlow(c, 'soft', p.color, p.x, p.y, p.size * 2.8, dpr);
         }
-        c.globalAlpha = a * 0.85;
-        drawGlow(c, 'hot', p.color, p.x, p.y, p.size * 2.6, dpr);
+      } else {
+        // Two strokes, batched: a soft coloured halo and a white-hot core.
+        queueStroke(p, p.color, a * 0.3, p.size * 2.6);
+        queueStroke(p, p.hot, a, p.size * 0.85);
+        if (!lite) {
+          c.globalAlpha = a * 0.85;
+          drawGlow(c, 'hot', p.color, p.x, p.y, p.size * 2.8, dpr);
+        }
       }
       break;
     }
@@ -808,7 +820,7 @@ function drawLight(c: CanvasRenderingContext2D, p: Particle): void {
     case 'flash':
       // Bloom: the old flat disc at 0.4 alpha becomes a soft additive glow.
       c.globalAlpha = Math.min(1, a * (p.glow === 'hot' ? 1 : 2));
-      drawGlow(c, p.glow ?? 'soft', p.color, p.x, p.y, p.size * (p.glow === 'hot' ? 1 : 1.15), dpr);
+      drawGlow(c, p.glow ?? 'soft', p.color, p.x, p.y, p.size, dpr);
       break;
     case 'puff':
       c.globalAlpha = a;
@@ -819,7 +831,11 @@ function drawLight(c: CanvasRenderingContext2D, p: Particle): void {
       const fl = p.wobble ? 0.7 + 0.3 * Math.sin(frame * 0.6 + p.max) : 1;
       if (p.trail && p.trail.length >= 4) queueStroke(p, p.color, a * 0.35, p.size * 0.9);
       c.globalAlpha = a * fl;
-      drawGlow(c, fade > 0.55 ? 'hot' : 'soft', p.color, p.x, p.y, p.size * 2.1 * fl, dpr);
+      if (lite) {
+        c.beginPath();
+        c.arc(p.x, p.y, p.size * fl, 0, Math.PI * 2);
+        c.fill();
+      } else drawGlow(c, fade > 0.55 ? 'hot' : 'soft', p.color, p.x, p.y, p.size * 2.1 * fl, dpr);
       break;
     }
     case 'bolt': {
@@ -919,6 +935,9 @@ function step(): void {
   const dt = Math.min(100, Math.max(0, now - lastNow));
   lastNow = now;
   const frozen = now < frozenUntil;
+  frameEma = frameEma * 0.8 + Math.max(8, dt) * 0.2;
+  if (!lite && frameEma > 21) lite = true;
+  else if (lite && frameEma < 17.5) lite = false;
   if (frozen) {
     // Hold comets in place by pushing their start forward.
     for (const k of comets) k.start += dt;
