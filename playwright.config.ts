@@ -13,6 +13,8 @@ export default defineConfig({
   use: {
     baseURL: `http://127.0.0.1:${PORT}`,
     ...devices['Pixel 7'],
+    // Like a real phone: no sound until the player has tapped something.
+    launchOptions: { args: ['--autoplay-policy=user-gesture-required'] },
     trace: 'retain-on-failure',
   },
   webServer: {

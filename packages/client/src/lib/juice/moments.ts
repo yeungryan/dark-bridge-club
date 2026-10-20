@@ -1,29 +1,53 @@
-import { trumpSuit, type Card, type PublicEvent, type Seat, type Side, type TableView } from '@dark/engine';
+import {
+  trumpSuit,
+  winningPlay,
+  type Call,
+  type Card,
+  type PlayedCard,
+  type PublicEvent,
+  type Seat,
+  type Side,
+  type Suit,
+  type TableView,
+} from '@dark/engine';
+import { sameCard } from '../format';
 import type { Level } from './timing';
 
 // Spec S16: turn raw server events into "moments" the juice engine responds to.
 // Pure functions, so the intensity rules are unit tested.
 
 export type Moment =
-  | { kind: 'call'; seat: Seat; mine: boolean }
-  | { kind: 'contractSet' }
+  /** `going`: passes since the last bid, before the auction ends (1 = "going once", 2 = "going twice"). */
+  | { kind: 'call'; seat: Seat; mine: boolean; call: Call; going: number }
+  | { kind: 'contractSet'; declarer: Seat }
   | { kind: 'passedOut' }
-  | { kind: 'cardPlayed'; seat: Seat; mine: boolean }
-  | { kind: 'trickWon'; side: Side; winner: Seat; trumpOver: boolean; pip: number }
+  /**
+   * `lead`: how many times the lead of this trick has changed, counting this card (0 = it doesn't lead).
+   * `trumpIn`: it takes the lead by trumping a trick led in another suit.
+   * `completes`: it is the trick's fourth card (the trick-won moment takes over from there).
+   */
+  | { kind: 'cardPlayed'; seat: Seat; mine: boolean; card: Card; lead: number; trumpIn: boolean; completes: boolean }
+  /**
+   * `trump`: won by a trump card. `trumpOver`: won by trumping another suit (a ruff).
+   * `firstTrump`: the first trick of this deal won by a trump.
+   */
+  | { kind: 'trickWon'; side: Side; winner: Seat; trump: boolean; trumpOver: boolean; firstTrump: boolean; pip: number }
   | { kind: 'oneAway'; side: Side }
   | { kind: 'decider' }
   | { kind: 'clinch'; side: Side; seat: Seat; card: Card; drama: number }
   | { kind: 'dealComplete' }
   | { kind: 'nightEnded' };
 
+/** The ladder (S16): each moment's size. Only the clinch and the end of the night reach 5. */
 export function intensityOf(m: Moment): Level {
   switch (m.kind) {
     case 'call':
-    case 'cardPlayed':
     case 'passedOut':
       return 1;
+    case 'cardPlayed':
+      return m.trumpIn ? 3 : m.lead > 0 ? 2 : 1;
     case 'trickWon':
-      return m.trumpOver ? 3 : 2;
+      return m.firstTrump ? 4 : m.trump ? 3 : 2;
     case 'contractSet':
     case 'oneAway':
       return 3;
@@ -51,35 +75,93 @@ function remaining(view: TableView, won: { declarers: number; defenders: number 
   return { declarers: d.declarerTarget! - won.declarers, defenders: d.defenderTarget! - won.defenders };
 }
 
+/** How a card changed the trick it was played to. */
+export function leadChange(cards: readonly PlayedCard[], index: number, trump: Suit | null): { lead: number; trumpIn: boolean } {
+  if (index <= 0) return { lead: 0, trumpIn: false };
+  let changes = 0;
+  let leader = cards[0]!;
+  for (let i = 1; i <= index; i++) {
+    const best = winningPlay(cards.slice(0, i + 1), trump);
+    if (best !== leader) {
+      changes++;
+      leader = best;
+    }
+  }
+  const card = cards[index]!;
+  if (leader !== card) return { lead: 0, trumpIn: false };
+  const led = cards[0]!.card.suit;
+  return { lead: changes, trumpIn: trump !== null && card.card.suit === trump && led !== trump };
+}
+
+/** Finds the trick (current or just completed) holding a played card. */
+function trickOf(view: TableView, seat: Seat, card: Card): { cards: readonly PlayedCard[]; index: number } | null {
+  const deal = view.deal;
+  for (const trick of [deal?.currentTrick, deal?.lastTrick]) {
+    const index = trick?.cards.findIndex((p) => p.seat === seat && sameCard(p.card, card)) ?? -1;
+    if (trick && index >= 0) return { cards: trick.cards, index };
+  }
+  return null;
+}
+
 export function momentsFrom(events: readonly PublicEvent[], view: TableView): Moment[] {
   const moments: Moment[] = [];
   const me = view.mySeat;
   const deal = view.deal;
+  const calls = deal?.calls ?? [];
+  // Calls in this batch are the last ones in the auction; find each one's position.
+  let callIndex = calls.length - events.filter((e) => e.type === 'deal' && e.event.type === 'callMade').length;
+  const auctionEnds = events.some((e) => e.type === 'deal' && (e.event.type === 'contractSet' || e.event.type === 'passedOut'));
 
   for (const e of events) {
     if (e.type === 'nightEnded') moments.push({ kind: 'nightEnded' });
     if (e.type !== 'deal') continue;
     const ev = e.event;
     switch (ev.type) {
-      case 'callMade':
-        moments.push({ kind: 'call', seat: ev.seat, mine: ev.seat === me });
+      case 'callMade': {
+        const upTo = calls.slice(0, callIndex + 1);
+        callIndex++;
+        let passes = 0;
+        for (let i = upTo.length - 1; i >= 0 && upTo[i]!.call.type === 'pass'; i--) passes++;
+        const anyBid = upTo.some((c) => c.call.type === 'bid');
+        const going = ev.call.type === 'pass' && anyBid && !(auctionEnds && passes >= 3) ? Math.min(passes, 2) : 0;
+        moments.push({ kind: 'call', seat: ev.seat, mine: ev.seat === me, call: ev.call, going });
         break;
+      }
       case 'contractSet':
-        moments.push({ kind: 'contractSet' });
+        moments.push({ kind: 'contractSet', declarer: ev.contract.declarer });
         break;
       case 'passedOut':
         moments.push({ kind: 'passedOut' });
         break;
-      case 'cardPlayed':
-        moments.push({ kind: 'cardPlayed', seat: ev.seat, mine: ev.seat === me });
+      case 'cardPlayed': {
+        const trump = deal?.contract ? trumpSuit(deal.contract.strain) : null;
+        const found = trickOf(view, ev.seat, ev.card);
+        const change = found ? leadChange(found.cards, found.index, trump) : { lead: 0, trumpIn: false };
+        moments.push({
+          kind: 'cardPlayed',
+          seat: ev.seat,
+          mine: ev.seat === me,
+          card: ev.card,
+          ...change,
+          completes: found?.index === 3,
+        });
         break;
+      }
       case 'trickWon': {
         if (!deal?.contract) break;
         const trick = deal.lastTrick;
         const trump = trumpSuit(deal.contract.strain);
         const led = trick?.cards[0]?.card.suit;
-        const trumpOver = !!trump && ev.card.suit === trump && led !== trump;
-        moments.push({ kind: 'trickWon', side: ev.side, winner: ev.winner, trumpOver, pip: ev.tricksWon[ev.side] - 1 });
+        const isTrump = !!trump && ev.card.suit === trump;
+        moments.push({
+          kind: 'trickWon',
+          side: ev.side,
+          winner: ev.winner,
+          trump: isTrump,
+          trumpOver: isTrump && led !== trump,
+          firstTrump: isTrump && deal.trumpTricksWon === 1,
+          pip: ev.tricksWon[ev.side] - 1,
+        });
 
         // Getting close: a side just became one trick away; both at once is the decider.
         const after = remaining(view, ev.tricksWon);

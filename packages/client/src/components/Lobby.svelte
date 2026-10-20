@@ -36,6 +36,10 @@
     {/each}
   </ul>
   <p class="muted">{here}/4 here. The night starts as soon as everyone has joined.</p>
+  <p class="muted extras">
+    While you wait: <a href="lab.html" target="_blank">sound check</a> ·
+    <a href="practice.html" target="_blank">practice table</a>
+  </p>
 </main>
 
 <style>
@@ -108,6 +112,12 @@
   }
   li .muted {
     margin-left: auto;
+  }
+  .extras {
+    font-size: 14px;
+  }
+  .extras a {
+    color: var(--accent);
   }
   .dot {
     width: 12px;

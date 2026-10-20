@@ -23,7 +23,12 @@ export class Connection {
   private errorTimer: ReturnType<typeof setTimeout> | null = null;
   private listeners = new Set<(events: readonly PublicEvent[]) => void>();
 
-  constructor() {
+  /** `offline`: no server (the practice table drives this connection itself). */
+  constructor(offline = false) {
+    if (offline) {
+      this.status = 'open';
+      return;
+    }
     document.addEventListener('visibilitychange', () => {
       if (document.visibilityState === 'visible' && this.status === 'reconnecting') this.reconnectNow();
     });
@@ -95,7 +100,7 @@ export class Connection {
     this.open();
   }
 
-  private receive(message: ServerMessage): void {
+  protected receive(message: ServerMessage): void {
     switch (message.type) {
       case 'state':
         if (message.seq < this.seq && message.events.length === 0) return; // stale

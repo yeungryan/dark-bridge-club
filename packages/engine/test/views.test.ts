@@ -108,6 +108,19 @@ describe('S06 per-player views', () => {
       }
     });
   });
+  it('counts tricks won by a trump, and only by a trump (S16 "first trump")', () => {
+    let sawTrumpTrick = false;
+    botNight(20, (s) => {
+      const deal = s.deal;
+      if (!deal?.contract) return;
+      const view = tableView(s, 'ryan').deal!;
+      const trump = deal.contract.strain === 'NT' ? null : deal.contract.strain;
+      const expected = deal.tricks.filter((t) => trump !== null && t.winningCard.suit === trump).length;
+      expect(view.trumpTricksWon).toBe(expected);
+      if (expected > 0) sawTrumpTrick = true;
+    });
+    expect(sawTrumpTrick).toBe(true);
+  });
 });
 
 describe('S22 bots', () => {

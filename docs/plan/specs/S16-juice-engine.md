@@ -35,3 +35,16 @@ One place that decides **how big each moment feels**, so effects stay proportion
 - [ ] The side-by-side check (M2 checkpoint): effects on feel better and are not slower.
 - [ ] 60 fps on a mid-range Android phone during a level-5 moment.
 - [ ] Every intensity response is listed in one table in code.
+
+## The ladder, revised after the first M2 playtest
+In M2, levels 1–4 had no shake, particles or hit-pause, so nothing between a card and the clinch felt like anything. The new ladder (`RESPONSES` in `lib/juice/timing.ts`):
+
+| Level | Moments | Hit-pause | Shake | Particles |
+|---|---|---|---|---|
+| 1 | a card, a call | – | – | – |
+| 2 | takes the lead, trick won | – | 2 px | 12 |
+| 3 | trump-in, trick won by a trump, contract set (Sold!) | 40 ms | 4 px | 26 |
+| 4 | first trump trick, decider | 90 ms | 6 px | 45 |
+| 5 | the clinch, end of night | 120 ms | 7 px + drama | 60 + drama |
+
+Beats are timed to visuals: a card's sound plays when it lands, the trick payoff when its last card lands, and a pip when the orb reaches the score bar. Moments are detected in `moments.ts`, which is unit tested. `DealView.trumpTricksWon` (public information) lets clients detect "first trump" even after a reconnect.

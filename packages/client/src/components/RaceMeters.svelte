@@ -6,9 +6,11 @@
   // A new pip pops in; a side one trick away shimmers; at the clinch the winner glows and the loser dims.
   let { deal, declarers, defenders }: { deal: DealView; declarers: string; defenders: string } = $props();
 
+  // A won trick's pip appears when its orb arrives from the table (director.pipHold).
+  const shown = (side: 'declarers' | 'defenders') => director.pipHold[side] ?? deal.tricksWon[side];
   const rows = $derived([
-    { side: 'declarers' as const, label: declarers, won: deal.tricksWon.declarers, need: deal.declarerTarget! },
-    { side: 'defenders' as const, label: defenders, won: deal.tricksWon.defenders, need: deal.defenderTarget! },
+    { side: 'declarers' as const, label: declarers, won: shown('declarers'), need: deal.declarerTarget! },
+    { side: 'defenders' as const, label: defenders, won: shown('defenders'), need: deal.defenderTarget! },
   ]);
   const settledBy = $derived(deal.clinch?.side ?? null);
   // The clinch glow waits for the hit-pause, so it lands with the shake and the chord.
@@ -18,6 +20,7 @@
 <div class="meters">
   {#each rows as row (row.side)}
     <div
+      data-side={row.side}
       class="row"
       class:close={!settledBy && row.won === row.need - 1}
       class:done={row.won >= row.need}
@@ -27,7 +30,7 @@
       <span class="who">{row.label}</span>
       <span class="pips" aria-hidden="true">
         {#each Array.from({ length: row.need }, (_, i) => i) as i (i)}
-          {#key i < row.won}<i class:on={i < row.won}></i>{/key}
+          {#key i < row.won}<i class:on={i < row.won} style="--i: {i}"></i>{/key}
         {/each}
       </span>
       <span class="count">{Math.min(row.won, row.need)}/{row.need}</span>
@@ -62,6 +65,15 @@
     height: 9px;
     border-radius: 50%;
     border: 1.5px solid var(--ink-dim);
+  }
+  /* When the contract is set, the empty pips deal out left to right. */
+  :global(.fx-full) .pips i:not(.on) {
+    animation: pip-in calc(260ms * var(--speed)) cubic-bezier(0.3, 1.6, 0.6, 1) calc(var(--i) * 35ms * var(--speed)) backwards;
+  }
+  @keyframes pip-in {
+    0% {
+      transform: scale(0);
+    }
   }
   .pips i.on {
     background: var(--accent);

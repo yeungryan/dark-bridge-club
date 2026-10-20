@@ -1,52 +1,44 @@
 <script lang="ts">
-  import type { CompletedTrick, PlayedCard } from '@dark/engine';
+  import { suitSymbol, trumpSuit, winningPlay, type CompletedTrick, type PlayedCard, type Seat } from '@dark/engine';
   import type { Connection } from '../lib/connection.svelte';
   import { spotOf } from '../lib/format';
   import { director } from '../lib/juice/director.svelte';
+  import { launch } from '../lib/juice/launch.svelte';
   import { settings } from '../lib/juice/settings.svelte';
   import { TIMING } from '../lib/juice/timing';
   import Card from './Card.svelte';
 
-  // Spec S13/S16: cards fly in from their player's side and land with a small squash.
-  // A finished trick holds so everyone sees all four cards, the winner pulses, then the
-  // cards sweep toward the winner. The settling (clinching) trick stays put for the payoff.
+  // Spec S13/S16: each card flies in from where it came from (your finger, or the player's
+  // name) and lands with a squash. The card currently winning the trick wears a gold ring.
+  // A finished trick holds so everyone sees all four cards, the winner pulses, then the cards
+  // sweep into the winner's name. The director (lib/juice) times each beat; this draws them.
   let { conn }: { conn: Connection } = $props();
 
   const view = $derived(conn.view!);
   const deal = $derived(view.deal!);
+  const me = $derived(view.mySeat!);
   // The area shrinks to fit between the side badges; cards scale with it so they never overlap them.
   let size = $state(180);
   const cardWidth = $derived(Math.max(34, Math.min(52, Math.floor(size * 0.29))));
 
   let held = $state<CompletedTrick | null>(null);
-  let sweeping = $state(false);
   let lastSeen = 0;
-  let timers: ReturnType<typeof setTimeout>[] = [];
-
   $effect(() => {
     const count = deal.tricksPlayed;
-    const settled = deal.phase === 'awaitingPlayOn' || deal.phase === 'complete';
-    if (count > lastSeen && deal.lastTrick) {
-      timers.forEach(clearTimeout);
-      timers = [];
-      held = deal.lastTrick;
-      sweeping = false;
-      // The trick that settles the deal stays on the table for the clinch moment.
-      if (!settled) {
-        const hold = settings.animated ? settings.ms(TIMING.trickHold) : 900;
-        const sweep = settings.motion ? settings.ms(TIMING.sweep) : 0;
-        timers.push(setTimeout(() => (sweeping = true), hold));
-        timers.push(setTimeout(() => ((held = null), (sweeping = false)), hold + sweep));
-      }
-    }
+    if (count > lastSeen && deal.lastTrick) held = deal.lastTrick;
     if (count === 0) held = null;
     lastSeen = count;
   });
 
+  const fx = $derived(director.trickFx?.trick === deal.tricksPlayed ? director.trickFx : null);
   const live = $derived(deal.currentTrick !== null && deal.currentTrick.cards.length > 0);
-  const showing = $derived<readonly PlayedCard[]>(live ? deal.currentTrick!.cards : (held?.cards ?? []));
+  const showing = $derived<readonly PlayedCard[]>(live ? deal.currentTrick!.cards : held && fx?.phase !== 'done' ? held.cards : []);
+  const trump = $derived(deal.contract ? trumpSuit(deal.contract.strain) : null);
+  // Who is winning the trick so far (anyone could work it out, so show it).
+  const leading = $derived(live && showing.length > 1 ? winningPlay(showing, trump).seat : null);
   const winner = $derived(live ? null : (held?.winner ?? null));
-  const winnerSpot = $derived(winner === null ? null : spotOf(winner, view.mySeat!));
+  const celebrating = $derived(winner !== null && fx !== null && fx.phase !== 'landing');
+  const sweepingTo = $derived(!live && fx?.phase === 'sweep' ? winner : null);
   const motion = $derived(settings.motion ? 'move' : settings.animated ? 'fade' : 'none');
 
   // Both sides one trick away: the next trick decides the deal.
@@ -57,19 +49,79 @@
       deal.declarerTarget - deal.tricksWon.declarers === 1 &&
       deal.defenderTarget! - deal.tricksWon.defenders === 1,
   );
+
+  const center = (r: DOMRect) => ({ x: r.left + r.width / 2, y: r.top + r.height / 2 });
+
+  /** Fly in from your finger (your card) or from the player's name (everyone else's). */
+  function arrive(node: HTMLElement, play: PlayedCard) {
+    if (!settings.motion) return;
+    const from = (play.seat === me ? launch.take(play.card) : null) ?? null;
+    const badge = document.querySelector(`[data-badge-seat="${play.seat}"]`)?.getBoundingClientRect() ?? null;
+    const origin = from ?? badge;
+    if (!origin) return;
+    const r = node.getBoundingClientRect();
+    const a = center(origin);
+    const b = center(r);
+    const scale = from ? from.width / r.width : 0.55;
+    const spin = play.seat === me ? 0 : (play.seat % 2 ? 1 : -1) * 10;
+    node.animate(
+      [
+        { transform: `translate(${a.x - b.x}px, ${a.y - b.y}px) scale(${scale}) rotate(${spin}deg)`, opacity: from ? 1 : 0.2 },
+        { transform: 'translate(0, 0) scale(1.08, 0.9)', opacity: 1, offset: 0.78 },
+        { transform: 'none', opacity: 1 },
+      ],
+      { duration: settings.ms(TIMING.cardFly), easing: 'cubic-bezier(0.2, 0.8, 0.3, 1)', fill: 'backwards' },
+    );
+  }
+
+  /** The finished trick slides into the winner's name and fades. */
+  function sweep(node: HTMLElement, target: Seat | null) {
+    const go = (to: Seat | null) => {
+      if (to === null || !settings.animated) return;
+      const badge = document.querySelector(`[data-badge-seat="${to}"]`)?.getBoundingClientRect();
+      const r = node.getBoundingClientRect();
+      const end =
+        settings.motion && badge
+          ? { transform: `translate(${center(badge).x - center(r).x}px, ${center(badge).y - center(r).y}px) scale(0.45)`, opacity: 0 }
+          : { opacity: 0 };
+      node.animate([{ transform: 'none', opacity: 1 }, end], {
+        duration: settings.ms(TIMING.sweep),
+        easing: 'cubic-bezier(0.5, 0, 0.9, 0.6)',
+        fill: 'forwards',
+      });
+    };
+    go(target);
+    return { update: go };
+  }
 </script>
 
-<div class="area" bind:clientWidth={size} style="transform: translate({director.shakeX}px, {director.shakeY}px)">
+<div class="area" class:armed={launch.armed} bind:clientWidth={size} style="transform: translate({director.shakeX}px, {director.shakeY}px)">
+  {#if director.flash}
+    {#key director.flash.id}
+      <span class="flash" class:big={director.flash.big} aria-hidden="true">{suitSymbol(director.flash.suit)}</span>
+    {/key}
+  {/if}
   {#each showing as play (play.seat + ':' + play.card.suit + play.card.rank)}
-    {@const spot = spotOf(play.seat, view.mySeat!)}
+    {@const spot = spotOf(play.seat, me)}
     <div class="spot {spot}" data-seat={play.seat}>
-      <div class="fly {motion} from-{spot}" class:sweep={sweeping} style="--to: {winnerSpot ?? 'none'}" data-to={winnerSpot}>
-        <div class:win={winner === play.seat && motion === 'move'}>
-          <Card card={play.card} width={cardWidth} highlight={winner === play.seat} />
+      <div class="fly {motion}" use:arrive={play} use:sweep={sweepingTo}>
+        <div
+          class="face"
+          class:leading={leading === play.seat}
+          class:beaten={leading !== null && leading !== play.seat}
+          class:win={celebrating && winner === play.seat}
+          class:trumpwin={celebrating && winner === play.seat && fx?.kind !== 'normal'}
+        >
+          <Card card={play.card} width={cardWidth} highlight={leading === play.seat || (celebrating && winner === play.seat)} />
         </div>
       </div>
     </div>
   {/each}
+  {#if director.banner}
+    {#key director.banner.id}
+      <span class="banner" role="status">{director.banner.text}</span>
+    {/key}
+  {/if}
   {#if decider}<span class="decider" role="status">Decider</span>{/if}
 </div>
 
@@ -80,6 +132,22 @@
     max-width: 190px;
     aspect-ratio: 1 / 1;
     margin: 0 auto;
+  }
+  /* Your dragged card would play if you let go now. */
+  .area::before {
+    content: '';
+    position: absolute;
+    inset: -6px;
+    border-radius: 50%;
+    border: 2px dashed transparent;
+    transition:
+      border-color calc(150ms * var(--speed)),
+      box-shadow calc(150ms * var(--speed));
+    pointer-events: none;
+  }
+  .area.armed::before {
+    border-color: var(--accent);
+    box-shadow: inset 0 0 30px rgba(232, 194, 90, 0.25), 0 0 18px rgba(232, 194, 90, 0.35);
   }
   .spot {
     position: absolute;
@@ -104,72 +172,131 @@
     top: 50%;
     transform: translateY(-50%);
   }
-
-  /* Arrival: fly in from the player's side, land with a squash. */
-  .fly.move {
-    animation: land calc(220ms * var(--speed)) cubic-bezier(0.2, 0.8, 0.3, 1) backwards;
-  }
   .fly.fade {
     animation: fade-in calc(160ms * var(--speed)) ease-out backwards;
   }
-  .from-bottom {
-    --dx: 0px;
-    --dy: 90px;
+  .face {
+    border-radius: 6px;
+    transition: filter calc(200ms * var(--speed));
   }
-  .from-top {
-    --dx: 0px;
-    --dy: -90px;
+  /* A card that is beaten so far sinks back a little; the leader pops when it takes the lead. */
+  .face.beaten {
+    filter: brightness(0.78);
   }
-  .from-left {
-    --dx: -90px;
-    --dy: 0px;
+  :global(.fx-full) .face.leading {
+    animation: take-lead calc(300ms * var(--speed)) cubic-bezier(0.3, 1.6, 0.6, 1);
   }
-  .from-right {
-    --dx: 90px;
-    --dy: 0px;
-  }
-  @keyframes land {
-    0% {
-      transform: translate(var(--dx), var(--dy)) scale(0.9) rotate(-4deg);
-      opacity: 0.4;
+  @keyframes take-lead {
+    40% {
+      transform: scale(1.14);
     }
-    78% {
-      transform: translate(0, 0) scale(1.04, 0.94);
+  }
+  /* The trick's winner. */
+  :global(.fx-full) .face.win {
+    animation: win calc(420ms * var(--speed)) cubic-bezier(0.3, 1.6, 0.6, 1);
+  }
+  @keyframes win {
+    35% {
+      transform: scale(1.22) rotate(-3deg);
+    }
+  }
+  .face.win {
+    box-shadow: 0 0 16px 2px rgba(232, 194, 90, 0.75);
+  }
+  .face.trumpwin {
+    box-shadow: 0 0 20px 4px rgba(197, 139, 255, 0.85);
+  }
+
+  /* A trump's suit flashes behind the trick. */
+  .flash {
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    font-size: 110px;
+    line-height: 1;
+    color: #c58bff;
+    pointer-events: none;
+    opacity: 0;
+    transform: translate(-50%, -50%);
+    animation: suit-flash calc(650ms * var(--speed)) ease-out;
+  }
+  .flash.big {
+    font-size: 150px;
+    animation-duration: calc(900ms * var(--speed));
+  }
+  @keyframes suit-flash {
+    0% {
+      opacity: 0;
+      transform: translate(-50%, -50%) scale(0.4);
+    }
+    25% {
+      opacity: 0.45;
+      transform: translate(-50%, -50%) scale(1.1);
+    }
+    100% {
+      opacity: 0;
+      transform: translate(-50%, -50%) scale(1.4);
+    }
+  }
+  :global(.fx-reduced) .flash {
+    animation-name: fade-out-soft;
+  }
+  @keyframes fade-out-soft {
+    20% {
+      opacity: 0.35;
+    }
+  }
+
+  /* "First trump!" stamped across the table. */
+  .banner {
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    z-index: 5;
+    white-space: nowrap;
+    padding: 6px 14px;
+    border-radius: 10px;
+    background: #2a1640;
+    border: 2px solid #c58bff;
+    color: #f2e6ff;
+    font-weight: 800;
+    font-size: 1.15rem;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    pointer-events: none;
+    transform: translate(-50%, -50%) rotate(-6deg);
+    opacity: 0;
+    animation: banner calc(1300ms * var(--speed)) cubic-bezier(0.3, 1.5, 0.6, 1);
+  }
+  @keyframes banner {
+    0% {
+      transform: translate(-50%, -50%) rotate(-6deg) scale(2.2);
+      opacity: 0;
+    }
+    18% {
+      transform: translate(-50%, -50%) rotate(-6deg) scale(1);
+      opacity: 1;
+    }
+    80% {
       opacity: 1;
     }
     100% {
-      transform: none;
+      transform: translate(-50%, -50%) rotate(-6deg) scale(1);
+      opacity: 0;
     }
   }
-
-  /* The winning card pulses. */
-  .win {
-    animation: pulse calc(320ms * var(--speed)) ease-out;
+  :global(.fx-reduced) .banner {
+    animation-name: fade-in-out;
   }
-  @keyframes pulse {
-    40% {
-      transform: scale(1.13);
+  @keyframes fade-in-out {
+    0%,
+    100% {
+      opacity: 0;
     }
-  }
-
-  /* Then the whole trick sweeps toward the winner and fades. */
-  .fly.sweep {
-    transition:
-      transform calc(280ms * var(--speed)) ease-in,
-      opacity calc(280ms * var(--speed)) ease-in;
-    opacity: 0;
-  }
-  .fly.move.sweep[data-to='bottom'] {
-    transform: translateY(80px) scale(0.85);
-  }
-  .fly.move.sweep[data-to='top'] {
-    transform: translateY(-80px) scale(0.85);
-  }
-  .fly.move.sweep[data-to='left'] {
-    transform: translateX(-80px) scale(0.85);
-  }
-  .fly.move.sweep[data-to='right'] {
-    transform: translateX(80px) scale(0.85);
+    20%,
+    80% {
+      opacity: 1;
+    }
   }
 
   .decider {

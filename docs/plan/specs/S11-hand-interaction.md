@@ -22,3 +22,11 @@ Playing a card should feel physical and be impossible to misclick (T3).
 - [ ] Zero accidental plays across 50 deals in playtest.
 - [ ] Measured input-to-visible-response time ≤ 16 ms on a mid-range Android phone.
 - [ ] A rejected play recovers cleanly with no ghost cards.
+
+## Decision after the first M2 playtest (locked with Ryan)
+- **Tap only lifts a card** (it rises ~26 px and grows to 112%). **You play a card by dragging or flicking it up to the table.** The card follows your finger in any direction, the trick area glows (a dashed ring) once letting go would play it, and the card flies on from exactly where you let go.
+  - Plays if dragged ≥ 70 px up, or flicked upward faster than 0.6 px/ms over at least 24 px.
+  - A second tap on a lifted card makes it hop and shows "Swipe it up to the table to play." It does not play, so a double tap can never misplay.
+- **Settings → Play cards: Tap twice** restores tap-to-raise, tap-again-to-play for anyone who prefers it. Keyboard Enter always plays the lifted card.
+- Other players' cards fly in from their name badge, not from a fixed offset.
+- Why: the second tap landed on a small, overlapped card, and the card vanished from the hand instead of travelling to the table. That broke the link between the gesture and the card on the table.

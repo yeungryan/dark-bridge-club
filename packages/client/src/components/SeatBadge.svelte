@@ -18,7 +18,7 @@
   });
 </script>
 
-<div class="badge" class:turn={isTurn} style="--c: {profile.color}">
+<div class="badge" class:turn={isTurn} style="--c: {profile.color}" data-badge-seat={seat}>
   {#if deal?.dealer === seat}<span class="chip" title="Dealer">D</span>{/if}
   <span class="name">
     <span class="dot" class:away={presence !== 'connected'} title={presence}></span>

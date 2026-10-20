@@ -21,3 +21,10 @@ Sound adds weight to the game without ever competing with your friends' voices (
 
 ## Open
 - Generate the sounds procedurally (Web Audio, tiny and easy to theme) or use a royalty-free pack. **Recommendation: procedural first**, and swap in samples only where it sounds cheap.
+
+## Fixes after the first M2 playtest (no sound was heard)
+- **Bug:** audio was only unlocked on `pointerdown`. Phones only allow audio from a completed tap (`touchend` / `pointerup` / `click`), so on phones sound never started. It now unlocks on all of those, every time (which also recovers after switching to Messenger and back), and plays a silent buffer for iOS.
+- **Redesign:** M2's "call-safe" thumps (80–140 Hz) are below what phone speakers can play, and the default volume was ~20%. Every sound now has its body at 300 Hz–5 kHz (short knocks, snaps, bells, brass), the default volume is 70%, and phones that saved M2's quiet default are reset once.
+- **Haptics:** short vibrations on your own taps and card plays, and on big table moments (Android only; iPhone browsers have no vibration API). Settings → Vibrate.
+- On an iPhone, the ring/silent switch mutes web game sounds; this is not overridable without risking interrupting the call.
+- **lab.html** (the sound check page) plays every sound on demand, to check volume on a real Messenger call. **practice.html** is you against three bots in the browser, and nothing is recorded.

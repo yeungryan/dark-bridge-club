@@ -6,6 +6,7 @@
   import BiddingBox from './BiddingBox.svelte';
   import Card from './Card.svelte';
   import Hand from './Hand.svelte';
+  import LastTrickPeek from './LastTrickPeek.svelte';
   import Prompts from './Prompts.svelte';
   import RaceMeters from './RaceMeters.svelte';
   import Reveal from './Reveal.svelte';
@@ -67,9 +68,10 @@
     <div class="info">
       {#if contract}
         {#key director.contractPulse}
-        <button class="ghost contract" onclick={() => (showAuction = !showAuction)}>
-          {callLabel({ type: 'bid', level: contract.level, strain: contract.strain })} by {nameAtSeat(view, profiles, contract.declarer)}
-        </button>
+          <button class="ghost contract" onclick={() => (showAuction = !showAuction)}>
+            {callLabel({ type: 'bid', level: contract.level, strain: contract.strain })} by {nameAtSeat(view, profiles, contract.declarer)}
+            {#if director.contractPulse > 0}<span class="sold" aria-hidden="true">Sold!</span>{/if}
+          </button>
         {/key}
         <RaceMeters {deal} declarers={pairOf(contract.declarer)} defenders={pairOf(next(contract.declarer))} />
       {:else}
@@ -119,9 +121,10 @@
           <AuctionStrip {conn} />
         {:else}
           <TrickArea {conn} />
-          {#if deal.lastTrick}
-            <button class="ghost peek" onclick={() => (peek = !peek)}>{peek ? 'Hide last trick' : 'Last trick'}</button>
-          {/if}
+          <!-- Always takes its space, so the trick area doesn't jump when the first trick ends. -->
+          <button class="ghost peek" class:open={peek} class:none={!deal.lastTrick} disabled={!deal.lastTrick} onclick={() => (peek = !peek)}>
+            <span class="stack" aria-hidden="true"><i></i><i></i><i></i></span>{peek ? 'Hide last trick' : 'Last trick'}
+          </button>
         {/if}
       </div>
       <div class="right"><SeatBadge {conn} seat={seatAt('right', me)} /></div>
@@ -129,14 +132,9 @@
   {/if}
 
   {#if peek && deal.lastTrick}
-    <div class="peek-sheet panel" role="dialog" aria-label="Last trick">
-      {#each deal.lastTrick.cards as play (play.seat)}
-        <div class="peek-card">
-          <Card card={play.card} width={46} highlight={play.seat === deal.lastTrick.winner} />
-          <small style="color: {profileOf(profiles, view.seating?.[play.seat]).color}">{nameAtSeat(view, profiles, play.seat)}</small>
-        </div>
-      {/each}
-    </div>
+    {#key deal.tricksPlayed}
+      <LastTrickPeek trick={deal.lastTrick} {view} {profiles} onClose={() => (peek = false)} />
+    {/key}
   {/if}
 
   <section class="bottom">
@@ -145,7 +143,7 @@
       <AuctionStrip {conn} />
     {/if}
     <p class="turn" class:mine={deal.turn === me} style="--c: {profileOf(profiles, view.me).color}">
-      <span class="me">{profileOf(profiles, view.me).name}{#if deal.dealer === me} <span class="chip">D</span>{/if}{#if myRole}{' · '}{myRole}{/if}</span>
+      <span class="me" data-badge-seat={me}>{profileOf(profiles, view.me).name}{#if deal.dealer === me} <span class="chip">D</span>{/if}{#if myRole}{' · '}{myRole}{/if}</span>
       {#if view.phase === 'inDeal' && turnText}<span>— {turnText}</span>{/if}
     </p>
     {#if myTurnToCall}<BiddingBox {conn} />{/if}
@@ -188,9 +186,44 @@
     font-weight: 700;
     font-size: 1.05rem;
   }
+  /* "Sold!": the contract slams into the header. */
   @keyframes stamp {
     0% {
-      transform: scale(1.35);
+      transform: scale(2.2) rotate(-4deg);
+      opacity: 0;
+    }
+    55% {
+      transform: scale(0.92);
+      opacity: 1;
+    }
+  }
+  .contract {
+    position: relative;
+  }
+  .sold {
+    display: inline-block;
+    margin-left: 8px;
+    padding: 0 6px;
+    border-radius: 6px;
+    background: var(--accent);
+    color: #1b1300;
+    font-size: 0.8rem;
+    font-weight: 800;
+    text-transform: uppercase;
+    opacity: 0;
+    animation: sold calc(1600ms * var(--speed)) cubic-bezier(0.3, 1.5, 0.6, 1);
+  }
+  @keyframes sold {
+    0% {
+      transform: scale(2) rotate(-12deg);
+      opacity: 0;
+    }
+    15%,
+    75% {
+      transform: scale(1) rotate(-6deg);
+      opacity: 1;
+    }
+    100% {
       opacity: 0;
     }
   }
@@ -301,17 +334,34 @@
   .peek {
     min-height: 32px;
     font-size: 14px;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
   }
-  .peek-sheet {
-    display: flex;
-    justify-content: center;
-    gap: 10px;
-    margin: 6px auto;
+  .peek.none {
+    visibility: hidden;
   }
-  .peek-card {
-    display: grid;
-    justify-items: center;
-    gap: 2px;
+  /* A tiny face-down stack: the quitted trick. */
+  .stack {
+    position: relative;
+    width: 14px;
+    height: 18px;
+  }
+  .stack i {
+    position: absolute;
+    inset: 0;
+    border-radius: 2px;
+    background: #2f5d8a;
+    border: 1px solid #c9d6e3;
+  }
+  .stack i:nth-child(2) {
+    transform: translate(2px, -2px) rotate(6deg);
+  }
+  .stack i:nth-child(3) {
+    transform: translate(4px, -4px) rotate(12deg);
+  }
+  :global(.fx-full) .peek:active .stack {
+    transform: scale(0.85);
   }
   .bottom {
     display: grid;

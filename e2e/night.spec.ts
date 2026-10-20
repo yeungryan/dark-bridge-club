@@ -73,6 +73,21 @@ function describeState(frames: Frame[]): string {
   });
 }
 
+/** Drag a card from the hand onto the middle of the table, like a thumb would. */
+async function dragToTable(page: Page, card: Locator): Promise<void> {
+  const from = await card.boundingBox();
+  const area = await page.locator('.area').boundingBox();
+  if (!from || !area) return;
+  const x0 = from.x + 10;
+  const y0 = from.y + 30;
+  const x1 = area.x + area.width / 2;
+  const y1 = area.y + area.height * 0.7;
+  await page.mouse.move(x0, y0);
+  await page.mouse.down();
+  for (let i = 1; i <= 8; i++) await page.mouse.move(x0 + ((x1 - x0) * i) / 8, y0 + ((y1 - y0) * i) / 8);
+  await page.mouse.up();
+}
+
 /** Deals won so far tonight, from the latest server state. */
 function dealsScored(frames: Frame[]): number {
   const v = frames.filter((f) => f.type === 'state').at(-1)?.view;
@@ -104,10 +119,9 @@ async function playAsHuman(player: Player, deals: number): Promise<void> {
       continue;
     }
     if (await page.getByText('Your turn to play').isVisible()) {
-      // Tap a playable (not dimmed) card twice: raise, then play.
-      // Cards overlap, so tap the visible left edge, like a thumb would.
+      // Drag a playable (not dimmed) card to the table. Cards overlap, so grab the visible left edge.
       const playable = page.locator('.hand .slot').filter({ has: page.locator('.card:not(.dim)') }).first();
-      if (await tap(playable, { position: { x: 10, y: 30 } })) await tap(playable, { position: { x: 10, y: 30 } });
+      await dragToTable(page, playable);
       await page.waitForTimeout(250);
       continue;
     }
@@ -150,7 +164,7 @@ test.describe.serial('a night at the DARK table', () => {
     expect(last.view.wins.A + last.view.wins.B).toBeGreaterThanOrEqual(2);
   });
 
-  test('a raised card stays raised when unrelated updates arrive, so the second tap plays it', async () => {
+  test('a raised card stays raised when unrelated updates arrive, and can then be swiped to play', async () => {
     const page = ryan().page;
     const darren = players[0]!;
     await reachMyTurnToPlay(ryan());
@@ -164,11 +178,11 @@ test.describe.serial('a night at the DARK table', () => {
     await page.waitForTimeout(1500);
     await expect(page.locator('.hand .slot.up')).toHaveCount(1);
 
-    await page.locator('.hand .slot.up').click({ position: { x: 10, y: 30 } });
+    await dragToTable(page, page.locator('.hand .slot.up'));
     await expect(page.locator('.hand .slot')).toHaveCount(before - 1);
   });
 
-  test('dragging a playable card upward plays it; a short drag springs back', async () => {
+  test('dragging a playable card upward plays it; a short, slow drag springs back', async () => {
     const page = ryan().page;
     await reachMyTurnToPlay(ryan());
     const before = await page.locator('.hand .slot').count();
@@ -177,10 +191,13 @@ test.describe.serial('a night at the DARK table', () => {
     const x = box.x + 10;
     const y = box.y + 30;
 
-    // A short drag (not past the line) leaves the card in the hand.
+    // A short, slow drag (not past the line, and not a flick) leaves the card in the hand.
     await page.mouse.move(x, y);
     await page.mouse.down();
-    await page.mouse.move(x, y - 30, { steps: 4 });
+    for (let i = 1; i <= 6; i++) {
+      await page.mouse.move(x, y - i * 5);
+      await page.waitForTimeout(60);
+    }
     await page.mouse.up();
     await page.waitForTimeout(400);
     await expect(page.locator('.hand .slot')).toHaveCount(before);
