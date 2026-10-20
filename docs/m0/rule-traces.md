@@ -54,12 +54,11 @@ Anything that does not match how the four of you play is a bug in the engine.
 | 3 | Adrian ♥8 · Kim ♥9 · Ryan ♥Q · Darren ♥K | Darren | highest ♥, the suit led | 1/9 | 2/5 |
 | 4 | Darren ♣A · Adrian ♣3 · Kim ♣2 · Ryan ♣4 | Darren | highest ♣, the suit led | 2/9 | 2/5 |
 | 5 | Darren ♣K · Adrian ♣5 · Kim ♣J · Ryan ♣7 | Darren | highest ♣, the suit led | 3/9 | 2/5 |
-| 6 | Darren ♣Q · Adrian ♣8 · Kim ♥3 · Ryan ♣9 | Darren | highest ♣, the suit led | 4/9 | 2/5 |
-| 7 | Darren ♦Q · Adrian ♦A · Kim ♦3 · Ryan ♦2 | Adrian | highest ♦, the suit led | 4/9 | 3/5 |
-| 8 | Adrian ♠5 · Kim ♠9 · Ryan ♠K · Darren ♠10 | Ryan | highest ♠, the suit led | 4/9 | 4/5 |
-| 9 🏁 | Ryan ♦K · Darren ♦4 · Adrian ♦10 · Kim ♦5 | Ryan | highest ♦, the suit led | 4/9 | 5/5 |
+| 6 | Darren ♦Q · Adrian ♦A · Kim ♦3 · Ryan ♦2 | Adrian | highest ♦, the suit led | 3/9 | 3/5 |
+| 7 | Adrian ♠5 · Kim ♠9 · Ryan ♠K · Darren ♠10 | Ryan | highest ♠, the suit led | 3/9 | 4/5 |
+| 8 🏁 | Ryan ♦K · Darren ♦4 · Adrian ♦10 · Kim ♦5 | Ryan | highest ♦, the suit led | 3/9 | 5/5 |
 
-- 🏁 **Settled on trick 9:** Ryan's ♦K wins it, giving the defenders their 5th trick. "Play it out?" appears.
+- 🏁 **Settled on trick 8:** Ryan's ♦K wins it, giving the defenders their 5th trick. "Play it out?" appears.
 - Nobody taps **Play on** within 5 seconds, so the deal ends here.
 - **Result: SET.** Adrian & Ryan +1 win. Over/undertricks not recorded (not played out).
 - **Night so far:** Adrian & Ryan 1 · Darren & Kim 0
@@ -218,15 +217,15 @@ Anything that does not match how the four of you play is a bug in the engine.
 
 | # | Cards in play order | Winner | Why | Declarers | Defenders |
 |---|---|---|---|---|---|
-| 1 | Kim ♣A · Ryan ♣9 · Darren ♣4 · Adrian ♣2 | Kim | highest ♣, the suit led | 0/12 | 1/2 |
-| 2 | Kim ♦Q · Ryan ♦2 · Darren ♦3 · Adrian ♦A | Adrian | highest ♦, the suit led | 1/12 | 1/2 |
-| 3 | Adrian ♠A · Kim ♠4 · Ryan ♠6 · Darren ♠3 | Adrian | highest ♠, the suit led | 2/12 | 1/2 |
-| 4 | Adrian ♠Q · Kim ♠7 · Ryan ♠K · Darren ♠5 | Ryan | highest ♠, the suit led | 3/12 | 1/2 |
-| 5 | Ryan ♥A · Darren ♥5 · Adrian ♠2 · Kim ♥3 | Ryan | highest ♥, the suit led | 4/12 | 1/2 |
-| 6 | Ryan ♥K · Darren ♥6 · Adrian ♣3 · Kim ♥10 | Ryan | highest ♥, the suit led | 5/12 | 1/2 |
-| 7 🏁 | Ryan ♥J · Darren ♣6 · Adrian ♦4 · Kim ♥Q | Kim | highest ♥, the suit led | 5/12 | 2/2 |
+| 1 | Kim ♦Q · Ryan ♦2 · Darren ♦3 · Adrian ♦A | Adrian | highest ♦, the suit led | 1/12 | 0/2 |
+| 2 | Adrian ♠A · Kim ♠4 · Ryan ♠6 · Darren ♠3 | Adrian | highest ♠, the suit led | 2/12 | 0/2 |
+| 3 | Adrian ♠Q · Kim ♠7 · Ryan ♠K · Darren ♠5 | Ryan | highest ♠, the suit led | 3/12 | 0/2 |
+| 4 | Ryan ♥A · Darren ♥5 · Adrian ♠2 · Kim ♥3 | Ryan | highest ♥, the suit led | 4/12 | 0/2 |
+| 5 | Ryan ♥K · Darren ♥6 · Adrian ♣2 · Kim ♥10 | Ryan | highest ♥, the suit led | 5/12 | 0/2 |
+| 6 | Ryan ♥J · Darren ♣4 · Adrian ♣3 · Kim ♥Q | Kim | highest ♥, the suit led | 5/12 | 1/2 |
+| 7 🏁 | Kim ♣A · Ryan ♣9 · Darren ♣6 · Adrian ♣5 | Kim | highest ♣, the suit led | 5/12 | 2/2 |
 
-- 🏁 **Settled on trick 7:** Kim's ♥Q wins it, giving the defenders their 2nd trick. "Play it out?" appears.
+- 🏁 **Settled on trick 7:** Kim's ♣A wins it, giving the defenders their 2nd trick. "Play it out?" appears.
 - Nobody taps **Play on** within 5 seconds, so the deal ends here.
 - **Result: SET.** Darren & Kim +1 win. Over/undertricks not recorded (not played out).
 - **Night so far:** Adrian & Ryan 2 · Darren & Kim 2

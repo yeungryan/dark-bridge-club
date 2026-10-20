@@ -15,7 +15,7 @@ export function seedFromWords(words: readonly number[]): Seed {
 /** A fresh, unpredictable seed. Server-side only. */
 export function randomSeed(): Seed {
   const words = new Uint32Array(4);
-  globalThis.crypto.getRandomValues(words);
+  crypto.getRandomValues(words);
   return seedFromWords(Array.from(words));
 }
 

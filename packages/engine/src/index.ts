@@ -6,3 +6,5 @@ export * from './auction';
 export * from './play';
 export * from './deal';
 export * from './session';
+export * from './views';
+export * from './protocol';

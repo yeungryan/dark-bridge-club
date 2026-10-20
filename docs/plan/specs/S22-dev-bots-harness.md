@@ -7,7 +7,7 @@ So you (and I) can test the game alone, and so the M0 rule-trace checkpoint is e
 ## Contents
 - **Rule-trace generator:** prints a deal in plain English for your M0 checkpoint, e.g.
   `Dealer: Darren. Bidding (counter-clockwise): Darren 1♥ → Adrian Pass → Kim 1♠ → Ryan 2♣ → Darren Pass → Adrian Pass → Kim Pass. Contract 2♣ by Ryan (final bidder). Ryan's right (Darren) leads ♠K…`
-- **Bots:** `random-legal` (for fuzz testing) and `simple` (follows basic heuristics, so a test deal makes sense). Selectable only in **dev mode**.
+- **Bots:** `random-legal` (for fuzz testing) and `simple` (follows basic heuristics, so a test deal makes sense). Selectable only in **dev mode**. A bot agrees when a person proposes ending the night, and never answers concessions.
 - **Four-tab mode:** a dev URL opens four seats in one browser window as a 2×2 grid.
 - **Seeded deals:** `?seed=…` in dev mode, to reproduce bugs and stage dramatic scenarios (a decider clinch, a Yarborough) for tuning effects.
 - **End-to-end tests:** Playwright with four browser contexts plays full deals headlessly in CI.
@@ -15,4 +15,4 @@ So you (and I) can test the game alone, and so the M0 rule-trace checkpoint is e
 ## Acceptance criteria
 - [ ] One command runs the engine unit tests, the property tests and the end-to-end tests.
 - [ ] A bot-only session of 100 deals finishes with no errors.
-- [ ] Production builds contain no bot code.
+- [x] Bots only ever run in a seat opened with `bot=1` (the dev page). *(Changed in M1: bots run in the browser, deciding from that seat's own view, so they can never see other hands. The bot code ships in the app bundle but is inert unless a seat is opened as a bot.)*

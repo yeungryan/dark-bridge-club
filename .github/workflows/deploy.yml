@@ -1,0 +1,36 @@
+name: Deploy
+
+# Publishes the club to Cloudflare after the tests pass on main.
+# Needs four repository secrets; see docs/DEPLOY.md.
+on:
+  workflow_run:
+    workflows: [Tests]
+    types: [completed]
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  deploy:
+    if: github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npm run build
+      - uses: cloudflare/wrangler-action@v3
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          workingDirectory: packages/server
+          packageManager: npm
+          wranglerVersion: "4.151.2"
+          secrets: |
+            ROOM_KEY
+            ADMIN_KEY
+        env:
+          ROOM_KEY: ${{ secrets.ROOM_KEY }}
+          ADMIN_KEY: ${{ secrets.ADMIN_KEY }}
