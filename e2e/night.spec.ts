@@ -61,12 +61,19 @@ function describeState(frames: Frame[]): string {
   });
 }
 
-/** Plays Ryan's turns until `deals` more deals have finished. */
+/** Deals won so far tonight, from the latest server state. */
+function dealsScored(frames: Frame[]): number {
+  const v = frames.filter((f) => f.type === 'state').at(-1)?.view;
+  return v ? v.wins.A + v.wins.B : 0;
+}
+
+/** Plays Ryan's turns until `deals` more deals have been scored. */
 async function playAsHuman(player: Player, deals: number): Promise<void> {
   const page = player.page;
-  let finished = 0;
+  // Count from the score, not from taps: on a slow machine one reveal can take two taps.
+  const target = dealsScored(player.frames) + deals;
   const deadline = Date.now() + 4 * 60_000;
-  while (finished < deals) {
+  while (dealsScored(player.frames) < target) {
     if (Date.now() > deadline) throw new Error(`Timed out playing as Ryan. Last state: ${describeState(player.frames)}`);
 
     const partnerButton = page.getByRole('button', { name: /^Partner with/ });
@@ -76,7 +83,7 @@ async function playAsHuman(player: Player, deals: number): Promise<void> {
     }
     const nextDeal = page.getByRole('button', { name: 'Next deal' });
     if ((await nextDeal.isVisible()) && (await nextDeal.isEnabled())) {
-      if (await tap(nextDeal)) finished++;
+      await tap(nextDeal);
       continue;
     }
     const pass = page.getByRole('button', { name: 'Pass', exact: true });
