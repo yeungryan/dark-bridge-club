@@ -15,7 +15,26 @@
   --panel: rgba(0, 0, 0, 0.35);
   --radius: 12px;
   --tap: 44px;
+  /* Set by the Speed setting: 1 (normal) or 0.6 (fast). Multiply every duration by it. */
+  --speed: 1;
   color-scheme: dark;
+}
+
+/* Effects: Off: nothing moves. (Full and Calm are handled per component.) */
+.fx-off *,
+.fx-off *::before,
+.fx-off *::after {
+  animation: none !important;
+  transition: none !important;
+}
+
+@keyframes fade-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
 }
 
 * {

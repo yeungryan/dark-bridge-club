@@ -25,7 +25,7 @@
 </script>
 
 {#if deal?.phase === 'awaitingPlayOn' && deal.clinch}
-  <div class="prompt panel" role="status">
+  <div class="prompt panel clinch-prompt" role="status">
     <strong>{deal.clinch.side === 'declarers' ? 'Contract made!' : 'Contract set!'}</strong>
     <span>Play the rest out?</span>
     <div class="bar"><i style="width: {fraction(room.clinchDeadline, 5000) * 100}%"></i></div>
@@ -70,6 +70,10 @@
     gap: 8px;
     text-align: center;
     margin: 6px 0;
+  }
+  /* Appears just after the clinch moment has landed (hit-pause, shake, burst). */
+  .clinch-prompt {
+    animation: fade-in calc(250ms * var(--speed)) ease-out calc(650ms * var(--speed)) backwards;
   }
   .two {
     display: grid;

@@ -14,6 +14,8 @@ Make each night feel like an **event** (promise B), spending the big ceremonies 
 7. Seats animate into place → the first dealer is chosen → deal.
 
 ## End of night
+*(M2 built: crest light-up and flare, captain spotlight, pairs announcement, end-of-night count-up, banner and confetti. Still to come: the "Last time…" card and rivalry (M3, S20), the theme roll (M3, S18), the avatar pick (M3, S24), awards (M3, S19), and "Next time?" (M4, S21).)*
+
 1. Someone proposes "End night" → all 4 confirm (S05).
 2. **Final tally** count-up → winners' banner (or a "dead heat" banner for a tie).
 3. **Awards** (S19): 3–5 award cards flip in, one at a time.

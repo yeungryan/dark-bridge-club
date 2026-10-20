@@ -6,7 +6,7 @@
   "scripts": {
     "build": "vite build",
     "typecheck": "svelte-check --tsconfig ./tsconfig.json --fail-on-warnings",
-    "test": "echo 'client is covered by the e2e suite (npm run e2e at the root)'"
+    "test": "vitest run"
   },
   "dependencies": {
     "@dark/engine": "0.1.0"

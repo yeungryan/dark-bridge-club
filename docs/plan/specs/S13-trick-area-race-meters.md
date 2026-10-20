@@ -19,7 +19,7 @@ This is the heart of the game's tension. It's the bridge version of Balatro's cl
 ```
 - Two segmented bars, **declarers' needing `6+level` pips and defenders' needing `8−level`.** One pip fills per trick won, with a small pop.
 - **Getting close:** when either side is **1 trick from its target**, that meter starts a slow, gentle shimmer. Both sides 1 away (a decider) = the most tension in the game. The table lighting dims slightly and the **next trick is marked as the "decider"** (S16, max-intensity setup).
-- **Clinch (S04):** the clinching card gets the **biggest moment in the game** (S16). The winning meter fills completely and glows, and the losing one dims. Then the "Play it out?" prompt appears (R11): two buttons, **Play on** and **Done**, with a thin countdown bar *(5 s)*.
+- **Clinch (S04):** the clinching card gets the **biggest moment in the game** (S16). The winning meter fills completely and glows, and the losing one dims. Then the "Play it out?" prompt appears (R11): two buttons, **Play on** and **Done**, with a thin countdown bar *(5 s)*. *(M2: ships with **Play on** only. Letting the 5 s run out is the "Done", which avoids a second button that does nothing.)*
 
 ## Acceptance criteria
 - [ ] At any moment, any player can answer "what's the contract and how close are we?" in under 1 second.

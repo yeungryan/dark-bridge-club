@@ -28,7 +28,9 @@
     gap: 6px;
     justify-content: center;
   }
+  /* Each new call is stamped into place (S12). */
   .call {
+    animation: stamp-in calc(260ms * var(--speed)) cubic-bezier(0.3, 1.6, 0.6, 1) backwards;
     display: inline-flex;
     flex-direction: column;
     align-items: center;
@@ -37,6 +39,15 @@
     background: var(--panel);
     border-radius: 6px 6px 0 0;
     min-width: 48px;
+  }
+  @keyframes stamp-in {
+    0% {
+      transform: scale(1.4) translateY(-6px);
+      opacity: 0;
+    }
+  }
+  :global(.fx-reduced) .call {
+    animation-name: fade-in;
   }
   small {
     font-size: 12px;
