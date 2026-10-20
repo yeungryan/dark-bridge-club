@@ -19,21 +19,25 @@
 </script>
 
 <div class="badge" class:turn={isTurn} style="--c: {profile.color}">
+  {#if deal?.dealer === seat}<span class="chip" title="Dealer">D</span>{/if}
   <span class="name">
     <span class="dot" class:away={presence !== 'connected'} title={presence}></span>
-    {profile.name}{#if deal?.dealer === seat}<span class="chip" title="Dealer">D</span>{/if}
+    {profile.name}
   </span>
   {#if deal}
-    <span class="role">{role ? `${role} · ` : ''}{deal.handCounts[seat]} cards</span>
+    {#if role}<span class="role">{role}</span>{/if}
+    <span class="role">{deal.handCounts[seat]} cards</span>
   {/if}
 </div>
 
 <style>
   .badge {
+    position: relative;
     display: inline-flex;
     flex-direction: column;
     align-items: center;
-    padding: 4px 8px;
+    padding: 4px 6px;
+    width: 88px;
     border-radius: 10px;
     border: 2px solid transparent;
     background: var(--panel);
@@ -61,6 +65,9 @@
     background: var(--bad);
   }
   .chip {
+    position: absolute;
+    top: -8px;
+    right: -6px;
     font-size: 11px;
     background: var(--ink);
     color: var(--felt);
@@ -72,6 +79,7 @@
   }
   .role {
     font-size: 12px;
+    line-height: 1.25;
     color: var(--ink-dim);
   }
 </style>

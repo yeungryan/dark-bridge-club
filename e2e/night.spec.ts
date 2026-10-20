@@ -43,6 +43,11 @@ async function tap(locator: Locator, options: Parameters<Locator['click']>[0] = 
   return locator.click({ timeout: 3000, ...options }).then(() => true, () => false);
 }
 
+/** isEnabled() waits for the element; if it vanished after an isVisible() check, give up quickly. */
+async function isEnabledNow(locator: Locator): Promise<boolean> {
+  return locator.isEnabled({ timeout: 1000 }).catch(() => false);
+}
+
 /** One line describing what Ryan's screen should be showing, for failure messages. */
 function describeState(frames: Frame[]): string {
   const last = frames.filter((f) => f.type === 'state').at(-1);
@@ -82,7 +87,7 @@ async function playAsHuman(player: Player, deals: number): Promise<void> {
       continue;
     }
     const nextDeal = page.getByRole('button', { name: 'Next deal' });
-    if ((await nextDeal.isVisible()) && (await nextDeal.isEnabled())) {
+    if ((await nextDeal.isVisible()) && (await isEnabledNow(nextDeal))) {
       await tap(nextDeal);
       continue;
     }
@@ -103,6 +108,23 @@ async function playAsHuman(player: Player, deals: number): Promise<void> {
   }
 }
 
+/** Moves Ryan along (partner pick, Next deal, Pass) until it's his turn to play a card. */
+async function reachMyTurnToPlay(player: Player): Promise<void> {
+  const page = player.page;
+  const deadline = Date.now() + 90_000;
+  while (!(await page.getByText('Your turn to play').isVisible())) {
+    if (Date.now() > deadline) throw new Error(`Never reached Ryan's turn. Last state: ${describeState(player.frames)}`);
+    const partnerButton = page.getByRole('button', { name: /^Partner with/ });
+    const nextDeal = page.getByRole('button', { name: 'Next deal' });
+    const pass = page.getByRole('button', { name: 'Pass', exact: true });
+    if (await partnerButton.isVisible()) await tap(partnerButton);
+    else if ((await nextDeal.isVisible()) && (await isEnabledNow(nextDeal))) await tap(nextDeal);
+    else if (await pass.isVisible()) {
+      if (await tap(pass)) await tap(page.getByRole('button', { name: 'Confirm Pass' }));
+    } else await page.waitForTimeout(200);
+  }
+}
+
 test.describe.serial('a night at the DARK table', () => {
   let players: Player[] = [];
   const ryan = () => players.find((p) => p.id === 'ryan')!;
@@ -119,6 +141,24 @@ test.describe.serial('a night at the DARK table', () => {
     await playAsHuman(ryan(), 2);
     const last = ryan().frames.filter((f) => f.type === 'state').at(-1)!;
     expect(last.view.wins.A + last.view.wins.B).toBeGreaterThanOrEqual(2);
+  });
+
+  test('a raised card stays raised when unrelated updates arrive, so the second tap plays it', async () => {
+    const page = ryan().page;
+    const darren = players[0]!;
+    await reachMyTurnToPlay(ryan());
+    const before = await page.locator('.hand .slot').count();
+    const playable = page.locator('.hand .slot').filter({ has: page.locator('.card:not(.dim)') }).first();
+    await playable.click({ position: { x: 10, y: 30 } });
+    await expect(page.locator('.hand .slot.up')).toHaveCount(1);
+
+    // Darren's browser drops and reconnects: two updates reach Ryan while his card is raised.
+    await darren.page.reload();
+    await page.waitForTimeout(1500);
+    await expect(page.locator('.hand .slot.up')).toHaveCount(1);
+
+    await page.locator('.hand .slot.up').click({ position: { x: 10, y: 30 } });
+    await expect(page.locator('.hand .slot')).toHaveCount(before - 1);
   });
 
   test('no browser ever receives another player’s cards or a deal seed before the reveal', async () => {
