@@ -1,6 +1,11 @@
 <script lang="ts">
   import type { Connection } from '../lib/connection.svelte';
+  import { animalById, avatarName } from '@dark/engine';
+  import { tick } from 'svelte';
+  import { avatarOf, ELEMENT_RING } from '../lib/avatars';
+  import { elementBurst } from '../lib/juice/particles';
   import { sound } from '../lib/juice/sound';
+  import AvatarPicker from './AvatarPicker.svelte';
 
   // Spec S15 (plain version): the DARK crest lights a letter as each friend arrives.
   let { conn, complete = false }: { conn: Connection; complete?: boolean } = $props();
@@ -14,8 +19,21 @@
     if (lastHere >= 0 && here > lastHere) sound.pip(here * 3);
     lastHere = here;
   });
+  // All four in and picked: the crest flares and everyone's avatar flips over at once,
+  // each with its element's entrance (S24).
+  let cards: HTMLElement[] = $state([]);
   $effect(() => {
-    if (complete) sound.fanfare();
+    if (!complete) return;
+    sound.fanfare();
+    void tick().then(() =>
+      setTimeout(() => {
+        room.profiles.forEach((p, i) => {
+          const a = avatarOf(conn, p.id);
+          const r = cards[i]?.getBoundingClientRect();
+          if (a && r) elementBurst(a.element, r.left + r.width / 2, r.top + r.height / 2);
+        });
+      }, 450),
+    );
   });
 </script>
 
@@ -26,20 +44,35 @@
     {/each}
   </div>
   <h2>Bridge Club</h2>
-  <ul>
-    {#each room.profiles as p (p.id)}
-      <li>
-        <span class="dot" style="--c: {p.color}" class:on={room.presence[p.id] === 'connected'}></span>
-        {p.name}
-        <span class="muted">{room.presence[p.id] === 'connected' ? 'is here' : 'not here yet'}</span>
-      </li>
-    {/each}
-  </ul>
-  <p class="muted">{here}/4 here. The night starts as soon as everyone has joined.</p>
-  <p class="muted extras">
-    While you wait: <a href="lab.html" target="_blank">sound check</a> ·
-    <a href="practice.html" target="_blank">practice table</a>
-  </p>
+  {#if complete && room.avatars}
+    <div class="reveal">
+      {#each room.profiles as p, i (p.id)}
+        {@const a = avatarOf(conn, p.id)}
+        <div class="card" bind:this={cards[i]} style="--c: {p.color}; --el: {a ? ELEMENT_RING[a.element] : 'var(--line)'}">
+          <span class="big">{a ? animalById(a.animal)?.emoji : '❔'}</span>
+          <strong style="color: {p.color}">{p.name}</strong>
+          <small>{a ? avatarName(a) : ''}</small>
+        </div>
+      {/each}
+    </div>
+  {:else}
+    <AvatarPicker {conn} />
+    <ul>
+      {#each room.profiles as p (p.id)}
+        {@const isHere = room.presence[p.id] === 'connected'}
+        <li>
+          <span class="dot" style="--c: {p.color}" class:on={isHere}></span>
+          {p.name}
+          <span class="muted">{!isHere ? 'not here yet' : room.avatarReady?.[p.id] ? 'ready ✓' : 'picking…'}</span>
+        </li>
+      {/each}
+    </ul>
+    <p class="muted">{here}/4 here. The night starts when everyone is here and has picked.</p>
+    <p class="muted extras">
+      While you wait: <a href="lab.html" target="_blank">sound check</a> ·
+      <a href="practice.html" target="_blank">practice table</a>
+    </p>
+  {/if}
 </main>
 
 <style>
@@ -92,6 +125,39 @@
       transform: translateY(-6px) scale(1.12);
       box-shadow: 0 0 30px var(--c);
     }
+  }
+  /* The four avatars flip over together. */
+  .reveal {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+    perspective: 600px;
+  }
+  .card {
+    display: grid;
+    justify-items: center;
+    gap: 2px;
+    padding: 12px 6px;
+    border-radius: 12px;
+    background: var(--panel);
+    box-shadow: 0 0 0 2px var(--el), 0 0 18px var(--el);
+    animation: flip-in calc(600ms * var(--speed)) cubic-bezier(0.3, 1.4, 0.6, 1) calc(300ms * var(--speed)) backwards;
+  }
+  .card .big {
+    font-size: 46px;
+    line-height: 1.1;
+  }
+  .card small {
+    color: var(--ink-dim);
+  }
+  @keyframes flip-in {
+    0% {
+      transform: rotateY(90deg) scale(0.8);
+      opacity: 0;
+    }
+  }
+  :global(.fx-reduced) .card {
+    animation-name: fade-in;
   }
   h2 {
     font-weight: 400;

@@ -1,5 +1,6 @@
 <script lang="ts">
   import type { Connection } from '../lib/connection.svelte';
+  import { avatarAtSeat, emojiOf } from '../lib/avatars';
   import { callLabel, profileOf } from '../lib/format';
   import { director } from '../lib/juice/director.svelte';
 
@@ -20,7 +21,7 @@
     {@const p = profileOf(profiles, view.seating?.[entry.seat])}
     {@const level = entry.call.type === 'bid' ? entry.call.level : 0}
     <span class="call" class:pass={level === 0} class:top={i === lastBid} style="--c: {p.color}; --weight: {level}">
-      <small>{p.name}</small>
+      <small>{emojiOf(avatarAtSeat(conn, entry.seat))} {p.name}</small>
       <strong class:red={entry.call.type === 'bid' && (entry.call.strain === 'H' || entry.call.strain === 'D')}>{callLabel(entry.call)}</strong>
       {#if i === lastBid && going > 0}
         {#key going}

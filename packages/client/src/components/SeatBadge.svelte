@@ -1,6 +1,7 @@
 <script lang="ts">
   import { partner, type Seat } from '@dark/engine';
   import type { Connection } from '../lib/connection.svelte';
+  import { avatarAtSeat, ELEMENT_RING, emojiOf } from '../lib/avatars';
   import { profileOf } from '../lib/format';
 
   // Spec S10: name + color, presence, dealer chip, turn glow, role.
@@ -11,6 +12,7 @@
   const profile = $derived(profileOf(conn.room!.profiles, view.seating?.[seat]));
   const presence = $derived(conn.room!.presence[profile.id]);
   const isTurn = $derived(deal?.turn === seat);
+  const avatar = $derived(avatarAtSeat(conn, seat));
   const role = $derived.by(() => {
     const c = deal?.contract;
     if (!c) return '';
@@ -18,10 +20,19 @@
   });
 </script>
 
-<div class="badge" class:turn={isTurn} style="--c: {profile.color}" data-badge-seat={seat}>
+<div
+  class="badge"
+  class:turn={isTurn}
+  style="--c: {profile.color}; --el: {avatar ? ELEMENT_RING[avatar.element] : 'transparent'}"
+  data-badge-seat={seat}
+>
   {#if deal?.dealer === seat}<span class="chip" title="Dealer">D</span>{/if}
   <span class="name">
-    <span class="dot" class:away={presence !== 'connected'} title={presence}></span>
+    {#if avatar}
+      <span class="avatar" class:away={presence !== 'connected'} title={presence}>{emojiOf(avatar)}</span>
+    {:else}
+      <span class="dot" class:away={presence !== 'connected'} title={presence}></span>
+    {/if}
     {profile.name}
   </span>
   {#if deal}
@@ -53,7 +64,7 @@
     color: var(--c);
     display: flex;
     align-items: center;
-    gap: 5px;
+    gap: 4px;
   }
   .dot {
     width: 9px;
@@ -63,6 +74,19 @@
   }
   .dot.away {
     background: var(--bad);
+  }
+  /* Tonight's animal, ringed in its element's colour (S24). Greyed out while away. */
+  .avatar {
+    font-size: 15px;
+    line-height: 1;
+    border-radius: 50%;
+    box-shadow: 0 0 0 2px var(--el);
+    background: rgba(0, 0, 0, 0.25);
+    padding: 2px;
+  }
+  .avatar.away {
+    filter: grayscale(1) opacity(0.5);
+    box-shadow: 0 0 0 2px var(--bad);
   }
   .chip {
     position: absolute;

@@ -4,7 +4,8 @@
   import { onMount } from 'svelte';
   import { cardText, isRed, pairNames, profileOf } from '../lib/format';
   import { director } from '../lib/juice/director.svelte';
-  import { burst } from '../lib/juice/particles';
+  import { avatarAtSeat, emojiOf } from '../lib/avatars';
+  import { ring, sparks } from '../lib/juice/particles';
   import { settings } from '../lib/juice/settings.svelte';
   import { sound } from '../lib/juice/sound';
   import { TIMING } from '../lib/juice/timing';
@@ -55,7 +56,12 @@
         setTimeout(() => {
           const r = banner?.getBoundingClientRect();
           const colors = view.pairs![winningPair].map((id) => profileOf(profiles, id).color);
-          if (r) burst(r.left + r.width / 2, r.top + r.height / 2, 70, [...colors, '#e8c25a']);
+          if (!r) return;
+          // A big contract: a golden ring and sparks (confetti is kept for winning the night).
+          const x = r.left + r.width / 2;
+          const y = r.top + r.height / 2;
+          ring(x, y, '#e8c25a', { radius: 120, width: 4, frames: 28 });
+          sparks(x, y, 30, [...colors, '#e8c25a']);
         }, settings.ms(TIMING.reveal.banner)),
       );
     }
@@ -89,7 +95,7 @@
       {@const p = profileOf(profiles, view.seating![seat])}
       <div class="hand" class:flipped={flipped.includes(seat)} style="--c: {p.color}">
         <div class="who">
-          {p.name}{seat === view.mySeat ? ' (you)' : ''}
+          {emojiOf(avatarAtSeat(conn, seat))} {p.name}{seat === view.mySeat ? ' (you)' : ''}
           <span class="muted">·
             {#if flipped.includes(seat)}<CountUp value={hcp(hands[seat])} />{:else}?{/if} HCP</span>
         </div>

@@ -48,3 +48,18 @@ In M2, levels 1–4 had no shake, particles or hit-pause, so nothing between a c
 | 5 | the clinch, end of night | 120 ms | 7 px + drama | 60 + drama |
 
 Beats are timed to visuals: a card's sound plays when it lands, the trick payoff when its last card lands, and a pip when the orb reaches the score bar. Moments are detected in `moments.ts`, which is unit tested. `DealView.trumpTricksWon` (public information) lets clients detect "first trump" even after a reconnect.
+
+## Effect vocabulary (M3, after Ryan's note that the confetti got repetitive)
+Each moment now has its own shape, not just more or fewer of the same squares (`lib/juice/particles.ts`). The most frequent moment gets the quietest effect.
+
+| Moment | Effect |
+|---|---|
+| Takes the lead | Spark streaks, no fall |
+| Trick won (13 a deal) | A soft glow only; the sweep and the orb carry it |
+| Trump-in | A shockwave ring and thrown trump-suit shards |
+| Trick won by a trump | The trump suit drifts up off the card |
+| First trump trick | A big ring and a shower of the trump suit |
+| Sold! | An ink-stamp dust puff |
+| Clinch | The element signature of the player who played the deciding card (S24) |
+| Big contract at the reveal | A gold ring and sparks |
+| Winning the night | **The only confetti:** paper ribbons that flutter and spin |

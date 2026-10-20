@@ -103,6 +103,12 @@ async function playAsHuman(player: Player, deals: number): Promise<void> {
   while (dealsScored(player.frames) < target) {
     if (Date.now() > deadline) throw new Error(`Timed out playing as Ryan. Last state: ${describeState(player.frames)}`);
 
+    // S24: pick an avatar in the lobby (the night waits for everyone's pick).
+    const surprise = page.getByRole('button', { name: 'Surprise me' });
+    if (await surprise.isVisible()) {
+      await tap(surprise);
+      continue;
+    }
     const partnerButton = page.getByRole('button', { name: /^Partner with/ });
     if (await partnerButton.isVisible()) {
       await tap(partnerButton);
@@ -138,7 +144,9 @@ async function reachMyTurnToPlay(player: Player): Promise<void> {
     const partnerButton = page.getByRole('button', { name: /^Partner with/ });
     const nextDeal = page.getByRole('button', { name: 'Next deal' });
     const pass = page.getByRole('button', { name: 'Pass', exact: true });
-    if (await partnerButton.isVisible()) await tap(partnerButton);
+    const surprise = page.getByRole('button', { name: 'Surprise me' });
+    if (await surprise.isVisible()) await tap(surprise);
+    else if (await partnerButton.isVisible()) await tap(partnerButton);
     else if ((await nextDeal.isVisible()) && (await isEnabledNow(nextDeal))) await tap(nextDeal);
     else if (await pass.isVisible()) {
       if (await tap(pass)) await tap(page.getByRole('button', { name: 'Confirm Pass' }));
@@ -217,6 +225,8 @@ test.describe.serial('a night at the DARK table', () => {
       for (const s of states) {
         const deal = s.view.deal;
         for (const e of s.events ?? []) if (e.type === 'dealStarted') expect(e.seed).toBe('');
+        // S24: avatar choices stay private until the night starts.
+        if (s.view.phase === 'lobby') expect((s as any).room.avatars).toBeNull();
         if (!deal) continue;
         if (deal.phase !== 'complete') expect(deal.revealedHands).toBeNull();
         expect(deal.hand.length).toBe(s.view.mySeat === null ? 0 : deal.handCounts[s.view.mySeat]);

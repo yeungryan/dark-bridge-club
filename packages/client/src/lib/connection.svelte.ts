@@ -1,4 +1,4 @@
-import type { ClientIntent, ClientMessage, PublicEvent, RoomInfo, ServerMessage, TableView } from '@dark/engine';
+import type { AvatarPick, ClientIntent, ClientMessage, PublicEvent, RoomInfo, ServerMessage, TableView } from '@dark/engine';
 import { checkLogin, token } from './session';
 
 // Spec S08: a WebSocket that shrugs off locked screens and app switches.
@@ -12,6 +12,8 @@ export class Connection {
   status = $state<ConnectionStatus>('connecting');
   view = $state<TableView | null>(null);
   room = $state<RoomInfo | null>(null);
+  /** Your own private avatar pick (S24), while in the lobby. */
+  myAvatar = $state<AvatarPick | null>(null);
   error = $state<string | null>(null);
   /** Server clock minus local clock, for countdowns. */
   clockOffset = 0;
@@ -108,6 +110,7 @@ export class Connection {
         this.clockOffset = message.room.serverTime - Date.now();
         this.view = message.view;
         this.room = message.room;
+        this.myAvatar = message.myAvatar ?? null;
         if (message.events.length) for (const l of this.listeners) l(message.events);
         break;
       case 'error':

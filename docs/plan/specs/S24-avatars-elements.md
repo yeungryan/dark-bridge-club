@@ -43,3 +43,12 @@ Tiger · Wolf · Bear · Fox · Otter · Owl · Eagle · Hawk · Badger · Rhino
 - [ ] Nobody sees anyone else's choice before the reveal.
 - [ ] Each element's clinch effect holds 60 fps on a mid-range Android phone.
 - [ ] Turning avatars off (a dev flag) leaves the game fully playable with plain name badges.
+
+
+## Roster edits (M3 input, 2026-10-20)
+Ryan: replace **Red Panda → Dragon**, **Badger → Badgermole**, **Raccoon → Koi**. The final 24:
+Tiger · Wolf · Bear · Fox · Otter · Owl · Eagle · Hawk · Badgermole · Rhino · Elephant · Lion · Panda · Dragon · Turtle · Koala · Penguin · Shark · Octopus · Lemur · Bison · Boar · Crane · Koi
+
+- *IP note:* "Badgermole" is a creature from the show. The guardrail above was written for a public product. This is a private game for four friends, so the name stays at Ryan's call.
+- *v1 art:* native emoji. Hawk, Lemur, Crane, Koi and Badgermole have no exact emoji, so they use the nearest one, and the animal's name always shows next to it. Custom portraits can come later.
+- *Lobby:* picking happens **in the lobby while waiting for everyone**, instead of as a separate step after the night starts, so it doesn't add 20 s to the start. The night starts once all four are here **and** locked in. A player who hasn't picked 30 s after the other three are ready gets "Surprise me".

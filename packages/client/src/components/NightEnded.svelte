@@ -2,7 +2,8 @@
   import type { Connection } from '../lib/connection.svelte';
   import { onMount } from 'svelte';
   import { pairNames, profileOf } from '../lib/format';
-  import { burst } from '../lib/juice/particles';
+  import { pairAvatarNames } from '../lib/avatars';
+  import { ribbons } from '../lib/juice/particles';
   import { settings } from '../lib/juice/settings.svelte';
   import CountUp from './CountUp.svelte';
 
@@ -22,7 +23,8 @@
     const colors = view.pairs![final.winner].map((id) => profileOf(profiles, id).color);
     const t = setTimeout(() => {
       const r = banner?.getBoundingClientRect();
-      if (r) burst(r.left + r.width / 2, r.top + r.height / 2, 120, [...colors, '#e8c25a', '#fbf8f0']);
+      // The only real confetti in the game: paper ribbons for winning the night.
+      if (r) ribbons(r.left + r.width / 2, r.top + r.height / 2, 120, [...colors, '#e8c25a', '#fbf8f0']);
     }, settings.ms(BANNER_LANDS));
     return () => clearTimeout(t);
   });
@@ -38,6 +40,7 @@
     <h2 bind:this={banner} class="banner">A dead heat</h2>
   {:else}
     <h2 bind:this={banner} class="banner">{pairNames(view, profiles, final.winner)} win the night</h2>
+    {#if pairAvatarNames(conn, final.winner)}<p class="avatars">{pairAvatarNames(conn, final.winner)}</p>{/if}
   {/if}
   {#if final.discardedDeal}<p class="muted">The unfinished last deal didn't count.</p>{/if}
   <button class="primary" onclick={() => conn.send({ type: 'newNight' })}>Start a new night</button>
@@ -66,6 +69,11 @@
   }
   :global(.fx-reduced) .banner {
     animation-name: fade-in;
+  }
+  .avatars {
+    margin-top: -8px;
+    color: var(--ink-dim);
+    font-style: italic;
   }
   .score {
     font-size: 1.2rem;

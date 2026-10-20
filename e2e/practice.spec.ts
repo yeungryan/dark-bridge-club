@@ -36,7 +36,9 @@ async function playUntil(page: Page, until: () => Promise<boolean>, opts: { bidS
     const partner = page.getByRole('button', { name: /^Partner with/ });
     const next = page.getByRole('button', { name: 'Next deal' });
     const pass = page.getByRole('button', { name: 'Pass', exact: true });
-    if (await skip.isVisible()) await tap(skip);
+    const surprise = page.getByRole('button', { name: 'Surprise me' });
+    if (await surprise.isVisible()) await tap(surprise);
+    else if (await skip.isVisible()) await tap(skip);
     else if (await partner.isVisible()) await tap(partner);
     else if ((await next.isVisible()) && (await next.isEnabled())) await tap(next);
     else if (await pass.isVisible()) {
@@ -50,7 +52,7 @@ async function playUntil(page: Page, until: () => Promise<boolean>, opts: { bidS
 
 test('no sound before the first tap; after it, the game is audible', async ({ page }) => {
   await page.goto('/practice.html');
-  // The captain draw ticks before anyone has touched the phone: those can't play yet.
+  // The bots' avatar picks happen before anyone has touched the phone: no sound yet.
   await page.waitForTimeout(1500);
   expect(await sounds(page)).toEqual([]);
   await playUntil(page, async () => (await sounds(page)).length > 0);
@@ -104,4 +106,27 @@ test('Drag style: a second tap does not play; it asks for a swipe', async ({ pag
   await expect(page.locator('.hand .slot')).toHaveCount(before);
   await dragToTable(page, page.locator('.hand .slot.up'));
   await expect(page.locator('.hand .slot')).toHaveCount(before - 1);
+});
+
+test('avatars: pick an animal and element, then everyone flips together and shows on the table', async ({ page }) => {
+  await page.goto('/practice.html');
+  await expect(page.getByText('Who are you tonight?')).toBeVisible();
+  // Three animals on offer; one reroll, then it's used up.
+  await expect(page.locator('.picker .animal')).toHaveCount(3);
+  const before = await page.locator('.picker .animal').allTextContents();
+  await page.getByRole('button', { name: /Show me three others/ }).tap();
+  await expect(page.getByRole('button', { name: 'Reroll used' })).toBeDisabled();
+  const after = await page.locator('.picker .animal').allTextContents();
+  expect(after.some((a) => before.includes(a))).toBe(false);
+
+  await page.locator('.picker .animal').first().tap();
+  await page.getByRole('button', { name: /Water/ }).tap();
+  await page.getByRole('button', { name: /^Lock in Water/ }).tap();
+  // The bots pick too; then the four avatars flip, and Ryan's badge carries his.
+  await expect(page.locator('.reveal .card')).toHaveCount(4, { timeout: 15_000 });
+  const mine = (await page.locator('.reveal .card').filter({ hasText: 'Ryan' }).textContent()) ?? '';
+  expect(mine).toContain('Water');
+  const emojis = await page.locator('.reveal .card .big').allTextContents();
+  expect(new Set(emojis).size).toBe(4);
+  await playUntil(page, () => page.locator('[data-badge-seat] .avatar').first().isVisible());
 });

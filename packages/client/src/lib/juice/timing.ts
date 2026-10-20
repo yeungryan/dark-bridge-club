@@ -34,7 +34,7 @@ export const TIMING = {
   /** Numbers counting up (tallies, HCP). */
   countUp: 600,
   reveal: { banner: 450, firstFlip: 500, flipGap: 260, flip: 320 },
-  ceremony: { crestFlare: 1200, spotlightStep: 110, spotlightSteps: 14, pairSnap: 1600 },
+  ceremony: { crestFlare: 2600, spotlightStep: 110, spotlightSteps: 14, pairSnap: 1600 },
 } as const;
 
 export type Level = 0 | 1 | 2 | 3 | 4 | 5;
