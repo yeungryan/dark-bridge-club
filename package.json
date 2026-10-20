@@ -1,0 +1,10 @@
+{
+  "name": "dark-bridge-club",
+  "private": true,
+  "workspaces": ["packages/*"],
+  "scripts": {
+    "test": "npm run test --workspaces",
+    "typecheck": "npm run typecheck --workspaces",
+    "trace": "npm run trace -w @dark/engine"
+  }
+}

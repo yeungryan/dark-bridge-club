@@ -5,4 +5,4 @@ A private browser bridge table for Darren, Adrian, Ryan and Kim, played over a M
 - **Plan and decisions:** [docs/plan/README.md](docs/plan/README.md)
 - **Specs:** [docs/plan/specs/](docs/plan/specs/)
 
-Status: planning complete. Next up is M0 (rules engine).
+Status: **M0 (rules engine) in review.** Run `npm install`, then `npm test` for the test suite and `npm run trace` to regenerate the [M0 rule traces](docs/m0/rule-traces.md).
