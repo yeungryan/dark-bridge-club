@@ -100,7 +100,7 @@ export class TableRoom extends DurableObject<Env> {
   }
 
   private freshSession(): SessionState {
-    return newSession({ profiles: PROFILE_IDS, usualPartner: USUAL_PARTNER, seed: randomSeed() });
+    return newSession({ profiles: PROFILE_IDS, usualPartner: USUAL_PARTNER, seed: this.env.TEST_SEED || randomSeed() });
   }
 
   private save(): void {

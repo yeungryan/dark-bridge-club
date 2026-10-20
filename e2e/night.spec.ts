@@ -1,7 +1,8 @@
-import { expect, test, type Browser, type BrowserContext, type Page } from '@playwright/test';
+import { expect, test, type Browser, type BrowserContext, type Locator, type Page } from '@playwright/test';
 
 // A whole night through the real UI and server: three practice bots plus Ryan,
 // whom this test plays by tapping the screen like a person would.
+// The server starts from a fixed seed (playwright.config.ts) in which Ryan is drawn captain.
 
 type Frame = { type: string; view?: any; events?: any[] };
 
@@ -24,6 +25,9 @@ const SEATS = [
 async function openPlayer(browser: Browser, seat: (typeof SEATS)[number]): Promise<Player> {
   const context = await browser.newContext();
   const page = await context.newPage();
+  // E2E_CPU_SLOWDOWN=6 imitates a slow CI machine or an old phone.
+  const slowdown = Number(process.env.E2E_CPU_SLOWDOWN ?? 1);
+  if (slowdown > 1) await (await context.newCDPSession(page)).send('Emulation.setCPUThrottlingRate', { rate: slowdown });
   const player: Player = { ...seat, context, page, frames: [] };
   watchFrames(player, page);
   await page.goto(`/?slot=${seat.slot}&k=dev&as=${seat.id}&pin=${seat.pin}&bot=${seat.bot ? 1 : 0}`);
@@ -34,36 +38,57 @@ function watchFrames(player: Player, page: Page): void {
   page.on('websocket', (ws) => ws.on('framereceived', (f) => player.frames.push(JSON.parse(String(f.payload)))));
 }
 
+/** A tap that gives up after a moment if the screen changed underneath it, like a person tapping again. */
+async function tap(locator: Locator, options: Parameters<Locator['click']>[0] = {}): Promise<boolean> {
+  return locator.click({ timeout: 3000, ...options }).then(() => true, () => false);
+}
+
+/** One line describing what Ryan's screen should be showing, for failure messages. */
+function describeState(frames: Frame[]): string {
+  const last = frames.filter((f) => f.type === 'state').at(-1);
+  if (!last) return 'no state received';
+  const v = last.view;
+  const errors = frames.filter((f) => f.type === 'error').slice(-3).map((f: any) => f.code);
+  return JSON.stringify({
+    phase: v.phase,
+    captain: v.captain,
+    mySeat: v.mySeat,
+    deal: v.deal && { phase: v.deal.phase, turn: v.deal.turn, calls: v.deal.calls.length, tricks: v.deal.tricksPlayed },
+    ready: v.readyForNext,
+    presence: (last as any).room?.presence,
+    paused: (last as any).room?.paused,
+    recentErrors: errors,
+  });
+}
+
 /** Plays Ryan's turns until `deals` more deals have finished. */
-async function playAsHuman(page: Page, deals: number): Promise<void> {
+async function playAsHuman(player: Player, deals: number): Promise<void> {
+  const page = player.page;
   let finished = 0;
   const deadline = Date.now() + 4 * 60_000;
   while (finished < deals) {
-    if (Date.now() > deadline) throw new Error('Timed out playing as Ryan');
+    if (Date.now() > deadline) throw new Error(`Timed out playing as Ryan. Last state: ${describeState(player.frames)}`);
 
     const partnerButton = page.getByRole('button', { name: /^Partner with/ });
     if (await partnerButton.isVisible()) {
-      await partnerButton.click();
+      await tap(partnerButton);
       continue;
     }
     const nextDeal = page.getByRole('button', { name: 'Next deal' });
-    if (await nextDeal.isVisible() && (await nextDeal.isEnabled())) {
-      await nextDeal.click();
-      finished++;
+    if ((await nextDeal.isVisible()) && (await nextDeal.isEnabled())) {
+      if (await tap(nextDeal)) finished++;
       continue;
     }
     const pass = page.getByRole('button', { name: 'Pass', exact: true });
     if (await pass.isVisible()) {
-      await pass.click();
-      await page.getByRole('button', { name: 'Confirm Pass' }).click();
+      if (await tap(pass)) await tap(page.getByRole('button', { name: 'Confirm Pass' }));
       continue;
     }
     if (await page.getByText('Your turn to play').isVisible()) {
       // Tap a playable (not dimmed) card twice: raise, then play.
-      const playable = page.locator('.hand .slot').filter({ has: page.locator('.card:not(.dim)') }).first();
       // Cards overlap, so tap the visible left edge, like a thumb would.
-      await playable.click({ position: { x: 10, y: 30 } });
-      await playable.click({ position: { x: 10, y: 30 } });
+      const playable = page.locator('.hand .slot').filter({ has: page.locator('.card:not(.dim)') }).first();
+      if (await tap(playable, { position: { x: 10, y: 30 } })) await tap(playable, { position: { x: 10, y: 30 } });
       await page.waitForTimeout(250);
       continue;
     }
@@ -84,7 +109,7 @@ test.describe.serial('a night at the DARK table', () => {
   });
 
   test('the night starts once all four are here, and Ryan can bid and play two full deals', async () => {
-    await playAsHuman(ryan().page, 2);
+    await playAsHuman(ryan(), 2);
     const last = ryan().frames.filter((f) => f.type === 'state').at(-1)!;
     expect(last.view.wins.A + last.view.wins.B).toBeGreaterThanOrEqual(2);
   });

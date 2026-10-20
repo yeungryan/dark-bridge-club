@@ -8,6 +8,8 @@ export interface Env {
   ROOM_KEY: string;
   /** Lets Ryan reset a forgotten PIN. */
   ADMIN_KEY: string;
+  /** Tests only: start nights from a fixed seed so they're reproducible. Never set in production. */
+  TEST_SEED?: string;
 }
 
 export default {
