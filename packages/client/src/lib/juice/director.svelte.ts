@@ -256,7 +256,7 @@ class Director {
       sound.pip(pip);
     };
     const from = this.centerOf(`[data-badge-seat="${winner}"]`);
-    const to = this.centerOf(`.meters [data-side="${side}"] .pips i:nth-child(${pip + 1})`);
+    const to = this.centerOf(`.meters [data-side="${side}"] .pips > :nth-child(${pip + 1})`);
     const color = kind === 'normal' ? this.colorOf(conn, winner) : '#c58bff';
     const duration = settings.ms(TIMING.orbFly);
     if (from && to) comet(from, to, duration, color, land);

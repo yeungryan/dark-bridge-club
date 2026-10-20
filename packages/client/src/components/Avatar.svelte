@@ -83,7 +83,7 @@
   }
   .el-water .face {
     background:
-      repeating-radial-gradient(circle at 50% 115%, rgba(150, 215, 255, 0.3) 0 1.5px, transparent 1.5px 6px),
+      repeating-radial-gradient(circle at 50% -15%, rgba(150, 215, 255, 0.3) 0 1.5px, transparent 1.5px 6px),
       radial-gradient(circle at 50% 35%, #1a5fa8 0%, #0d3566 100%);
   }
   .el-earth .face {

@@ -28,6 +28,8 @@ export interface DealView {
   readonly tricksWon: { readonly declarers: number; readonly defenders: number };
   /** Tricks so far won by a trump card (public: everyone saw them played). Drives "first trump" (S16). */
   readonly trumpTricksWon: number;
+  /** Who won each trick so far, in order (public: everyone saw them). Drives the scoreboard's silhouettes. */
+  readonly trickWinners: readonly Seat[];
   readonly clinch: Clinch | null;
   readonly playingOn: boolean;
   readonly concession: PendingConcession | null;
@@ -97,6 +99,7 @@ function dealView(state: SessionState, mySeat: Seat | null): DealView {
     lastTrick: deal.tricks[deal.tricks.length - 1] ?? null,
     tricksPlayed: deal.tricks.length,
     tricksWon: deal.tricksWon,
+    trickWinners: deal.tricks.map((t) => t.winner),
     trumpTricksWon: contract ? deal.tricks.filter((t) => t.winningCard.suit === trumpSuit(contract.strain)).length : 0,
     clinch: deal.clinch,
     playingOn: deal.playingOn,

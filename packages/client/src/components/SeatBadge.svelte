@@ -6,7 +6,7 @@
   import Avatar from './Avatar.svelte';
 
   // Spec S10, redesigned: the avatar is the hero (team-coloured ring, element inside it), then
-  // one line with cards left (a tiny card) and the name, then a small role tag once the
+  // one line with the name and cards left (a tiny card), then a small role tag once the
   // contract is set. Whose turn it is: the ring glows. Used for all four seats, you included.
   let { conn, seat }: { conn: Connection; seat: Seat } = $props();
 
@@ -36,11 +36,11 @@
     away={presence !== 'connected'}
   />
   <span class="nameline">
+    <span class="name">{profile.name}</span>
     {#if deal}
       {@const n = deal.handCounts[seat]}
       <span class="count" aria-label="{n} {n === 1 ? 'card' : 'cards'} left">{n}</span>
     {/if}
-    <span class="name">{profile.name}</span>
   </span>
   {#if role}<span class="role" class:decl={role === 'Declarer'}>{role}</span>{/if}
 </div>
@@ -52,6 +52,9 @@
     gap: 3px;
     min-width: 64px;
     max-width: 88px;
+    /* Room for the role tag even before there is one, so seats don't shift when it appears. */
+    min-height: 88px;
+    align-content: start;
     padding: 6px 2px 4px;
     text-align: center;
   }

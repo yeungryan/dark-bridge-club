@@ -142,7 +142,7 @@
   /* Little bidding cards: card-coloured, with a bit of thickness, and they press in. */
   .tile {
     padding: 0;
-    min-height: 44px;
+    min-height: 40px;
     border: 0;
     border-radius: 8px;
     background: var(--card);
@@ -197,7 +197,7 @@
     text-transform: uppercase;
   }
   .confirm {
-    min-height: 48px;
+    min-height: 44px;
     font-weight: 750;
     font-size: 1.05rem;
   }

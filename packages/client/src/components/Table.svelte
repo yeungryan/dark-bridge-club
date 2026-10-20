@@ -9,7 +9,7 @@
   import Hand from './Hand.svelte';
   import LastTrickPeek from './LastTrickPeek.svelte';
   import Prompts from './Prompts.svelte';
-  import RaceMeters from './RaceMeters.svelte';
+  import Scoreboard from './Scoreboard.svelte';
   import Reveal from './Reveal.svelte';
   import SeatBadge from './SeatBadge.svelte';
   import MenuSheet from './MenuSheet.svelte';
@@ -66,6 +66,8 @@
 <div class="table" class:decider data-turn={deal.turn === me ? (deal.phase === 'auction' ? 'my-call' : deal.phase === 'play' ? 'my-play' : '') : ''}>
   <header>
     <button class="ghost menu" aria-label="Menu" onclick={() => (menuOpen = !menuOpen)}>☰</button>
+    <h1 class="game">Game {view.dealNumber}</h1>
+    <span aria-hidden="true"></span>
   </header>
 
   {#if menuOpen}
@@ -94,25 +96,18 @@
       <div class="cluster">
         <div class="seat-top"><SeatBadge {conn} seat={seatAt('top', me)} /></div>
         <div class="seat-left"><SeatBadge {conn} seat={seatAt('left', me)} /></div>
+        <!-- The same square table while bidding and playing, so nobody's seat moves. -->
         <div class="center">
+          <!-- The table itself, in tonight's theme (felt and wood, an infinity pool, neon...). -->
+          <div class="surface" aria-hidden="true"></div>
           {#if deal.phase === 'auction'}
-            <AuctionStrip {conn} />
+            <div class="auction"><AuctionStrip {conn} /></div>
           {:else}
-            <!-- The table itself, in tonight's theme (felt and wood, an infinity pool, neon...). -->
-            <div class="surface" aria-hidden="true"></div>
             <TrickArea {conn} />
           {/if}
         </div>
         <div class="seat-right"><SeatBadge {conn} seat={seatAt('right', me)} /></div>
         <div class="seat-me"><SeatBadge {conn} seat={me} /></div>
-        {#if deal.phase !== 'auction'}
-          <div class="peek-slot">
-            <!-- Always takes its space, so nothing jumps when the first set ends. -->
-            <button class="ghost peek" class:open={peek} class:none={!deal.lastTrick} disabled={!deal.lastTrick} onclick={() => (peek = !peek)}>
-              <span class="stack" aria-hidden="true"><i></i><i></i><i></i></span>{peek ? 'Hide' : 'Last set'}
-            </button>
-          </div>
-        {/if}
       </div>
     </section>
   {/if}
@@ -129,19 +124,7 @@
       <AuctionStrip {conn} />
     {/if}
     <!-- The contract and the race, where "X to play" used to be: the header stays clear for the theme. -->
-    <div class="info">
-      {#if contract}
-        {#key director.contractPulse}
-          <button class="ghost contract" onclick={() => (showAuction = !showAuction)}>
-            <CallText call={{ type: 'bid', level: contract.level, strain: contract.strain }} /> by {nameAtSeat(view, profiles, contract.declarer)}
-            {#if director.contractPulse > 0}<span class="sold" aria-hidden="true">Sold!</span>{/if}
-          </button>
-        {/key}
-        <RaceMeters {deal} declarers={pairOf(contract.declarer)} defenders={pairOf(next(contract.declarer))} />
-      {:else}
-        <span class="muted">Game {view.dealNumber} · bidding · {nameAtSeat(view, profiles, deal.dealer)} deals</span>
-      {/if}
-    </div>
+    <Scoreboard {conn} onPeek={() => (peek = !peek)} onAuction={() => (showAuction = !showAuction)} />
     <!-- Whose turn is shown on the seats themselves (S10); this line is for screen readers. -->
     {#if view.phase === 'inDeal' && turnText}<p class="sr-only" aria-live="polite">{turnText}</p>{/if}
     {#if myTurnToCall}<BiddingBox {conn} />{/if}
@@ -163,22 +146,23 @@
   /* Just the menu button: the rest of the top belongs to the theme's scene (and, top-right,
      to Messenger's floating video, S10). */
   header {
-    display: flex;
+    display: grid;
+    grid-template-columns: 48px 1fr 48px;
+    align-items: center;
     min-height: 48px;
+  }
+  .game {
+    margin: 0;
+    text-align: center;
+    font-size: 1.05rem;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    color: var(--ink);
+    text-shadow: 0 1px 6px rgba(0, 0, 0, 0.6);
   }
   .menu {
     font-size: 1.3rem;
     padding: 0 12px;
-  }
-  .info {
-    display: grid;
-    justify-items: center;
-    gap: 2px;
-    min-width: 0;
-    text-align: center;
-  }
-  .info :global(.meters) {
-    width: min(100%, 340px);
   }
   .sr-only {
     position: absolute;
@@ -187,58 +171,6 @@
     overflow: hidden;
     clip: rect(0 0 0 0);
     white-space: nowrap;
-  }
-  .contract {
-    animation: stamp calc(420ms * var(--speed)) cubic-bezier(0.3, 1.5, 0.6, 1);
-    min-height: 0;
-    border: 0;
-    padding: 2px 0;
-    font-weight: 700;
-    font-size: 1.05rem;
-  }
-  /* "Sold!": the contract slams into the header. */
-  @keyframes stamp {
-    0% {
-      transform: scale(2.2) rotate(-4deg);
-      opacity: 0;
-    }
-    55% {
-      transform: scale(0.92);
-      opacity: 1;
-    }
-  }
-  .contract {
-    position: relative;
-  }
-  .sold {
-    display: inline-block;
-    margin-left: 8px;
-    padding: 0 6px;
-    border-radius: 6px;
-    background: var(--accent);
-    color: #1b1300;
-    font-size: 0.8rem;
-    font-weight: 800;
-    text-transform: uppercase;
-    opacity: 0;
-    animation: sold calc(1600ms * var(--speed)) cubic-bezier(0.3, 1.5, 0.6, 1);
-  }
-  @keyframes sold {
-    0% {
-      transform: scale(2) rotate(-12deg);
-      opacity: 0;
-    }
-    15%,
-    75% {
-      transform: scale(1) rotate(-6deg);
-      opacity: 1;
-    }
-    100% {
-      opacity: 0;
-    }
-  }
-  :global(.fx-reduced) .contract {
-    animation: fade-in calc(300ms * var(--speed));
   }
   /* The decider: everything but the trick area dims a little. */
   .table {
@@ -296,21 +228,25 @@
   :global(.fx-reduced) .pname {
     animation-name: fade-in !important;
   }
+  /* Anchored to the top, not centred: the seats stay exactly where they are when the bidding
+     box opens or closes below. */
   .middle {
     display: grid;
-    align-content: center;
+    align-content: start;
     min-height: 0;
+    padding-top: 2px;
   }
   /* A 3×3 grid around the table: one gap everywhere, so every seat is equally far from it. */
   .cluster {
     display: grid;
-    grid-template-columns: auto min(180px, calc(100vw - 236px)) auto;
+    /* The table shrinks on short phones so everything still fits with the bidding box open. */
+    grid-template-columns: auto min(176px, calc(100vw - 236px), max(112px, calc(100dvh - 604px))) auto;
     grid-template-areas:
       '. top .'
       'left center right'
-      '. me peek';
+      '. me .';
     /* Clear of the table's rim, the same on all four sides. */
-    gap: 18px;
+    gap: 16px;
     justify-content: center;
     align-items: center;
   }
@@ -337,17 +273,20 @@
     justify-self: center;
     align-self: start;
   }
-  .peek-slot {
-    grid-area: peek;
-    align-self: start;
-    justify-self: start;
-  }
   .center {
     grid-area: center;
     position: relative;
     display: grid;
     justify-items: center;
+    align-items: center;
     min-width: 0;
+    aspect-ratio: 1 / 1;
+  }
+  .auction {
+    position: relative;
+    padding: 10px;
+    max-height: 100%;
+    overflow-y: auto;
   }
   .surface {
     position: absolute;
@@ -356,40 +295,6 @@
     background: var(--surface, rgba(0, 0, 0, 0.15));
     box-shadow: var(--surface-rim, none);
     pointer-events: none;
-  }
-  .peek {
-    white-space: nowrap;
-    min-height: 32px;
-    padding: 0 8px;
-    font-size: 13px;
-    display: inline-flex;
-    align-items: center;
-    gap: 8px;
-  }
-  .peek.none {
-    visibility: hidden;
-  }
-  /* A tiny face-down stack: the quitted trick. */
-  .stack {
-    position: relative;
-    width: 14px;
-    height: 18px;
-  }
-  .stack i {
-    position: absolute;
-    inset: 0;
-    border-radius: 2px;
-    background: #2f5d8a;
-    border: 1px solid #c9d6e3;
-  }
-  .stack i:nth-child(2) {
-    transform: translate(2px, -2px) rotate(6deg);
-  }
-  .stack i:nth-child(3) {
-    transform: translate(4px, -4px) rotate(12deg);
-  }
-  :global(.fx-full) .peek:active .stack {
-    transform: scale(0.85);
   }
   .bottom {
     display: grid;

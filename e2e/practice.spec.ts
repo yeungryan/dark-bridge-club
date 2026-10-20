@@ -132,3 +132,19 @@ test('avatars: two animals, tap one and an element to lock in; the crest shows w
   await expect(page.locator('.seat .token[class*="el-"]')).toHaveCount(4);
   await expect(page.locator('.seat .count')).toHaveCount(4);
 });
+
+test('seats stay put from bidding to play; the newest set on the scoreboard opens the last set', async ({ page }) => {
+  await page.goto('/practice.html');
+  const topSeat = page.locator('.seat-top .seat');
+  await playUntil(page, () => page.locator('.box .strains').isVisible());
+  const bidding = (await topSeat.boundingBox())!;
+  // Play on until a set has been won.
+  await playUntil(page, () => page.locator('.pip.latest').isVisible());
+  const playing = (await topSeat.boundingBox())!;
+  expect(Math.abs(playing.y - bidding.y)).toBeLessThanOrEqual(1);
+  expect(Math.abs(playing.x - bidding.x)).toBeLessThanOrEqual(1);
+  // No separate "Last set" button any more: the latest silhouette is the way in.
+  await expect(page.getByRole('button', { name: /^Last set$/ })).toHaveCount(0);
+  await page.locator('.pip.latest').tap();
+  await expect(page.getByRole('button', { name: 'Last set (tap to close)' })).toBeVisible();
+});
