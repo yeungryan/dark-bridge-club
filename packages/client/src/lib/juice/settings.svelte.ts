@@ -1,4 +1,5 @@
 import { options } from '../session';
+import { installSprings } from './spring';
 import { SPEED } from './timing';
 
 // Spec S16/S17: per-player feel settings, remembered on this device.
@@ -87,6 +88,7 @@ class Settings {
         root.style.setProperty('--speed', String(SPEED[this.speed]));
         root.classList.remove('fx-full', 'fx-reduced', 'fx-off');
         root.classList.add(`fx-${this.effects}`);
+        if (!root.style.getPropertyValue('--spring-pop')) installSprings(root);
       });
     });
   }

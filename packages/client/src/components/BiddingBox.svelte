@@ -195,10 +195,12 @@
   }
   :global(.fx-full) .tile.on {
     animation: pick calc(220ms * var(--speed)) cubic-bezier(0.3, 1.6, 0.6, 1);
+    animation-duration: calc(var(--spring-pop-ms, 320ms) * var(--speed));
+    animation-timing-function: var(--spring-pop, cubic-bezier(0.3, 1.6, 0.6, 1));
   }
   @keyframes pick {
-    40% {
-      transform: translateY(-7px) scale(1.06);
+    from {
+      transform: translateY(2px) scale(0.9);
     }
   }
   .tile.faint {

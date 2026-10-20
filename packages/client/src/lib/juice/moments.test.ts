@@ -1,6 +1,6 @@
 import type { PublicEvent, TableView } from '@dark/engine';
 import { describe, expect, it } from 'vitest';
-import { clinchDrama, intensityOf, leadChange, momentsFrom } from './moments';
+import { clinchDrama, intensityOf, leadChange, momentsFrom, streak } from './moments';
 
 // A minimal view of 4♠ by seat 0, seen by seat 1, after some tricks.
 function view(won: { declarers: number; defenders: number }, lastTrickLed: 'S' | 'H' = 'H'): TableView {
@@ -144,5 +144,15 @@ describe('S12 auction countdown', () => {
     const ms = momentsFrom(events, callView(['1S', 'p', 'p', 'p']));
     expect(ms.map((m) => m.kind)).toEqual(['call', 'contractSet']);
     expect(ms[0]).toMatchObject({ going: 0 });
+  });
+});
+
+describe('streak (combos)', () => {
+  it('counts the latest side’s run of sets, partners together', () => {
+    expect(streak([])).toBe(0);
+    expect(streak([0])).toBe(1);
+    expect(streak([1, 0, 2, 0])).toBe(3);
+    expect(streak([0, 2, 1])).toBe(1);
+    expect(streak([3, 1, 3, 1, 3])).toBe(5);
   });
 });

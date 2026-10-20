@@ -2,7 +2,7 @@
   import { buzz, type Haptic } from '../lib/juice/haptics';
   import { settings } from '../lib/juice/settings.svelte';
   import { sound } from '../lib/juice/sound';
-  import { elementBurst, elementStrike, elementWin, flash, glyphs, puff, ribbons, ring, sparks, type Element } from '../lib/juice/particles';
+  import { elementBurst, elementStrike, elementWin, flash, freeze, glyphs, lightBurst, pop, puff, ribbons, ring, screenFlash, sparks, type Element } from '../lib/juice/particles';
   import Particles from './Particles.svelte';
   import TableScene from './TableScene.svelte';
   import { applyTheme, THEMES } from '../lib/themes';
@@ -63,6 +63,17 @@
       ],
     },
     {
+      title: 'Juice',
+      items: [
+        { label: 'Pick up a card', play: () => sound.pickup() },
+        { label: 'Combo ×2 → ×6', play: () => [1, 2, 3, 4, 5].forEach((n, i) => after(i * 420, () => (sound.lead(2), sound.combo(n)))) },
+        { label: 'Impact (small)', play: () => sound.impact(0) },
+        { label: 'Impact (big)', play: () => sound.impact(3), haptic: 'clinch' },
+        { label: 'Tension (decider)', play: () => sound.riser(0.9) },
+        { label: 'Whoosh', play: () => sound.whoosh() },
+      ],
+    },
+    {
       title: 'Other',
       items: [
         { label: 'Last set peek', play: () => [0, 1, 2, 3].forEach((i) => after(i * 200, () => sound.flip())) },
@@ -80,6 +91,29 @@
     { label: 'Trumps in (shockwave)', play: (x, y) => (sound.trumpIn(), ring(x, y, '#c58bff', { radius: 80, width: 4 }), glyphs(x, y, 8, '♠', ['#c58bff', '#f2e6ff'], 'shower')) },
     { label: 'Won with a trump', play: (x, y) => (sound.trumpTrick(), flash(x, y, '#c58bff', 46), glyphs(x, y, 7, '♥', ['#c58bff', '#f2e6ff'], 'rise')) },
     { label: 'First trump!', play: (x, y) => (sound.firstTrump(), ring(x, y, '#c58bff', { radius: 120, width: 5, frames: 30 }), glyphs(x, y, 22, '♦', ['#c58bff', '#f2e6ff', '#e8c25a'], 'shower')) },
+    { label: 'Light burst', play: (x, y) => (sound.lead(2), lightBurst(x, y, ['#e8c25a', '#fff6d8'], 0)) },
+    {
+      label: 'Combo ×2 → ×6',
+      play: (x, y) =>
+        [1, 2, 3, 4, 5].forEach((n, i) =>
+          after(i * 420, () => {
+            sound.lead(2);
+            sound.combo(n);
+            lightBurst(x, y, ['#e8c25a', '#fff6d8', '#ff9a3a'], Math.min(3, n - 1));
+          }),
+        ),
+    },
+    {
+      label: 'Hit-stop (freeze-frame)',
+      play: (x, y) => {
+        sound.impact(3);
+        lightBurst(x, y, ['#e8c25a', '#fffbe8'], 3);
+        elementStrike('fire', x, y, 2);
+        screenFlash('#e8c25a', 0.35);
+        freeze(130);
+      },
+    },
+    { label: 'Score pop', play: (x, y) => (sound.pip(4), pop(x, y, '#e8c25a')) },
     { label: 'Sold! (stamp puff)', play: (x, y) => (sound.sold(), puff(x, y, 12, '#d8c38f')) },
     { label: 'Night won (confetti)', play: (x, y) => (sound.fanfare(), ribbons(x, y, 120, ['#3fb27f', '#3a8fe0', '#e8c25a', '#fbf8f0'])) },
   ];

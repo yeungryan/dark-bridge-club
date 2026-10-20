@@ -78,7 +78,13 @@
               {/if}
             {/each}
           </span>
-          <span class="count">{row.count}<small>/{row.need}</small></span>
+          <span class="count"
+            >{row.count}<small>/{row.need}</small
+            >{#if director.combo?.side === row.side && director.combo.n >= 2}{#key director.combo.id}<b
+                  class="combo"
+                  aria-label="{director.combo.n} sets in a row">×{director.combo.n}</b
+                >{/key}{/if}</span
+          >
           <span class="series" aria-label="Games won tonight">{view.wins[row.pair]}</span>
         </div>
       {/each}
@@ -119,6 +125,8 @@
     border-right: 1px solid var(--line);
     border-radius: 0;
     animation: stamp calc(420ms * var(--speed)) cubic-bezier(0.3, 1.5, 0.6, 1);
+    animation-duration: calc(var(--spring-wobble-ms, 320ms) * var(--speed));
+    animation-timing-function: var(--spring-wobble, cubic-bezier(0.3, 1.6, 0.6, 1));
   }
   .bid {
     font-family: var(--font-card);
@@ -135,13 +143,9 @@
     color: var(--ink-dim);
   }
   @keyframes stamp {
-    0% {
+    from {
       transform: scale(2.2) rotate(-4deg);
       opacity: 0;
-    }
-    55% {
-      transform: scale(0.92);
-      opacity: 1;
     }
   }
   :global(.fx-reduced) .contract {
@@ -236,13 +240,13 @@
   }
   :global(.fx-full) .pip.on {
     animation: pip calc(320ms * var(--speed)) cubic-bezier(0.3, 1.6, 0.6, 1);
+    animation-duration: calc(var(--spring-wobble-ms, 320ms) * var(--speed));
+    animation-timing-function: var(--spring-wobble, cubic-bezier(0.3, 1.6, 0.6, 1));
   }
+  /* A silhouette springs in from nothing and wobbles to rest. */
   @keyframes pip {
-    0% {
-      transform: scale(0.3);
-    }
-    60% {
-      transform: scale(1.5);
+    from {
+      transform: scale(0.2);
     }
   }
   /* The newest set: bigger, ringed and breathing, and tappable to see it. */
@@ -259,8 +263,9 @@
   }
   :global(.fx-full) .pip.latest {
     animation:
-      pip calc(320ms * var(--speed)) cubic-bezier(0.3, 1.6, 0.6, 1),
+      pip calc(var(--spring-wobble-ms, 320ms) * var(--speed)) cubic-bezier(0.3, 1.6, 0.6, 1),
       latest calc(1800ms * var(--speed)) ease-in-out calc(400ms * var(--speed)) infinite;
+    animation-timing-function: var(--spring-wobble, cubic-bezier(0.3, 1.6, 0.6, 1)), ease-in-out;
   }
   @keyframes latest {
     50% {
@@ -275,10 +280,32 @@
     opacity: 1;
   }
   .count {
+    position: relative;
     font-family: var(--font-card);
     font-weight: 700;
     font-size: 14px;
     white-space: nowrap;
+  }
+  /* Sets in a row: a little flame-coloured "×3" that springs in and grows with the run. */
+  .combo {
+    position: absolute;
+    top: -9px;
+    right: -10px;
+    padding: 0 4px;
+    border-radius: 6px;
+    background: var(--accent);
+    color: var(--accent-ink);
+    font-size: 10px;
+    font-weight: 800;
+    line-height: 14px;
+    box-shadow: 0 0 10px var(--accent-glow);
+    animation: combo calc(var(--spring-wobble-ms, 400ms) * var(--speed)) var(--spring-wobble, cubic-bezier(0.3, 1.6, 0.6, 1));
+  }
+  @keyframes combo {
+    from {
+      transform: scale(2.4) rotate(-12deg);
+      opacity: 0;
+    }
   }
   .count small {
     font-size: 11px;

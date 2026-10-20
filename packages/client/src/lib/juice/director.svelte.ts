@@ -3,8 +3,8 @@ import { elementAtSeat } from '../avatars';
 import { cssColor } from '../themes';
 import type { Connection } from '../connection.svelte';
 import { buzz } from './haptics';
-import { intensityOf, momentsFrom, type Moment } from './moments';
-import { comet, elementBurst, elementStrike, elementWin, flash, glyphs, puff, ring, sparks } from './particles';
+import { intensityOf, momentsFrom, streak, type Moment } from './moments';
+import { comet, elementBurst, elementStrike, elementWin, flash, freeze, glyphs, lightBurst, pop, puff, ring, screenFlash, sparks } from './particles';
 import { settings } from './settings.svelte';
 import { sound } from './sound';
 import { DRAMA_BOOST, RESPONSES, TIMING, type Level } from './timing';
@@ -62,6 +62,10 @@ class Director {
   revealHold = $state(false);
   /** Score-bar pips shown, per side, while a trick's orb is still flying there. */
   pipHold = $state<Record<Side, number | null>>({ declarers: null, defenders: null });
+  /** True during a hit-stop: the table's freeze-frame on a big impact. */
+  frozen = $state(false);
+  /** Sets won in a row by one side (shown as "×n" once its orb lands); n ≥ 2 is a combo. */
+  combo = $state<{ side: Side; n: number; id: number } | null>(null);
 
   /** Trick sequences; a newer trick cancels an older one's remaining beats. */
   private seq = 0;
@@ -92,7 +96,24 @@ class Director {
     this.banner = null;
     this.flash = null;
     this.pipHold = { declarers: null, defenders: null };
+    this.combo = null;
   }
+
+  /**
+   * A hit-stop (Balatro): on a big impact everything holds for a beat on the brightest frame,
+   * with a punchy thump, then bursts on. `power` 0–3. Input is never frozen.
+   */
+  private impact(power: number, color?: string): void {
+    sound.impact(power);
+    if (!settings.motion) return;
+    const ms = settings.ms([55, 75, 100, 130][Math.max(0, Math.min(3, power))]!);
+    freeze(ms);
+    if (color && power >= 2) screenFlash(color, 0.14 + power * 0.07);
+    this.frozen = true;
+    clearTimeout(this.unfreeze);
+    this.unfreeze = setTimeout(() => (this.frozen = false), ms);
+  }
+  private unfreeze: ReturnType<typeof setTimeout> | undefined;
 
   private respond(m: Moment, conn: Link, settles: boolean): void {
     const fly = settings.animated ? settings.ms(TIMING.cardFly) : 0;
@@ -119,7 +140,10 @@ class Director {
         // An ink-stamp puff behind the contract as it slams into the header.
         setTimeout(() => {
           const c = this.centerOf('.contract');
-          if (c) puff(c.x, c.y, 12, '#d8c38f');
+          if (c) {
+            puff(c.x, c.y, 12, '#d8c38f');
+            pop(c.x, c.y, gold());
+          }
         }, 60);
         break;
       case 'passedOut':
@@ -133,7 +157,7 @@ class Director {
           if (m.mine) buzz('card');
           const at = this.centerOf(`.area [data-seat="${m.seat}"]`);
           if (m.trumpIn) {
-            // A shockwave and shards of the trump suit.
+            // A shockwave and shards of the trump suit, on a freeze-frame.
             sound.trumpIn();
             buzz('trumpIn');
             this.flashSuit(conn, false);
@@ -141,7 +165,9 @@ class Director {
             if (at) {
               ring(at.x, at.y, TRUMP_COLOR, { radius: 80, width: 4 });
               glyphs(at.x, at.y, 8, this.trumpGlyph(conn), [TRUMP_COLOR, '#f2e6ff'], 'shower');
+              lightBurst(at.x, at.y, [TRUMP_COLOR, '#f2e6ff'], 0);
             }
+            this.impact(1, TRUMP_COLOR);
           } else if (m.lead > 0 && !m.completes) {
             // Quick sparks: it's ahead now.
             sound.lead(m.lead);
@@ -158,7 +184,11 @@ class Director {
         setTimeout(() => sound.close(), fly + 200);
         break;
       case 'decider':
-        setTimeout(() => sound.decider(), fly + 300);
+        // Both sides one away: the tension swells.
+        setTimeout(() => {
+          sound.decider();
+          sound.riser(0.9);
+        }, fly + 300);
         break;
       case 'clinch':
         setTimeout(() => this.playClinch(m, conn), fly);
@@ -195,6 +225,8 @@ class Director {
     this.trickFx = { trick, winner: m.winner, kind, phase: 'landing' };
     this.pipHold = { ...this.pipHold, [side]: m.pip };
     const mineWon = conn.view?.mySeat !== null && conn.view?.mySeat !== undefined && (m.winner - conn.view.mySeat) % 2 === 0;
+    // Sets in a row for this side: a combo from the second one, bigger each time.
+    const run = streak(deal?.trickWinners ?? []);
 
     setTimeout(() => {
       if (!alive()) return;
@@ -222,15 +254,22 @@ class Director {
           ring(at.x, at.y, TRUMP_COLOR, { radius: 120, width: 5, frames: 30 });
           glyphs(at.x, at.y, RESPONSES[level].particles / 3, this.trumpGlyph(conn), [TRUMP_COLOR, '#f2e6ff', gold()], 'shower');
         }
+        this.impact(2, TRUMP_COLOR);
       } else if (kind === 'trump') {
         sound.trumpTrick();
         if (mineWon) buzz('trumpTrick');
         this.flashSuit(conn, true);
         signature(0);
+        this.impact(1, TRUMP_COLOR);
       } else {
         sound.lead(2);
         if (mineWon) buzz('trick');
         signature(0);
+      }
+      // A combo: the same side again. A rising chime on top, and more light each time.
+      if (run >= 2) {
+        sound.combo(run - 1);
+        if (at) lightBurst(at.x, at.y, [this.colorOf(conn, m.winner), gold(), '#fff6d8'], Math.min(3, run - 2));
       }
     }, fly + pause);
 
@@ -242,22 +281,24 @@ class Director {
 
     setTimeout(() => {
       if (this.seq === id && this.trickFx) this.trickFx = { ...this.trickFx, phase: 'done' };
-      this.sendOrb(conn, m.winner, side, m.pip, kind);
+      this.sendOrb(conn, m.winner, side, m.pip, kind, run);
     }, fly + pause + hold + sweep);
   }
 
   /** The orb from the winner's name to their side's next score pip. */
-  private sendOrb(conn: Link, winner: Seat, side: Side, pip: number, kind: TrickFx['kind']): void {
+  private sendOrb(conn: Link, winner: Seat, side: Side, pip: number, kind: TrickFx['kind'], run = 1): void {
     let landed = false;
+    const from = this.centerOf(`[data-badge-seat="${winner}"]`);
+    const to = this.centerOf(`.meters [data-side="${side}"] .pips > :nth-child(${pip + 1})`);
+    const color = kind === 'normal' ? this.colorOf(conn, winner) : '#c58bff';
     const land = () => {
       if (landed) return;
       landed = true;
       if (this.pipHold[side] === pip) this.pipHold = { ...this.pipHold, [side]: null };
       sound.pip(pip);
+      if (to) pop(to.x, to.y, color);
+      this.combo = { side, n: run, id: ++this.fxId };
     };
-    const from = this.centerOf(`[data-badge-seat="${winner}"]`);
-    const to = this.centerOf(`.meters [data-side="${side}"] .pips > :nth-child(${pip + 1})`);
-    const color = kind === 'normal' ? this.colorOf(conn, winner) : '#c58bff';
     const duration = settings.ms(TIMING.orbFly);
     if (from && to) comet(from, to, duration, color, land);
     else land();
@@ -279,11 +320,13 @@ class Director {
       this.holding = false;
       sound.clinch(m.drama);
       buzz('clinch');
+      this.impact(Math.min(3, 1 + m.drama), gold());
       this.shake(base.shakePx + DRAMA_BOOST.shakePx * m.drama);
       // The signature effect of whoever played the deciding card (S24): fire, air, water or earth.
       const at = this.centerOf(`.area [data-seat="${m.seat}"]`);
       if (!at) return;
       const element = elementAtSeat(conn, m.seat);
+      lightBurst(at.x, at.y, [this.colorOf(conn, m.seat), gold(), '#fffbe8'], Math.min(3, 1 + m.drama));
       if (element) elementBurst(element, at.x, at.y, m.drama);
       else {
         ring(at.x, at.y, gold(), { radius: 110, width: 5 });

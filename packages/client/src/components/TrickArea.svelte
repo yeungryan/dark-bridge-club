@@ -52,6 +52,10 @@
   );
 
   const center = (r: DOMRect) => ({ x: r.left + r.width / 2, y: r.top + r.height / 2 });
+  /** The card lands this far through its animation: exactly at TIMING.cardFly, when its sound plays. */
+  const LAND_AT = 0.62;
+  /** The page's wobble spring (lib/juice/spring.ts), or a plain overshoot where unsupported. */
+  const wobble = () => getComputedStyle(document.documentElement).getPropertyValue('--spring-wobble').trim() || 'cubic-bezier(0.3, 1.6, 0.6, 1)';
 
   /** Fly in from your finger (your card) or from the player's name (everyone else's). */
   function arrive(node: HTMLElement, play: PlayedCard) {
@@ -68,10 +72,11 @@
     node.animate(
       [
         { transform: `translate(${a.x - b.x}px, ${a.y - b.y}px) scale(${scale}) rotate(${spin}deg)`, opacity: from ? 1 : 0.2 },
-        { transform: 'translate(0, 0) scale(1.08, 0.9)', opacity: 1, offset: 0.78 },
+        // Lands with a squash, then springs back to shape with a wobble.
+        { transform: 'translate(0, 0) scale(1.12, 0.86)', opacity: 1, offset: LAND_AT, easing: wobble() },
         { transform: 'none', opacity: 1 },
       ],
-      { duration: settings.ms(TIMING.cardFly), easing: 'cubic-bezier(0.2, 0.8, 0.3, 1)', fill: 'backwards' },
+      { duration: settings.ms(Math.round(TIMING.cardFly / LAND_AT)), easing: 'cubic-bezier(0.2, 0.8, 0.3, 1)', fill: 'backwards' },
     );
   }
 
@@ -96,7 +101,7 @@
   }
 </script>
 
-<div class="area" class:armed={launch.armed} bind:clientWidth={size} style="transform: translate({director.shakeX}px, {director.shakeY}px)">
+<div class="area" class:armed={launch.armed} class:frozen={director.frozen} bind:clientWidth={size} style="transform: translate({director.shakeX}px, {director.shakeY}px)">
   {#if director.flash}
     {#key director.flash.id}
       <span class="flash" class:big={director.flash.big} aria-hidden="true"><Suit suit={director.flash.suit} label={false} /></span>
@@ -180,25 +185,37 @@
     border-radius: 6px;
     transition: filter calc(200ms * var(--speed));
   }
+  /* The hit-stop's freeze-frame: the table holds, overexposed, for a beat (lib/juice/director). */
+  .area.frozen {
+    filter: brightness(1.35) saturate(1.25) contrast(1.05);
+  }
+  .area.frozen :global(*) {
+    animation-play-state: paused !important;
+  }
   /* A card that is beaten so far sinks back a little; the leader pops when it takes the lead. */
   .face.beaten {
     filter: brightness(0.78);
   }
   :global(.fx-full) .face.leading {
     animation: take-lead calc(300ms * var(--speed)) cubic-bezier(0.3, 1.6, 0.6, 1);
+    animation-duration: calc(var(--spring-pop-ms, 320ms) * var(--speed));
+    animation-timing-function: var(--spring-pop, cubic-bezier(0.3, 1.6, 0.6, 1));
   }
+  /* Springs: jump to the peak, then settle back with an overshoot (lib/juice/spring.ts). */
   @keyframes take-lead {
-    40% {
-      transform: scale(1.14);
+    from {
+      transform: scale(1.2) rotate(-2deg);
     }
   }
   /* The trick's winner. */
   :global(.fx-full) .face.win {
     animation: win calc(420ms * var(--speed)) cubic-bezier(0.3, 1.6, 0.6, 1);
+    animation-duration: calc(var(--spring-wobble-ms, 320ms) * var(--speed));
+    animation-timing-function: var(--spring-wobble, cubic-bezier(0.3, 1.6, 0.6, 1));
   }
   @keyframes win {
-    35% {
-      transform: scale(1.22) rotate(-3deg);
+    from {
+      transform: scale(1.4) rotate(-6deg);
     }
   }
   .face.win {
