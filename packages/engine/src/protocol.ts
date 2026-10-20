@@ -1,6 +1,7 @@
 // Spec S06: messages between a browser and the table server. Types only.
 import type { Avatar, AvatarAction, AvatarPick } from './avatars';
 import type { PlayerDealAction, ProfileId, SessionEvent } from './session';
+import type { ThemeId } from './themes';
 import type { TableView } from './views';
 
 /** What a player may ask for; the server fills in who sent it. */
@@ -17,7 +18,7 @@ export type ClientMessage =
   | { type: 'snapshot' }
   /** After a night has ended: open a fresh lobby. */
   | { type: 'newNight' }
-  /** In the lobby: reroll, lock in or change your avatar (S24). */
+  /** In the lobby: lock in or change your avatar (S24). */
   | { type: 'avatar'; action: AvatarAction };
 
 export type Presence = 'connected' | 'reconnecting' | 'away';
@@ -47,6 +48,8 @@ export interface RoomInfo {
   readonly avatars: Readonly<Record<ProfileId, Avatar | null>> | null;
   /** When a player who hasn't picked gets "Surprise me" (epoch ms), if that timer is running. */
   readonly surpriseAt: number | null;
+  /** Tonight's theme (S18), rolled when the lobby opens. */
+  readonly theme: ThemeId;
 }
 
 /** Session events with anything secret (deal seeds) removed. */

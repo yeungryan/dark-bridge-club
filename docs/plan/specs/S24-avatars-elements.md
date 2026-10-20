@@ -52,3 +52,30 @@ Tiger · Wolf · Bear · Fox · Otter · Owl · Eagle · Hawk · Badgermole · R
 - *IP note:* "Badgermole" is a creature from the show. The guardrail above was written for a public product. This is a private game for four friends, so the name stays at Ryan's call.
 - *v1 art:* native emoji. Hawk, Lemur, Crane, Koi and Badgermole have no exact emoji, so they use the nearest one, and the animal's name always shows next to it. Custom portraits can come later.
 - *Lobby:* picking happens **in the lobby while waiting for everyone**, instead of as a separate step after the night starts, so it doesn't add 20 s to the start. The night starts once all four are here **and** locked in. A player who hasn't picked 30 s after the other three are ready gets "Surprise me".
+
+## Clean-up before launch (Ryan, 2026-10-20)
+- **No rerolls.** Three animals on offer, pick one.
+- **No avatar names in text** ("Water Bear" is gone everywhere). The avatar speaks for itself.
+- **The element lives on the avatar:** a small element badge on the bottom-right of the avatar circle.
+- **Colour means team during play:** avatar rings, auction underlines, reveal stripes and effects use your pair's theme accent, and silver for the other pair. Names are plain ink in the theme's name font. Personal colours stay in the lobby, crest and history.
+- **Seat badges are avatar-first:** big round avatar, cards left as a tiny card with the number on it (bottom-left), dealer chip (top-right), the name underneath, and a role tag (Declarer / Partner / Defender). On your turn the ring glows.
+- **Round 3 (Ryan):**
+  - No badges around the avatar. The element is a quiet backdrop inside the circle: embers for fire, ripples for water, a swirl for air, rock strata for earth.
+  - Cards left sit as a tiny card to the left of the name.
+  - The dealer chip is gone; the header says who deals.
+  - Your own seat uses the same badge as the other three.
+- **Winning a set shows the winner's element:**
+
+  | Element | Normal win | Win by trumping a different suit |
+  |---|---|---|
+  | Fire | fireball | lightning |
+  | Air | tornado | sound waves |
+  | Water | tsunami | ice |
+  | Earth | rock smash | metal |
+
+  The clinch keeps the full element signature. A player with no avatar gets the plain glow or trump symbols.
+- **Round 4 (Ryan):**
+  - Element backdrops take a primary colour: red fire, yellow air, blue water, green earth.
+  - Two animals on offer, not three.
+  - The lobby picker has no words and no buttons: tapping an animal and an element locks you in, and tapping another changes it.
+  - Anyone who doesn't pick within 30 s of the others being ready is still auto-picked by the server.

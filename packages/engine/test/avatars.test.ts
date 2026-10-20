@@ -29,12 +29,11 @@ describe('S24 avatar picks', () => {
     for (let night = 0; night < 1000; night++) {
       const random = seeded(night + 1);
       let lobby = newAvatarLobby(PLAYERS, random, last);
-      // Some players reroll, then everyone locks in (some by "Surprise me").
-      for (const [i, p] of PLAYERS.entries()) {
-        if ((night + i) % 3 === 0) lobby = ok(applyAvatarAction(lobby, p, { type: 'reroll' }, random));
+      // Everyone locks in (some by "Surprise me").
+      for (const p of PLAYERS) {
         const offers = PLAYERS.map((q) => lobby.picks[q]!.offered);
         expect(new Set(offers.flat()).size).toBe(offers.flat().length);
-        expect(lobby.picks[p]!.offered).toHaveLength(3);
+        expect(lobby.picks[p]!.offered).toHaveLength(2);
         expect(lobby.picks[p]!.offered).not.toContain(last[p]);
       }
       for (const [i, p] of PLAYERS.entries()) {
@@ -42,7 +41,7 @@ describe('S24 avatar picks', () => {
         lobby = ok(
           i % 2
             ? applyAvatarAction(lobby, p, { type: 'surprise' }, random)
-            : applyAvatarAction(lobby, p, { type: 'lock', animal: offered[night % 3]!, element: 'water' }, random),
+            : applyAvatarAction(lobby, p, { type: 'lock', animal: offered[night % 2]!, element: 'water' }, random),
         );
       }
       const animals = PLAYERS.map((p) => lobby.picks[p]!.avatar!.animal);
@@ -52,11 +51,9 @@ describe('S24 avatar picks', () => {
     }
   });
 
-  it('only one reroll per night, and only animals on offer can be picked', () => {
+  it('only animals on offer can be picked', () => {
     const random = seeded(7);
-    let lobby = newAvatarLobby(PLAYERS, random);
-    lobby = ok(applyAvatarAction(lobby, 'ryan', { type: 'reroll' }, random));
-    expect(applyAvatarAction(lobby, 'ryan', { type: 'reroll' }, random)).toMatchObject({ ok: false, error: { code: 'NO_REROLL' } });
+    const lobby = newAvatarLobby(PLAYERS, random);
     const notMine = lobby.picks['kim']!.offered[0]!;
     expect(applyAvatarAction(lobby, 'ryan', { type: 'lock', animal: notMine, element: 'fire' }, random)).toMatchObject({
       ok: false,

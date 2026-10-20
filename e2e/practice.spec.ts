@@ -27,23 +27,24 @@ async function dragToTable(page: Page, card: Locator): Promise<void> {
   await page.mouse.up();
 }
 
-/** Move along (captain draw, partner pick, Next deal, passing) until `until` is true. */
+/** Move along (captain draw, partner pick, Next game, passing) until `until` is true. */
 async function playUntil(page: Page, until: () => Promise<boolean>, opts: { bidSuitFirst?: boolean } = {}): Promise<void> {
   const deadline = Date.now() + 150_000;
   while (!(await until())) {
     if (Date.now() > deadline) throw new Error('Practice table got stuck');
     const skip = page.getByRole('button', { name: 'Skip the captain draw' });
     const partner = page.getByRole('button', { name: /^Partner with/ });
-    const next = page.getByRole('button', { name: 'Next deal' });
+    const next = page.getByRole('button', { name: 'Next game' });
     const pass = page.getByRole('button', { name: 'Pass', exact: true });
-    const surprise = page.getByRole('button', { name: 'Surprise me' });
-    if (await surprise.isVisible()) await tap(surprise);
-    else if (await skip.isVisible()) await tap(skip);
+    const animal = page.locator('.picker .animal').first();
+    if (await animal.isVisible()) {
+      if (await tap(animal)) await tap(page.locator('.picker .element').first());
+    } else if (await skip.isVisible()) await tap(skip);
     else if (await partner.isVisible()) await tap(partner);
     else if ((await next.isVisible()) && (await next.isEnabled())) await tap(next);
     else if (await pass.isVisible()) {
       if (await tap(pass)) await tap(page.getByRole('button', { name: 'Confirm Pass' }));
-    } else if (await page.getByText('Your turn to play').isVisible()) {
+    } else if (await page.locator('.table[data-turn="my-play"]').isVisible()) {
       await dragToTable(page, page.locator('.hand .slot').filter({ has: page.locator('.card:not(.dim)') }).first());
       await page.waitForTimeout(200);
     } else await page.waitForTimeout(150);
@@ -64,7 +65,7 @@ test('a bid can be chosen suit first, then level', async ({ page }) => {
   await playUntil(page, () => page.locator('.box .strains').isVisible());
   const strain = page.locator('.strains button:not([disabled])').last();
   await strain.tap();
-  await expect(page.locator('.confirm')).toContainText('choose a level');
+  await expect(page.locator('.box .context')).toContainText('now a level');
   await page.locator('.levels button:not([disabled]):not(.faint)').first().tap();
   await expect(page.locator('.confirm')).toContainText(/^Bid \d/);
   const label = ((await page.locator('.confirm').textContent()) ?? '').replace('Bid ', '').trim();
@@ -74,7 +75,7 @@ test('a bid can be chosen suit first, then level', async ({ page }) => {
 
 test('a whole deal by dragging cards: every beat of the feel ladder fires', async ({ page }) => {
   await page.goto('/practice.html');
-  await playUntil(page, () => page.getByRole('button', { name: 'Next deal' }).isVisible());
+  await playUntil(page, () => page.getByRole('button', { name: 'Next game' }).isVisible());
   // A deal settled on its last trick ends at once; its clinch lands a moment later.
   await expect.poll(async () => (await sounds(page)).includes('clinch'), { timeout: 3000 }).toBe(true);
   const heard = new Set(await sounds(page));
@@ -86,7 +87,7 @@ test('a whole deal by dragging cards: every beat of the feel ladder fires', asyn
 test('Tap twice style: the second tap plays the raised card', async ({ page }) => {
   await page.addInitScript(() => localStorage.setItem('dark.main.settings', JSON.stringify({ playStyle: 'tap', v: 2 })));
   await page.goto('/practice.html');
-  await playUntil(page, () => page.getByText('Your turn to play').isVisible());
+  await playUntil(page, () => page.locator('.table[data-turn="my-play"]').isVisible());
   const before = await page.locator('.hand .slot').count();
   const card = page.locator('.hand .slot').filter({ has: page.locator('.card:not(.dim)') }).first();
   await card.click({ position: { x: 10, y: 30 } });
@@ -97,7 +98,7 @@ test('Tap twice style: the second tap plays the raised card', async ({ page }) =
 
 test('Drag style: a second tap does not play; it asks for a swipe', async ({ page }) => {
   await page.goto('/practice.html');
-  await playUntil(page, () => page.getByText('Your turn to play').isVisible());
+  await playUntil(page, () => page.locator('.table[data-turn="my-play"]').isVisible());
   const before = await page.locator('.hand .slot').count();
   const card = page.locator('.hand .slot').filter({ has: page.locator('.card:not(.dim)') }).first();
   await card.click({ position: { x: 10, y: 30 } });
@@ -108,25 +109,58 @@ test('Drag style: a second tap does not play; it asks for a swipe', async ({ pag
   await expect(page.locator('.hand .slot')).toHaveCount(before - 1);
 });
 
-test('avatars: pick an animal and element, then everyone flips together and shows on the table', async ({ page }) => {
+test('avatars: two animals, tap one and an element to lock in; the crest shows who is ready', async ({ page }) => {
   await page.goto('/practice.html');
   await expect(page.getByText('Who are you tonight?')).toBeVisible();
-  // Three animals on offer; one reroll, then it's used up.
-  await expect(page.locator('.picker .animal')).toHaveCount(3);
-  const before = await page.locator('.picker .animal').allTextContents();
-  await page.getByRole('button', { name: /Show me three others/ }).tap();
-  await expect(page.getByRole('button', { name: 'Reroll used' })).toBeDisabled();
-  const after = await page.locator('.picker .animal').allTextContents();
-  expect(after.some((a) => before.includes(a))).toBe(false);
+  // Two animals on offer; no names, no reroll, no confirm or "Surprise me" buttons.
+  await expect(page.locator('.picker .animal')).toHaveCount(2);
+  await expect(page.getByRole('button', { name: /Surprise me|Lock in|Show me/ })).toHaveCount(0);
+  // The bots fill their crest letters as they pick.
+  await expect(page.locator('.crest span.ready')).toHaveCount(3, { timeout: 10_000 });
 
   await page.locator('.picker .animal').first().tap();
-  await page.getByRole('button', { name: /Water/ }).tap();
-  await page.getByRole('button', { name: /^Lock in Water/ }).tap();
-  // The bots pick too; then the four avatars flip, and Ryan's badge carries his.
+  await page.getByRole('button', { name: 'Water' }).tap();
+  // That locks it in: the four avatars flip. Avatars aren't named in words.
   await expect(page.locator('.reveal .card')).toHaveCount(4, { timeout: 15_000 });
-  const mine = (await page.locator('.reveal .card').filter({ hasText: 'Ryan' }).textContent()) ?? '';
-  expect(mine).toContain('Water');
-  const emojis = await page.locator('.reveal .card .big').allTextContents();
-  expect(new Set(emojis).size).toBe(4);
-  await playUntil(page, () => page.locator('[data-badge-seat] .avatar').first().isVisible());
+  const mine = page.locator('.reveal .card').filter({ hasText: 'Ryan' });
+  await expect(mine.locator('.token.el-water')).toHaveCount(1);
+  await expect(page.locator('.reveal')).not.toContainText('Water');
+  const faces = await page.locator('.reveal .card .face').allTextContents();
+  expect(new Set(faces.map((f) => f.trim())).size).toBe(4);
+  // At the table, all four seats (yours too) show the avatar with its element and cards left.
+  await playUntil(page, () => page.locator('[data-badge-seat] .count').first().isVisible());
+  await expect(page.locator('.seat .token[class*="el-"]')).toHaveCount(4);
+  await expect(page.locator('.seat .count')).toHaveCount(4);
+});
+
+test('seats stay put from bidding to play; the newest set on the scoreboard opens the last set', async ({ page }) => {
+  await page.goto('/practice.html');
+  // Each seat's avatar (the badge itself is centred, so its edge moves a hair with the role
+  // tag or the card count; the avatar is what has to stay put).
+  const seats = ['top', 'left', 'right', 'me'];
+  // My seat's 4px lift on my turn is the turn cue, not layout: hold it still while measuring.
+  const centres = async () => {
+    const still = await page.addStyleTag({ content: '.seat { transform: none !important; transition: none !important; }' });
+    const out = await Promise.all(
+      seats.map(async (s) => {
+        const b = (await page.locator(`.seat-${s} .seat .token`).boundingBox())!;
+        return { x: b.x + b.width / 2, y: b.y + b.height / 2 };
+      }),
+    );
+    await still.evaluate((el) => el.remove());
+    return out;
+  };
+  await playUntil(page, () => page.locator('.box .strains').isVisible());
+  const bidding = await centres();
+  // Play on until a set has been won.
+  await playUntil(page, () => page.locator('.pip.latest').isVisible());
+  const playing = await centres();
+  playing.forEach((p, i) => {
+    expect(Math.abs(p.x - bidding[i].x), `${seats[i]} x`).toBeLessThanOrEqual(1);
+    expect(Math.abs(p.y - bidding[i].y), `${seats[i]} y`).toBeLessThanOrEqual(1);
+  });
+  // No separate "Last set" button any more: the latest silhouette is the way in.
+  await expect(page.getByRole('button', { name: /^Last set$/ })).toHaveCount(0);
+  await page.locator('.pip.latest').tap();
+  await expect(page.getByRole('button', { name: 'Last set (tap to close)' })).toBeVisible();
 });

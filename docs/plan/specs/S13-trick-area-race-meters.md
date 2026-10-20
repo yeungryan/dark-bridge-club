@@ -31,3 +31,11 @@ This is the heart of the game's tension. It's the bridge version of Balatro's cl
 - A finished trick sweeps into the winner's name badge. A glowing orb then flies from there to that side's score bar, and the pip pops when it arrives (with a rising bell).
 - Trump flourishes: a big translucent trump symbol flashes behind the trick on a trump-in and on a trick won by a trump. The **first trick of a deal won by a trump** gets a "First trump!" banner and a longer hold. "Won by a trump" means the winning card is a trump, including trump leads (decided by Ryan).
 - **Last-trick peek:** the four cards flip up one by one in play order, then the winner lights up; tap to turn them back down. The button always takes its space, so the trick area doesn't jump after trick 1.
+
+## Round 5: the score bug (Ryan)
+- The contract and the race are one panel, laid out like a playoff score bug. On the left is the winning bid, large, with the declarer's avatar and name under it (tap it for the auction). On the right is one row per pair: initials ("D·K"), then a silhouette of the animal that won each set in the team colour (empty outlines for sets still needed), then sets/target, then the pair's games won tonight in a series column.
+- The newest set is the bigger, ringed, breathing silhouette. Tapping it opens the last set, which replaces the old "Last set" button.
+- `DealView.trickWinners` (public information) supplies who won each set.
+- The header reads **"Game N"**, centred.
+- The table is the same square during bidding and play, and anchored to the top, so seats never move when the bidding box opens. The table shrinks on short phones so everything still fits.
+- **Revised (Ryan):** the table is anchored where it sits during play, centred between the header and the scoreboard, which leaves room above for the theme's scene. It is not pinned to the top. The scoreboard's slot is a fixed 64px in every phase. The bidding box is now two rows (levels + Pass, then suits + Confirm, with a one-line hint on top), and it floats up from that slot over the empty felt below my seat, so the middle area never resizes. Seat badges are a fixed 84×96, so a role tag or a wider name can't shift a seat or push the table off-centre. Measured at four phone sizes: no seat moves between bidding and play, and "Game N" is centred exactly over the table.

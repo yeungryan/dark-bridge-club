@@ -61,11 +61,10 @@ export function avatarName(a: Avatar): string {
   return `${ELEMENT_INFO[a.element].name} ${animalById(a.animal)?.name ?? a.animal}`;
 }
 
-/** One player's private pick. */
+/** One player's private pick (two animals on offer, no rerolls: Ryan kept the choice small). */
 export interface AvatarPick {
-  /** The three animals on offer to this player (never overlapping anyone else's). */
+  /** The animals on offer to this player (never overlapping anyone else's). */
   readonly offered: readonly string[];
-  readonly rerolled: boolean;
   /** Set once locked in. */
   readonly avatar: Avatar | null;
 }
@@ -77,7 +76,6 @@ export interface AvatarLobby {
 }
 
 export type AvatarAction =
-  | { type: 'reroll' }
   | { type: 'lock'; animal: string; element: Element }
   | { type: 'unlock' }
   /** Pick at random from your offer (also used for a player who doesn't pick in time). */
@@ -93,7 +91,10 @@ function draw(random: Random, pool: readonly string[], count: number): string[] 
   return out;
 }
 
-/** Fresh offers for a new night: three animals each, no overlaps, nobody's last animal again. */
+/** How many animals each player is offered: two, to keep the choice quick. */
+export const OFFER_SIZE = 2;
+
+/** Fresh offers for a new night: two animals each, no overlaps, nobody's last animal again. */
 export function newAvatarLobby(profiles: readonly ProfileId[], random: Random, last: Record<ProfileId, string | undefined> = {}): AvatarLobby {
   const taken = new Set<string>();
   const picks: Record<ProfileId, AvatarPick> = {};
@@ -101,10 +102,10 @@ export function newAvatarLobby(profiles: readonly ProfileId[], random: Random, l
     const offered = draw(
       random,
       ANIMALS.map((a) => a.id).filter((id) => !taken.has(id) && id !== last[p]),
-      3,
+      OFFER_SIZE,
     );
     offered.forEach((id) => taken.add(id));
-    picks[p] = { offered, rerolled: false, avatar: null };
+    picks[p] = { offered, avatar: null };
   }
   return { picks, last };
 }
@@ -115,14 +116,6 @@ export function applyAvatarAction(lobby: AvatarLobby, by: ProfileId, action: Ava
   const set = (pick: AvatarPick): Outcome<AvatarLobby, never> => ({ ok: true, state: { ...lobby, picks: { ...lobby.picks, [by]: pick } }, events: [] });
 
   switch (action.type) {
-    case 'reroll': {
-      if (mine.rerolled) return fail('NO_REROLL', 'You have already used your reroll tonight.');
-      if (mine.avatar) return fail('LOCKED_IN', 'Unlock your pick first.');
-      // Three new animals nobody else is holding (and not your last one, or your current three).
-      const held = new Set(Object.entries(lobby.picks).flatMap(([p, pick]) => (p === by ? [] : pick.offered)));
-      const pool = ANIMALS.map((a) => a.id).filter((id) => !held.has(id) && !mine.offered.includes(id) && id !== lobby.last[by]);
-      return set({ offered: draw(random, pool, 3), rerolled: true, avatar: null });
-    }
     case 'lock':
       if (!mine.offered.includes(action.animal)) return fail('NOT_OFFERED', 'Pick one of the animals offered to you.');
       if (!ELEMENTS.includes(action.element)) return fail('BAD_ELEMENT', 'Pick an element.');

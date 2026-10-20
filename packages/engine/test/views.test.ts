@@ -117,6 +117,7 @@ describe('S06 per-player views', () => {
       const trump = deal.contract.strain === 'NT' ? null : deal.contract.strain;
       const expected = deal.tricks.filter((t) => trump !== null && t.winningCard.suit === trump).length;
       expect(view.trumpTricksWon).toBe(expected);
+      expect(view.trickWinners).toEqual(deal.tricks.map((t) => t.winner));
       if (expected > 0) sawTrumpTrick = true;
     });
     expect(sawTrumpTrick).toBe(true);

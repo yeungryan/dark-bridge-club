@@ -5,7 +5,10 @@ import {
   ELEMENTS,
   lockedIn,
   newAvatarLobby,
+  rollTheme,
   type AvatarLobby,
+  type ThemeBag,
+  type ThemeId,
   newSession,
   randomSeed,
   seatToAct,
@@ -43,13 +46,19 @@ const think = (base: number) => base + Math.random() * base * 0.6;
 export class PracticeTable extends Connection {
   private session!: SessionState;
   private avatars!: AvatarLobby;
+  private theme: ThemeId = 'clubhouse';
+  private themeBag: ThemeBag = { remaining: [] };
   private version = 0;
   private clinchAt: number | null = null;
   private concessionAt: number | null = null;
   private timers = new Set<ReturnType<typeof setTimeout>>();
   private botTimer: ReturnType<typeof setTimeout> | null = null;
 
-  constructor(private readonly me: ProfileId) {
+  /** `fixedTheme`: practice in one theme every night (practice.html?theme=bali). */
+  constructor(
+    private readonly me: ProfileId,
+    private readonly fixedTheme: ThemeId | null = null,
+  ) {
     super(true);
     this.newNight();
   }
@@ -69,6 +78,9 @@ export class PracticeTable extends Connection {
     this.session = newSession({ profiles: IDS, usualPartner: USUAL_PARTNER, seed: randomSeed() });
     const last = this.avatars ? Object.fromEntries(IDS.map((id) => [id, this.avatars.picks[id]?.avatar?.animal])) : {};
     this.avatars = newAvatarLobby(IDS, Math.random, last);
+    const roll = rollTheme(this.themeBag, Math.random, this.theme);
+    this.theme = this.fixedTheme ?? roll.theme;
+    this.themeBag = roll.bag;
     this.publish([]);
     // The bots pick their avatars over a few seconds; the night starts when you've picked too.
     IDS.filter((id) => id !== this.me).forEach((id, i) =>
@@ -121,6 +133,7 @@ export class PracticeTable extends Connection {
         avatarReady: Object.fromEntries(IDS.map((id) => [id, !!this.avatars.picks[id]?.avatar])),
         avatars: this.session.phase === 'lobby' ? null : avatarsOf(this.avatars),
         surpriseAt: null,
+        theme: this.theme,
       },
       events: publicEvents,
       myAvatar: this.avatars.picks[this.me] ?? null,

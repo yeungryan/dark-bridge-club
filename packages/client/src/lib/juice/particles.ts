@@ -7,7 +7,7 @@ import { PARTICLE_BUDGET } from './timing';
 //   ribbons (confetti: winning the night only) · element signatures (S24: the clinch)
 // The most frequent moment (trick won) deliberately uses no particles at all.
 
-type Shape = 'square' | 'streak' | 'ring' | 'glyph' | 'puff' | 'ribbon' | 'dot' | 'flash';
+type Shape = 'square' | 'streak' | 'ring' | 'glyph' | 'puff' | 'ribbon' | 'dot' | 'flash' | 'bolt' | 'arc' | 'shard';
 
 interface Particle {
   shape: Shape;
@@ -33,7 +33,12 @@ interface Particle {
   /** Sideways flutter (ribbons) or flicker (embers), 0 for none. */
   wobble: number;
   /** Orbit around a centre (air swirl). */
-  orbit?: { cx: number; cy: number; angle: number; radius: number; spin: number; spread: number };
+  /** Orbit around a centre (air swirl, tornado). `rise` moves the centre up; `squash` flattens it. */
+  orbit?: { cx: number; cy: number; angle: number; radius: number; spin: number; spread: number; rise?: number; squash?: number };
+  /** A lightning bolt's path. */
+  points?: { x: number; y: number }[];
+  /** An arc's span in radians (sound waves, a wave crest). */
+  span?: [number, number];
 }
 
 /** A glowing orb travelling along a curve (a won trick heading to its score bar). */
@@ -257,6 +262,146 @@ export function elementBurst(element: Element, x: number, y: number, power = 0):
   }
 }
 
+/** A jagged path from (x0, y0) to (x1, y1). */
+function zigzag(x0: number, y0: number, x1: number, y1: number, segments: number, jitter: number) {
+  return Array.from({ length: segments + 1 }, (_, i) => {
+    const t = i / segments;
+    const j = i === 0 || i === segments ? 0 : rand(-jitter, jitter);
+    return { x: x0 + (x1 - x0) * t + j, y: y0 + (y1 - y0) * t };
+  });
+}
+
+const SUB_COLORS = {
+  lightning: ['#fff7b0', '#ffe14d', '#ffb347'],
+  sound: ['#fff6cf', '#f4e7a1', '#ffffff'],
+  ice: ['#e8fbff', '#a8e6ff', '#6cc7f0'],
+  metal: ['#f2f4f7', '#c3c9d2', '#8a929e', '#ffcf8a'],
+};
+
+/**
+ * Winning a set (S16 + S24): the winner's element, small. Fire: a fireball. Air: a tornado.
+ * Water: a tsunami crest. Earth: a rock smash. Same timing and size for all four.
+ */
+export function elementWin(element: Element, x: number, y: number): void {
+  const c = ELEMENT_COLORS[element];
+  switch (element) {
+    case 'fire':
+      flash(x, y, '#ff8a3a', 55);
+      add([{ shape: 'puff', x, y, size: 10, grow: 1.6, max: 16, alpha: 0.7, color: '#ffd27a' }]);
+      add(
+        Array.from({ length: 22 }, (_, i) => {
+          const a = rand(0, Math.PI * 2);
+          const v = rand(1.5, 4);
+          return { shape: 'dot' as Shape, x, y, vx: Math.cos(a) * v, vy: Math.sin(a) * v - 0.5, gravity: -0.06, drag: 0.95, max: rand(30, 48), size: rand(2, 4), color: pick(c, i), wobble: 1 };
+        }),
+      );
+      break;
+    case 'air':
+      add(
+        Array.from({ length: 40 }, (_, i) => ({
+          shape: 'streak' as Shape,
+          x,
+          y,
+          max: rand(48, 62),
+          delay: (i % 8) * 2,
+          size: 2.5,
+          color: pick(c, i),
+          // A funnel: tight at the bottom, widening as it climbs.
+          orbit: { cx: x, cy: y + 30, angle: (i / 40) * Math.PI * 2, radius: 2 + (i % 8) * 1.5, spin: 0.34, spread: 0.7, rise: -2.1, squash: 0.3 },
+        })),
+      );
+      break;
+    case 'water':
+      for (let k = 0; k < 3; k++) {
+        add([{ shape: 'arc', x, y: y + 34, size: 12, grow: 2.4, max: 26, delay: k * 5, color: pick(c, k), wobble: 4 - k, span: [-Math.PI * 0.9, -Math.PI * 0.1] }]);
+      }
+      add(
+        Array.from({ length: 16 }, (_, i) => {
+          const a = rand(-Math.PI * 0.85, -Math.PI * 0.15);
+          const v = rand(3, 6);
+          return { shape: 'dot' as Shape, x, y: y + 10, vx: Math.cos(a) * v, vy: Math.sin(a) * v, gravity: 0.25, max: rand(30, 45), delay: 6, size: rand(2, 3.5), color: pick(c, i) };
+        }),
+      );
+      break;
+    case 'earth':
+      ring(x, y + 12, c[1]!, { radius: 46, width: 3, frames: 18 });
+      add([
+        ...Array.from({ length: 14 }, (_, i) => {
+          const a = rand(-Math.PI * 0.95, -Math.PI * 0.05);
+          const v = rand(3, 6.5);
+          return { shape: 'square' as Shape, x, y: y + 10, vx: Math.cos(a) * v, vy: Math.sin(a) * v, gravity: 0.42, drag: 0.98, max: rand(30, 45), size: rand(4, 7), color: pick(c, i), vrot: rand(-0.3, 0.3) };
+        }),
+        ...Array.from({ length: 6 }, (_, i) => ({
+          shape: 'puff' as Shape,
+          x: x + rand(-18, 18),
+          y: y + 16,
+          vx: (i % 2 ? 1 : -1) * rand(1, 2.5),
+          drag: 0.93,
+          max: rand(30, 40),
+          size: rand(5, 8),
+          grow: 0.5,
+          alpha: 0.4,
+          color: c[1]!,
+        })),
+      ]);
+      break;
+  }
+}
+
+/**
+ * Winning a set by trumping a different suit: the element's sub-element, sharper.
+ * Fire: lightning. Air: sound. Water: ice. Earth: metal. `power` (0–2) for the first trump.
+ */
+export function elementStrike(element: Element, x: number, y: number, power = 0): void {
+  switch (element) {
+    case 'fire': {
+      const col = SUB_COLORS.lightning;
+      const top = y - 150 - power * 20;
+      // Two strikes, the second a beat later, then the afterglow.
+      add([{ shape: 'bolt', x, y, max: 22, size: 3.5, color: col[1]!, points: zigzag(x + rand(-30, 30), top, x, y, 8, 14) }]);
+      add([{ shape: 'bolt', x, y, max: 16, delay: 6, size: 2.5, color: col[0]!, points: zigzag(x + rand(-30, 30), top + 20, x, y, 7, 16) }]);
+      add([{ shape: 'bolt', x, y, max: 12, delay: 3, size: 1.5, color: col[0]!, points: zigzag(x + rand(-20, 20), top + 40, x + rand(-40, 40), y - 40, 5, 10) }]);
+      flash(x, y, '#fff3b0', 60 + power * 15);
+      sparks(x, y, 14 + power * 6, col);
+      break;
+    }
+    case 'air':
+      for (let k = 0; k < 3 + power; k++) {
+        for (const side of [0, Math.PI]) {
+          add([{ shape: 'arc', x, y, size: 14, grow: 2.6, max: 24, delay: k * 5, color: pick(SUB_COLORS.sound, k), wobble: 3, span: [side - 0.55, side + 0.55] }]);
+        }
+      }
+      ring(x, y, SUB_COLORS.sound[0]!, { radius: 30, width: 2, frames: 12 });
+      break;
+    case 'water': {
+      const n = 14 + power * 6;
+      flash(x, y, '#bfefff', 44);
+      ring(x, y, '#e8fbff', { radius: 64, width: 1.5, frames: 22 });
+      add(
+        Array.from({ length: n }, (_, i) => {
+          const a = (i / n) * Math.PI * 2;
+          const v = rand(3.5, 5.5);
+          return { shape: 'shard' as Shape, x, y, vx: Math.cos(a) * v, vy: Math.sin(a) * v, drag: 0.82, max: rand(38, 50), size: rand(4, 7), color: pick(SUB_COLORS.ice, i), rot: a + Math.PI / 2 };
+        }),
+      );
+      break;
+    }
+    case 'earth': {
+      ring(x, y, '#ffffff', { radius: 52, width: 3, frames: 14 });
+      ring(x, y, SUB_COLORS.metal[1]!, { radius: 86, width: 2, delay: 3, frames: 18 });
+      sparks(x, y, 22 + power * 8, SUB_COLORS.metal);
+      add(
+        Array.from({ length: 6 }, (_, i) => {
+          const a = rand(-Math.PI, 0);
+          const v = rand(3, 5);
+          return { shape: 'shard' as Shape, x, y, vx: Math.cos(a) * v, vy: Math.sin(a) * v, gravity: 0.3, max: rand(30, 40), size: rand(3, 5), color: pick(SUB_COLORS.metal, i + 1), rot: a + Math.PI / 2, vrot: rand(-0.2, 0.2) };
+        }),
+      );
+      break;
+    }
+  }
+}
+
 /**
  * Send an orb from one screen point to another; `onArrive` runs when it lands (or at once
  * when motion effects are off, so the score still updates).
@@ -314,14 +459,16 @@ function drawComets(c: CanvasRenderingContext2D, now: number): void {
 function move(p: Particle): void {
   if (p.orbit) {
     const o = p.orbit;
+    const sq = o.squash ?? 1;
     const px = o.cx + Math.cos(o.angle) * o.radius;
-    const py = o.cy + Math.sin(o.angle) * o.radius;
+    const py = o.cy + Math.sin(o.angle) * o.radius * sq;
     o.angle += o.spin;
     o.radius += o.spread;
-    p.vx = o.cx + Math.cos(o.angle) * o.radius - px;
-    p.vy = o.cy + Math.sin(o.angle) * o.radius - py;
+    o.cy += o.rise ?? 0;
     p.x = o.cx + Math.cos(o.angle) * o.radius;
-    p.y = o.cy + Math.sin(o.angle) * o.radius;
+    p.y = o.cy + Math.sin(o.angle) * o.radius * sq;
+    p.vx = p.x - px;
+    p.vy = p.y - py;
     return;
   }
   p.vx *= p.drag;
@@ -384,6 +531,43 @@ function draw(c: CanvasRenderingContext2D, p: Particle): void {
       c.fill();
       break;
     }
+    case 'bolt': {
+      // Lightning flickers: on for three frames, off for one, with a white-hot core.
+      if (frame % 4 === 3 || !p.points) break;
+      c.lineJoin = 'round';
+      c.shadowColor = p.color;
+      c.shadowBlur = 14;
+      for (const [w, col] of [[p.size, p.color], [p.size * 0.4, '#ffffff']] as const) {
+        c.lineWidth = w;
+        c.strokeStyle = col;
+        c.beginPath();
+        p.points.forEach((q, i) => (i ? c.lineTo(q.x, q.y) : c.moveTo(q.x, q.y)));
+        c.stroke();
+      }
+      c.shadowBlur = 0;
+      break;
+    }
+    case 'arc':
+      c.lineWidth = p.wobble * fade + 0.5;
+      c.lineCap = 'round';
+      c.beginPath();
+      c.arc(p.x, p.y, p.size, p.span![0], p.span![1]);
+      c.stroke();
+      break;
+    case 'shard':
+      // A thin crystal/metal sliver pointing the way it flies.
+      c.save();
+      c.translate(p.x, p.y);
+      c.rotate(p.rot);
+      c.beginPath();
+      c.moveTo(0, -p.size * 1.8);
+      c.lineTo(p.size * 0.45, 0);
+      c.lineTo(0, p.size * 0.7);
+      c.lineTo(-p.size * 0.45, 0);
+      c.closePath();
+      c.fill();
+      c.restore();
+      break;
     case 'ribbon': {
       // A paper strip turning over: its width follows the spin.
       c.save();

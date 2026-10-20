@@ -2,8 +2,18 @@
   import { buzz, type Haptic } from '../lib/juice/haptics';
   import { settings } from '../lib/juice/settings.svelte';
   import { sound } from '../lib/juice/sound';
-  import { elementBurst, flash, glyphs, puff, ribbons, ring, sparks, type Element } from '../lib/juice/particles';
+  import { elementBurst, elementStrike, elementWin, flash, glyphs, puff, ribbons, ring, sparks, type Element } from '../lib/juice/particles';
   import Particles from './Particles.svelte';
+  import TableScene from './TableScene.svelte';
+  import { applyTheme, THEMES } from '../lib/themes';
+  import type { ThemeId } from '@dark/engine';
+
+  let previewing = $state<ThemeId>('clubhouse');
+  function preview(id: ThemeId) {
+    previewing = id;
+    applyTheme(id);
+    sound.sold();
+  }
 
   // lab.html: every game sound (and vibration) on its own button, to check volume on your
   // phone, ideally while on a Messenger call: can the others hear it? Is anything annoying?
@@ -26,7 +36,7 @@
         { label: 'Going once', play: () => sound.going(1) },
         { label: 'Going twice', play: () => sound.going(2) },
         { label: 'Sold!', play: () => sound.sold(), haptic: 'sold' },
-        { label: 'All pass (redeal)', play: () => sound.passedOut() },
+        { label: 'All pass (new game)', play: () => sound.passedOut() },
       ],
     },
     {
@@ -41,12 +51,12 @@
       ],
     },
     {
-      title: 'Tricks',
+      title: 'Sets',
       items: [
-        { label: 'Trick won', play: () => (sound.lead(2), after(650, () => sound.sweep()), after(1000, () => sound.pip(3))), haptic: 'trick' },
+        { label: 'Set won', play: () => (sound.lead(2), after(650, () => sound.sweep()), after(1000, () => sound.pip(3))), haptic: 'trick' },
         { label: 'Won with a trump', play: () => (sound.trumpTrick(), after(650, () => sound.sweep()), after(1000, () => sound.pip(4))), haptic: 'trumpTrick' },
         { label: 'First trump!', play: () => (sound.firstTrump(), after(1100, () => sound.sweep()), after(1450, () => sound.pip(5))), haptic: 'firstTrump' },
-        { label: 'One trick away', play: () => sound.close() },
+        { label: 'One set away', play: () => sound.close() },
         { label: 'Decider', play: () => sound.decider() },
         { label: 'Contract made', play: () => sound.clinch(0), haptic: 'clinch' },
         { label: 'Made, dramatically', play: () => sound.clinch(3), haptic: 'clinch' },
@@ -55,7 +65,7 @@
     {
       title: 'Other',
       items: [
-        { label: 'Last trick peek', play: () => [0, 1, 2, 3].forEach((i) => after(i * 200, () => sound.flip())) },
+        { label: 'Last set peek', play: () => [0, 1, 2, 3].forEach((i) => after(i * 200, () => sound.flip())) },
         { label: 'Score ticking', play: () => [0, 2, 4, 5, 7].forEach((s, i) => after(i * 90, () => sound.count(s))) },
         { label: 'Night won', play: () => sound.fanfare() },
       ],
@@ -66,7 +76,7 @@
   type Fx = { label: string; play: (x: number, y: number) => void };
   const effects: Fx[] = [
     { label: 'Takes the lead (sparks)', play: (x, y) => (sound.lead(1), sparks(x, y, 12, ['#3fb27f', '#e8c25a', '#fff6d8'])) },
-    { label: 'Trick won (glow)', play: (x, y) => (sound.lead(2), flash(x, y, '#e8c25a', 42)) },
+    { label: 'Set won (glow)', play: (x, y) => (sound.lead(2), flash(x, y, '#e8c25a', 42)) },
     { label: 'Trumps in (shockwave)', play: (x, y) => (sound.trumpIn(), ring(x, y, '#c58bff', { radius: 80, width: 4 }), glyphs(x, y, 8, '♠', ['#c58bff', '#f2e6ff'], 'shower')) },
     { label: 'Won with a trump', play: (x, y) => (sound.trumpTrick(), flash(x, y, '#c58bff', 46), glyphs(x, y, 7, '♥', ['#c58bff', '#f2e6ff'], 'rise')) },
     { label: 'First trump!', play: (x, y) => (sound.firstTrump(), ring(x, y, '#c58bff', { radius: 120, width: 5, frames: 30 }), glyphs(x, y, 22, '♦', ['#c58bff', '#f2e6ff', '#e8c25a'], 'shower')) },
@@ -114,13 +124,32 @@
     <button class:on={settings.muted} onclick={() => (settings.muted = !settings.muted)}>{settings.muted ? 'Muted' : 'Mute'}</button>
   </div>
 
-  <button class="primary demo" onclick={demo}>Play a whole trick</button>
+  <button class="primary demo" onclick={demo}>Play a whole set</button>
+
+  <h2>Themes</h2>
+  <p class="muted small">Tap to restyle this page (sounds retune too), or practise a whole night in one.</p>
+  <div class="grid">
+    {#each Object.values(THEMES) as t (t.id)}
+      <div class="theme" class:on={previewing === t.id}>
+        <button onclick={() => preview(t.id)}>{t.name}<br /><small>{t.place}</small></button>
+        <a href="practice.html?theme={t.id}">practise →</a>
+      </div>
+    {/each}
+  </div>
 
   <h2>Effects</h2>
   <p class="muted small">Each moment has its own look; confetti is only for winning the night. Effects must be on Full.</p>
   <div class="grid">
     {#each effects as fx (fx.label)}
       <button onclick={(e) => fx.play(...center(e))}>{fx.label}</button>
+    {/each}
+  </div>
+  <h2>Winning a set, by element</h2>
+  <p class="muted small">Left: a normal win. Right: a win by trumping a different suit.</p>
+  <div class="grid">
+    {#each [['fire', '🔥 Fireball', '⚡ Lightning'], ['air', '🌪️ Tornado', '🔊 Sound'], ['water', '🌊 Tsunami', '❄️ Ice'], ['earth', '🪨 Rock smash', '⚙️ Metal']] as [el, win, strike] (el)}
+      <button onclick={(e) => (sound.lead(2), elementWin(el as Element, ...center(e)))}>{win}</button>
+      <button onclick={(e) => (sound.trumpTrick(), elementStrike(el as Element, ...center(e)))}>{strike}</button>
     {/each}
   </div>
   <h2>Element clinches (your avatar's signature)</h2>
@@ -148,6 +177,7 @@
   <p class="muted"><a href="practice.html">Practice table →</a> (you against three bots; nothing is recorded)</p>
 </main>
 <Particles />
+<TableScene theme={previewing} />
 
 <style>
   main {
@@ -162,6 +192,21 @@
     font-size: 1rem;
     margin: 18px 0 8px;
     color: var(--accent);
+  }
+  .theme {
+    display: grid;
+    gap: 2px;
+    text-align: center;
+  }
+  .theme button {
+    min-height: 56px;
+    width: 100%;
+  }
+  .theme.on button {
+    outline: 3px solid var(--accent);
+  }
+  .theme a {
+    font-size: 13px;
   }
   .small {
     font-size: 13px;

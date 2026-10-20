@@ -9,3 +9,4 @@ export * from './session';
 export * from './views';
 export * from './protocol';
 export * from './avatars';
+export * from './themes';

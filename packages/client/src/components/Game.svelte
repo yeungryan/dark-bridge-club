@@ -6,12 +6,14 @@
   import { settings } from '../lib/juice/settings.svelte';
   import { TIMING } from '../lib/juice/timing';
   import { forgetLogin, options } from '../lib/session';
+  import { applyTheme } from '../lib/themes';
   import Lobby from './Lobby.svelte';
   import NightEnded from './NightEnded.svelte';
   import PartnerPick from './PartnerPick.svelte';
   import Particles from './Particles.svelte';
   import PauseBanner from './PauseBanner.svelte';
   import Table from './Table.svelte';
+  import TableScene from './TableScene.svelte';
 
   // `link`: the practice table passes its own in-browser table; otherwise we connect to the server.
   let { onSignedOut, link }: { onSignedOut: () => void; link?: Connection } = $props();
@@ -32,6 +34,11 @@
       setTimeout(() => (flaring = false), settings.ms(TIMING.ceremony.crestFlare));
     }
     lastPhase = phase;
+  });
+
+  // Tonight's theme (S18) restyles every screen.
+  $effect(() => {
+    if (conn.room) applyTheme(conn.room.theme);
   });
 
   $effect(() => {
@@ -67,6 +74,7 @@
 
 {#if conn.error}<div class="toast" role="alert">{conn.error}</div>{/if}
 <Particles />
+{#if conn.room}<TableScene theme={conn.room.theme} />{/if}
 
 <style>
   .center {

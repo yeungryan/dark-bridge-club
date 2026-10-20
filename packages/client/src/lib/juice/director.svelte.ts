@@ -1,9 +1,10 @@
 import { suitSymbol, trumpSuit, type Seat, type Side, type Suit } from '@dark/engine';
 import { elementAtSeat } from '../avatars';
+import { cssColor } from '../themes';
 import type { Connection } from '../connection.svelte';
 import { buzz } from './haptics';
 import { intensityOf, momentsFrom, type Moment } from './moments';
-import { comet, elementBurst, flash, glyphs, puff, ring, sparks } from './particles';
+import { comet, elementBurst, elementStrike, elementWin, flash, glyphs, puff, ring, sparks } from './particles';
 import { settings } from './settings.svelte';
 import { sound } from './sound';
 import { DRAMA_BOOST, RESPONSES, TIMING, type Level } from './timing';
@@ -33,6 +34,8 @@ type Link = Pick<Connection, 'view' | 'room' | 'onEvents'>;
 
 /** Trump moments share one colour, so "that was a trump" reads at a glance. */
 const TRUMP_COLOR = '#c58bff';
+/** The theme's accent (gold in the Clubhouse). */
+const gold = () => cssColor('--accent', '#e8c25a');
 
 class Director {
   /** Current shake offset in px, applied to the trick area only. */
@@ -144,7 +147,7 @@ class Director {
             sound.lead(m.lead);
             if (m.mine) buzz('lead');
             this.shake(RESPONSES[level].shakePx);
-            if (at) sparks(at.x, at.y, RESPONSES[level].particles, [this.colorOf(conn, m.seat), '#e8c25a', '#fff6d8']);
+            if (at) sparks(at.x, at.y, RESPONSES[level].particles, [this.colorOf(conn, m.seat), gold(), '#fff6d8']);
           }
         }, fly);
         break;
@@ -198,30 +201,36 @@ class Director {
       this.trickFx = { ...this.trickFx!, phase: 'win' };
       const at = this.centerOf(`.area [data-seat="${m.winner}"]`);
       this.shake(RESPONSES[level].shakePx);
+      // The winner's element plays out on the winning card (S24): its everyday form (fireball,
+      // tornado, tsunami, rock smash) for a normal win; its sub-element (lightning, sound, ice,
+      // metal) for a win by trumping a different suit. No avatar: the plain versions.
+      const element = elementAtSeat(conn, m.winner);
+      const signature = (power: number) => {
+        if (!at) return;
+        if (!element) return m.trumpOver ? glyphs(at.x, at.y, 7, this.trumpGlyph(conn), [TRUMP_COLOR, '#f2e6ff'], 'rise') : flash(at.x, at.y, gold(), 42);
+        if (m.trumpOver) elementStrike(element, at.x, at.y, power);
+        else elementWin(element, at.x, at.y);
+      };
       if (kind === 'first') {
-        // The first trump trick: a big ring and a shower of the trump suit.
+        // The first trump set: the banner, a big ring and a shower of the trump suit, on top.
         sound.firstTrump();
         buzz('firstTrump');
         this.banner = { text: 'First trump!', id: ++this.fxId };
         this.flashSuit(conn, true);
+        signature(2);
         if (at) {
           ring(at.x, at.y, TRUMP_COLOR, { radius: 120, width: 5, frames: 30 });
-          glyphs(at.x, at.y, RESPONSES[level].particles / 2, this.trumpGlyph(conn), [TRUMP_COLOR, '#f2e6ff', '#e8c25a'], 'shower');
+          glyphs(at.x, at.y, RESPONSES[level].particles / 3, this.trumpGlyph(conn), [TRUMP_COLOR, '#f2e6ff', gold()], 'shower');
         }
       } else if (kind === 'trump') {
-        // Won with a trump: the suit drifts up off the card.
         sound.trumpTrick();
         if (mineWon) buzz('trumpTrick');
         this.flashSuit(conn, true);
-        if (at) {
-          flash(at.x, at.y, TRUMP_COLOR, 46);
-          glyphs(at.x, at.y, 7, this.trumpGlyph(conn), [TRUMP_COLOR, '#f2e6ff'], 'rise');
-        }
+        signature(0);
       } else {
-        // The everyday win (13 a deal): just a warm glow. The sweep and orb carry the rest.
         sound.lead(2);
         if (mineWon) buzz('trick');
-        if (at) flash(at.x, at.y, '#e8c25a', 42);
+        signature(0);
       }
     }, fly + pause);
 
@@ -247,7 +256,7 @@ class Director {
       sound.pip(pip);
     };
     const from = this.centerOf(`[data-badge-seat="${winner}"]`);
-    const to = this.centerOf(`.meters [data-side="${side}"] .pips i:nth-child(${pip + 1})`);
+    const to = this.centerOf(`.meters [data-side="${side}"] .pips > :nth-child(${pip + 1})`);
     const color = kind === 'normal' ? this.colorOf(conn, winner) : '#c58bff';
     const duration = settings.ms(TIMING.orbFly);
     if (from && to) comet(from, to, duration, color, land);
@@ -277,8 +286,8 @@ class Director {
       const element = elementAtSeat(conn, m.seat);
       if (element) elementBurst(element, at.x, at.y, m.drama);
       else {
-        ring(at.x, at.y, '#e8c25a', { radius: 110, width: 5 });
-        sparks(at.x, at.y, base.particles, [this.colorOf(conn, m.seat), '#e8c25a', '#fbf8f0']);
+        ring(at.x, at.y, gold(), { radius: 110, width: 5 });
+        sparks(at.x, at.y, base.particles, [this.colorOf(conn, m.seat), gold(), '#fbf8f0']);
       }
     }, pause);
   }
@@ -295,9 +304,11 @@ class Director {
     if (suit && settings.animated) this.flash = { suit, big, id: ++this.fxId };
   }
 
+  /** Effects take the team colour, like the avatar rings: your pair's accent, the other pair's silver. */
   private colorOf(conn: Link, seat: Seat): string {
-    const id = conn.view?.seating?.[seat];
-    return conn.room?.profiles.find((p) => p.id === id)?.color ?? '#e8c25a';
+    const me = conn.view?.mySeat;
+    const mine = me !== null && me !== undefined && (seat - me) % 2 === 0;
+    return mine ? gold() : cssColor('--silver', '#c9ced6');
   }
 
   private centerOf(selector: string): { x: number; y: number } | null {

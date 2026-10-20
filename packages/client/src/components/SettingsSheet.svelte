@@ -89,7 +89,9 @@
   .sheet {
     display: grid;
     gap: 10px;
-    background: #0b1f16;
+    background: transparent;
+    border: 0;
+    padding: 4px 0;
   }
   .row {
     display: grid;

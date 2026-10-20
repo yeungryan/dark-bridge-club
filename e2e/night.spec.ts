@@ -73,6 +73,12 @@ function describeState(frames: Frame[]): string {
   });
 }
 
+/** Lobby (S24): tap the first animal and the first element, which locks the avatar in. */
+async function pickAvatar(page: Page): Promise<void> {
+  if (await tap(page.locator('.picker .animal').first())) await tap(page.locator('.picker .element').first());
+  await page.waitForTimeout(300);
+}
+
 /** Drag a card from the hand onto the middle of the table, like a thumb would. */
 async function dragToTable(page: Page, card: Locator): Promise<void> {
   const from = await card.boundingBox();
@@ -103,10 +109,9 @@ async function playAsHuman(player: Player, deals: number): Promise<void> {
   while (dealsScored(player.frames) < target) {
     if (Date.now() > deadline) throw new Error(`Timed out playing as Ryan. Last state: ${describeState(player.frames)}`);
 
-    // S24: pick an avatar in the lobby (the night waits for everyone's pick).
-    const surprise = page.getByRole('button', { name: 'Surprise me' });
-    if (await surprise.isVisible()) {
-      await tap(surprise);
+    // S24: pick an avatar in the lobby (an animal and an element; that locks it in).
+    if (await page.locator('.picker .animal').first().isVisible()) {
+      await pickAvatar(page);
       continue;
     }
     const partnerButton = page.getByRole('button', { name: /^Partner with/ });
@@ -114,7 +119,7 @@ async function playAsHuman(player: Player, deals: number): Promise<void> {
       await tap(partnerButton);
       continue;
     }
-    const nextDeal = page.getByRole('button', { name: 'Next deal' });
+    const nextDeal = page.getByRole('button', { name: 'Next game' });
     if ((await nextDeal.isVisible()) && (await isEnabledNow(nextDeal))) {
       await tap(nextDeal);
       continue;
@@ -124,7 +129,7 @@ async function playAsHuman(player: Player, deals: number): Promise<void> {
       if (await tap(pass)) await tap(page.getByRole('button', { name: 'Confirm Pass' }));
       continue;
     }
-    if (await page.getByText('Your turn to play').isVisible()) {
+    if (await page.locator('.table[data-turn="my-play"]').isVisible()) {
       // Drag a playable (not dimmed) card to the table. Cards overlap, so grab the visible left edge.
       const playable = page.locator('.hand .slot').filter({ has: page.locator('.card:not(.dim)') }).first();
       await dragToTable(page, playable);
@@ -135,17 +140,16 @@ async function playAsHuman(player: Player, deals: number): Promise<void> {
   }
 }
 
-/** Moves Ryan along (partner pick, Next deal, Pass) until it's his turn to play a card. */
+/** Moves Ryan along (partner pick, Next game, Pass) until it's his turn to play a card. */
 async function reachMyTurnToPlay(player: Player): Promise<void> {
   const page = player.page;
   const deadline = Date.now() + 90_000;
-  while (!(await page.getByText('Your turn to play').isVisible())) {
+  while (!(await page.locator('.table[data-turn="my-play"]').isVisible())) {
     if (Date.now() > deadline) throw new Error(`Never reached Ryan's turn. Last state: ${describeState(player.frames)}`);
     const partnerButton = page.getByRole('button', { name: /^Partner with/ });
-    const nextDeal = page.getByRole('button', { name: 'Next deal' });
+    const nextDeal = page.getByRole('button', { name: 'Next game' });
     const pass = page.getByRole('button', { name: 'Pass', exact: true });
-    const surprise = page.getByRole('button', { name: 'Surprise me' });
-    if (await surprise.isVisible()) await tap(surprise);
+    if (await page.locator('.picker .animal').first().isVisible()) await pickAvatar(page);
     else if (await partnerButton.isVisible()) await tap(partnerButton);
     else if ((await nextDeal.isVisible()) && (await isEnabledNow(nextDeal))) await tap(nextDeal);
     else if (await pass.isVisible()) {

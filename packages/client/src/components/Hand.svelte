@@ -159,7 +159,9 @@
     >
       {#key up ? nudge : 0}
         <div class="lift" class:nudge={up && nudge > 0}>
-          <Card {card} width={cardWidth} dim={myTurnToPlay && !isLegal(card)} highlight={up || held} />
+          <div class="glowable" class:playable={myTurnToPlay && isLegal(card) && !up && !held}>
+        <Card {card} width={cardWidth} dim={myTurnToPlay && !isLegal(card)} highlight={up || held} />
+      </div>
         </div>
       {/key}
     </button>
@@ -207,7 +209,7 @@
     filter: drop-shadow(0 10px 14px rgba(0, 0, 0, 0.5));
   }
   .slot.armed {
-    filter: drop-shadow(0 0 14px rgba(232, 194, 90, 0.9));
+    filter: drop-shadow(0 0 14px var(--accent-glow));
   }
   .slot.gone {
     visibility: hidden;
@@ -228,11 +230,19 @@
       transform: translateY(-16px);
     }
   }
+  /* Your turn: the cards you can play give off a soft glow. */
+  .glowable {
+    border-radius: 6px;
+    transition: box-shadow calc(250ms * var(--speed));
+  }
+  .glowable.playable {
+    box-shadow: 0 -2px 12px var(--accent-glow);
+  }
   .ghost {
     position: fixed;
     z-index: 40;
     pointer-events: none;
-    filter: drop-shadow(0 0 14px rgba(232, 194, 90, 0.9));
+    filter: drop-shadow(0 0 14px var(--accent-glow));
   }
   .hint {
     text-align: center;

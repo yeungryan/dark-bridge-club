@@ -5,14 +5,15 @@
   import AuctionStrip from './AuctionStrip.svelte';
   import BiddingBox from './BiddingBox.svelte';
   import Card from './Card.svelte';
+  import CallText from './CallText.svelte';
   import Hand from './Hand.svelte';
   import LastTrickPeek from './LastTrickPeek.svelte';
   import Prompts from './Prompts.svelte';
-  import RaceMeters from './RaceMeters.svelte';
+  import Scoreboard from './Scoreboard.svelte';
   import Reveal from './Reveal.svelte';
   import SeatBadge from './SeatBadge.svelte';
-  import SettingsSheet from './SettingsSheet.svelte';
-  import { avatarOf, emojiOf, pairAvatarNames } from '../lib/avatars';
+  import MenuSheet from './MenuSheet.svelte';
+  import { avatarOf, emojiOf } from '../lib/avatars';
   import { director } from '../lib/juice/director.svelte';
   import { settings } from '../lib/juice/settings.svelte';
   import { TIMING } from '../lib/juice/timing';
@@ -42,7 +43,6 @@
       setTimeout(() => (showPairs = false), settings.ms(TIMING.ceremony.pairSnap));
     }
   });
-  let settingsOpen = $state(false);
   let peek = $state(false);
   let showAuction = $state(false);
 
@@ -55,7 +55,7 @@
       deal.defenderTarget! - deal.tricksWon.defenders === 1,
   );
   const canConcede = $derived(deal.phase === 'play' && !deal.clinch && !deal.concession && !deal.playingOn);
-  const myRole = $derived(contract ? (me === contract.declarer ? 'Declarer' : me === partner(contract.declarer) ? 'Declarer’s partner' : 'Defender') : '');
+  const myRole = $derived(contract ? (me === contract.declarer ? 'Declarer' : me === partner(contract.declarer) ? 'Partner' : 'Defender') : '');
   const turnText = $derived.by(() => {
     if (deal.turn === null) return '';
     if (deal.turn === me) return deal.phase === 'auction' ? 'Your call' : 'Your turn to play';
@@ -63,35 +63,15 @@
   });
 </script>
 
-<div class="table" class:decider>
+<div class="table" class:decider data-turn={deal.turn === me ? (deal.phase === 'auction' ? 'my-call' : deal.phase === 'play' ? 'my-play' : '') : ''}>
   <header>
     <button class="ghost menu" aria-label="Menu" onclick={() => (menuOpen = !menuOpen)}>☰</button>
-    <div class="info">
-      {#if contract}
-        {#key director.contractPulse}
-          <button class="ghost contract" onclick={() => (showAuction = !showAuction)}>
-            {callLabel({ type: 'bid', level: contract.level, strain: contract.strain })} by {nameAtSeat(view, profiles, contract.declarer)}
-            {#if director.contractPulse > 0}<span class="sold" aria-hidden="true">Sold!</span>{/if}
-          </button>
-        {/key}
-        <RaceMeters {deal} declarers={pairOf(contract.declarer)} defenders={pairOf(next(contract.declarer))} />
-      {:else}
-        <span class="muted">Deal {view.dealNumber} · bidding</span>
-      {/if}
-    </div>
+    <h1 class="game">Game {view.dealNumber}</h1>
+    <span aria-hidden="true"></span>
   </header>
 
   {#if menuOpen}
-    <div class="menu-sheet panel">
-      <button disabled={!canConcede} onclick={() => { conn.intent({ type: 'deal', action: { type: 'proposeConcession' } }); menuOpen = false; }}>
-        Concede the rest of this deal
-      </button>
-      <button disabled={view.endNightVotes.includes(view.me)} onclick={() => { conn.intent({ type: 'voteEndNight' }); menuOpen = false; }}>
-        End the night
-      </button>
-      <button onclick={() => { settingsOpen = true; menuOpen = false; }}>Settings (effects, speed, sound)</button>
-      <button class="ghost" onclick={() => (menuOpen = false)}>Close</button>
-    </div>
+    <MenuSheet {conn} {canConcede} onClose={() => (menuOpen = false)} />
   {/if}
   {#if showPairs}
     <div class="pairs" aria-live="polite">
@@ -101,35 +81,34 @@
           {#each view.pairs![pair] as id, j (id)}
             {@const p = profileOf(profiles, id)}
             {#if j === 1}<span class="amp">&</span>{/if}
-            <span class="pname {j === 0 ? 'from-left' : 'from-right'}" style="color: {p.color}">{emojiOf(avatarOf(conn, id))} {p.name}</span>
+            <span class="pname {j === 0 ? 'from-left' : 'from-right'}">{emojiOf(avatarOf(conn, id))} {p.name}</span>
           {/each}
         </div>
-        {#if pairAvatarNames(conn, pair)}<div class="pavatars">{pairAvatarNames(conn, pair)}</div>{/if}
       {/each}
     </div>
-  {/if}
-  {#if settingsOpen}
-    <div class="settings-wrap"><SettingsSheet onClose={() => (settingsOpen = false)} /></div>
   {/if}
 
   {#if view.phase === 'betweenDeals' && deal.result && !director.revealHold}
     <section class="reveal-area"><Reveal {conn} /></section>
   {:else}
     <section class="middle">
-      <div class="top"><SeatBadge {conn} seat={seatAt('top', me)} /></div>
-      <div class="left"><SeatBadge {conn} seat={seatAt('left', me)} /></div>
-      <div class="center">
-        {#if deal.phase === 'auction'}
-          <AuctionStrip {conn} />
-        {:else}
-          <TrickArea {conn} />
-          <!-- Always takes its space, so the trick area doesn't jump when the first trick ends. -->
-          <button class="ghost peek" class:open={peek} class:none={!deal.lastTrick} disabled={!deal.lastTrick} onclick={() => (peek = !peek)}>
-            <span class="stack" aria-hidden="true"><i></i><i></i><i></i></span>{peek ? 'Hide last trick' : 'Last trick'}
-          </button>
-        {/if}
+      <!-- All four seats sit the same distance from the table in the middle (Ryan's rule). -->
+      <div class="cluster">
+        <div class="seat-top"><SeatBadge {conn} seat={seatAt('top', me)} /></div>
+        <div class="seat-left"><SeatBadge {conn} seat={seatAt('left', me)} /></div>
+        <!-- The same square table while bidding and playing, so nobody's seat moves. -->
+        <div class="center">
+          <!-- The table itself, in tonight's theme (felt and wood, an infinity pool, neon...). -->
+          <div class="surface" aria-hidden="true"></div>
+          {#if deal.phase === 'auction'}
+            <div class="auction"><AuctionStrip {conn} /></div>
+          {:else}
+            <TrickArea {conn} />
+          {/if}
+        </div>
+        <div class="seat-right"><SeatBadge {conn} seat={seatAt('right', me)} /></div>
+        <div class="seat-me"><SeatBadge {conn} seat={me} /></div>
       </div>
-      <div class="right"><SeatBadge {conn} seat={seatAt('right', me)} /></div>
     </section>
   {/if}
 
@@ -141,14 +120,19 @@
 
   <section class="bottom">
     <Prompts {conn} />
-    {#if showAuction && deal.phase !== 'auction'}
-      <AuctionStrip {conn} />
-    {/if}
-    <p class="turn" class:mine={deal.turn === me} style="--c: {profileOf(profiles, view.me).color}">
-      <span class="me" data-badge-seat={me}>{emojiOf(avatarOf(conn, view.me))} {profileOf(profiles, view.me).name}{#if deal.dealer === me} <span class="chip">D</span>{/if}{#if myRole}{' · '}{myRole}{/if}</span>
-      {#if view.phase === 'inDeal' && turnText}<span>— {turnText}</span>{/if}
-    </p>
-    {#if myTurnToCall}<BiddingBox {conn} />{/if}
+    <!-- The contract and the race, where "X to play" used to be: the header stays clear for the theme.
+         Its slot is the same height in bidding and play, and the bidding box and the auction
+         float up from it over the empty felt, so the table never moves (Ryan). -->
+    <div class="board" class:covered={myTurnToCall}>
+      <Scoreboard {conn} onPeek={() => (peek = !peek)} onAuction={() => (showAuction = !showAuction)} />
+      {#if myTurnToCall}
+        <div class="float"><BiddingBox {conn} /></div>
+      {:else if showAuction && deal.phase !== 'auction'}
+        <div class="float above"><AuctionStrip {conn} /></div>
+      {/if}
+    </div>
+    <!-- Whose turn is shown on the seats themselves (S10); this line is for screen readers. -->
+    {#if view.phase === 'inDeal' && turnText}<p class="sr-only" aria-live="polite">{turnText}</p>{/if}
     {#if view.phase === 'inDeal'}<Hand {conn} />{/if}
   </section>
 </div>
@@ -164,73 +148,34 @@
     padding: 6px 16px max(8px, env(safe-area-inset-bottom));
     overflow: hidden;
   }
+  /* Just the menu button: the rest of the top belongs to the theme's scene (and, top-right,
+     to Messenger's floating video, S10). */
   header {
-    display: flex;
-    gap: 8px;
-    align-items: flex-start;
-    /* Keep the top-right ~30% clear for Messenger's floating video (S10). */
-    padding-right: 30%;
-    min-height: 56px;
+    display: grid;
+    grid-template-columns: 48px 1fr 48px;
+    align-items: center;
+    min-height: 48px;
+  }
+  .game {
+    margin: 0;
+    text-align: center;
+    font-size: 1.05rem;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    color: var(--ink);
+    text-shadow: 0 1px 6px rgba(0, 0, 0, 0.6);
   }
   .menu {
     font-size: 1.3rem;
     padding: 0 12px;
   }
-  .info {
-    flex: 1;
-    min-width: 0;
-  }
-  .contract {
-    animation: stamp calc(420ms * var(--speed)) cubic-bezier(0.3, 1.5, 0.6, 1);
-    min-height: 0;
-    border: 0;
-    padding: 2px 0;
-    font-weight: 700;
-    font-size: 1.05rem;
-  }
-  /* "Sold!": the contract slams into the header. */
-  @keyframes stamp {
-    0% {
-      transform: scale(2.2) rotate(-4deg);
-      opacity: 0;
-    }
-    55% {
-      transform: scale(0.92);
-      opacity: 1;
-    }
-  }
-  .contract {
-    position: relative;
-  }
-  .sold {
-    display: inline-block;
-    margin-left: 8px;
-    padding: 0 6px;
-    border-radius: 6px;
-    background: var(--accent);
-    color: #1b1300;
-    font-size: 0.8rem;
-    font-weight: 800;
-    text-transform: uppercase;
-    opacity: 0;
-    animation: sold calc(1600ms * var(--speed)) cubic-bezier(0.3, 1.5, 0.6, 1);
-  }
-  @keyframes sold {
-    0% {
-      transform: scale(2) rotate(-12deg);
-      opacity: 0;
-    }
-    15%,
-    75% {
-      transform: scale(1) rotate(-6deg);
-      opacity: 1;
-    }
-    100% {
-      opacity: 0;
-    }
-  }
-  :global(.fx-reduced) .contract {
-    animation: fade-in calc(300ms * var(--speed));
+  .sr-only {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip: rect(0 0 0 0);
+    white-space: nowrap;
   }
   /* The decider: everything but the trick area dims a little. */
   .table {
@@ -249,23 +194,18 @@
     justify-items: center;
     padding: 16px;
     border-radius: var(--radius);
-    background: rgba(8, 20, 14, 0.9);
+    background: var(--sheet);
     border: 1px solid var(--line);
     z-index: 19;
     pointer-events: none;
     animation: fade-in calc(200ms * var(--speed)) backwards;
   }
   .pair {
+    font-family: var(--font-name);
     font-size: 1.4rem;
     font-weight: 750;
     display: flex;
     gap: 8px;
-  }
-  .pavatars {
-    font-size: 0.85rem;
-    font-style: italic;
-    color: var(--ink-dim);
-    margin-top: -4px;
   }
   .vs,
   .amp {
@@ -293,112 +233,104 @@
   :global(.fx-reduced) .pname {
     animation-name: fade-in !important;
   }
-  .settings-wrap {
-    position: absolute;
-    top: 60px;
-    left: 16px;
-    right: 16px;
-    z-index: 21;
-  }
-  .menu-sheet {
-    position: absolute;
-    top: 60px;
-    left: 16px;
-    display: grid;
-    gap: 8px;
-    z-index: 20;
-    background: #0b1f16;
-  }
+  /* Centred in the space between the header and the scoreboard, leaving room above for the
+     theme's scene. That space is the same in bidding and play, so the seats never move. */
   .middle {
     display: grid;
-    grid-template-columns: 88px minmax(0, 1fr) 88px;
-    grid-template-rows: auto 1fr;
-    grid-template-areas: 'top top top' 'left center right';
-    align-items: center;
-    gap: 4px;
+    align-content: center;
     min-height: 0;
+  }
+  /* A 3×3 grid around the table: one gap everywhere, so every seat is equally far from it. */
+  .cluster {
+    display: grid;
+    /* The table shrinks on short phones, so the bidding box never covers my seat. */
+    grid-template-columns: auto min(180px, calc(100vw - 236px), max(112px, calc(100dvh - 571px))) auto;
+    grid-template-areas:
+      '. top .'
+      'left center right'
+      '. me .';
+    /* Clear of the table's rim, the same on all four sides. */
+    gap: 18px;
+    justify-content: center;
+    align-items: center;
   }
   .reveal-area {
     min-height: 0;
     overflow-y: auto;
     padding-top: 4px;
   }
-  .top {
+  .seat-top {
     grid-area: top;
     justify-self: center;
+    align-self: end;
   }
-  .left {
+  .seat-left {
     grid-area: left;
+    justify-self: end;
   }
-  .right {
+  .seat-right {
     grid-area: right;
+    justify-self: start;
+  }
+  .seat-me {
+    grid-area: me;
+    justify-self: center;
+    align-self: start;
   }
   .center {
     grid-area: center;
+    position: relative;
     display: grid;
     justify-items: center;
-    gap: 4px;
-  }
-  .peek {
-    min-height: 32px;
-    font-size: 14px;
-    display: inline-flex;
     align-items: center;
-    gap: 8px;
+    min-width: 0;
+    aspect-ratio: 1 / 1;
   }
-  .peek.none {
-    visibility: hidden;
-  }
-  /* A tiny face-down stack: the quitted trick. */
-  .stack {
+  .auction {
     position: relative;
-    width: 14px;
-    height: 18px;
+    padding: 10px;
+    max-height: 100%;
+    overflow-y: auto;
   }
-  .stack i {
+  .surface {
     position: absolute;
     inset: 0;
-    border-radius: 2px;
-    background: #2f5d8a;
-    border: 1px solid #c9d6e3;
-  }
-  .stack i:nth-child(2) {
-    transform: translate(2px, -2px) rotate(6deg);
-  }
-  .stack i:nth-child(3) {
-    transform: translate(4px, -4px) rotate(12deg);
-  }
-  :global(.fx-full) .peek:active .stack {
-    transform: scale(0.85);
+    border-radius: var(--surface-radius, 50%);
+    background: var(--surface, rgba(0, 0, 0, 0.15));
+    box-shadow: var(--surface-rim, none);
+    pointer-events: none;
   }
   .bottom {
     display: grid;
     gap: 6px;
     justify-items: stretch;
   }
-  .turn {
-    display: flex;
-    flex-wrap: wrap;
-    justify-content: center;
-    gap: 0 6px;
-    text-align: center;
-    margin: 0;
-    color: var(--ink-dim);
-    font-size: 15px;
+  /* The scoreboard's slot: one fixed height in every phase. */
+  .board {
+    position: relative;
+    display: grid;
+    align-items: center;
+    height: 64px;
   }
-  .turn .me {
-    color: var(--c);
-    font-weight: 650;
+  /* Under the bidding box, the dealer line would show through: hide it. */
+  .board.covered > :global(.bug) {
+    visibility: hidden;
   }
-  .turn.mine span:last-child {
-    color: var(--accent);
-    font-weight: 700;
+  /* The bidding box sits on the slot and rises over the empty felt below my seat. */
+  .float {
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 5;
   }
-  .chip {
-    font-size: 11px;
-    background: var(--ink);
-    color: var(--felt);
-    border-radius: 50%;
-    padding: 1px 5px;
+  /* The auction, during play, opens above the scoreboard so the race stays visible. */
+  .float.above {
+    bottom: calc(100% + 6px);
+    padding: 8px;
+    border-radius: 12px;
+    background: var(--sheet);
+    border: 1px solid var(--line);
+    box-shadow: 0 6px 20px rgba(0, 0, 0, 0.45);
   }
 </style>

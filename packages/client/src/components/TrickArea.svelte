@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { suitSymbol, trumpSuit, winningPlay, type CompletedTrick, type PlayedCard, type Seat } from '@dark/engine';
+  import { trumpSuit, winningPlay, type CompletedTrick, type PlayedCard, type Seat } from '@dark/engine';
   import type { Connection } from '../lib/connection.svelte';
   import { spotOf } from '../lib/format';
   import { director } from '../lib/juice/director.svelte';
@@ -7,6 +7,7 @@
   import { settings } from '../lib/juice/settings.svelte';
   import { TIMING } from '../lib/juice/timing';
   import Card from './Card.svelte';
+  import Suit from './Suit.svelte';
 
   // Spec S13/S16: each card flies in from where it came from (your finger, or the player's
   // name) and lands with a squash. The card currently winning the trick wears a gold ring.
@@ -98,7 +99,7 @@
 <div class="area" class:armed={launch.armed} bind:clientWidth={size} style="transform: translate({director.shakeX}px, {director.shakeY}px)">
   {#if director.flash}
     {#key director.flash.id}
-      <span class="flash" class:big={director.flash.big} aria-hidden="true">{suitSymbol(director.flash.suit)}</span>
+      <span class="flash" class:big={director.flash.big} aria-hidden="true"><Suit suit={director.flash.suit} label={false} /></span>
     {/key}
   {/if}
   {#each showing as play (play.seat + ':' + play.card.suit + play.card.rank)}
@@ -147,7 +148,7 @@
   }
   .area.armed::before {
     border-color: var(--accent);
-    box-shadow: inset 0 0 30px rgba(232, 194, 90, 0.25), 0 0 18px rgba(232, 194, 90, 0.35);
+    box-shadow: inset 0 0 30px var(--accent-glow), 0 0 18px var(--accent-glow);
   }
   .spot {
     position: absolute;
@@ -201,7 +202,7 @@
     }
   }
   .face.win {
-    box-shadow: 0 0 16px 2px rgba(232, 194, 90, 0.75);
+    box-shadow: 0 0 16px 2px var(--accent-glow);
   }
   .face.trumpwin {
     box-shadow: 0 0 20px 4px rgba(197, 139, 255, 0.85);
@@ -214,7 +215,7 @@
     top: 50%;
     font-size: 110px;
     line-height: 1;
-    color: #c58bff;
+    color: var(--trump);
     pointer-events: none;
     opacity: 0;
     transform: translate(-50%, -50%);

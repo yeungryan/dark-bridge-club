@@ -4,16 +4,20 @@
   import { onMount } from 'svelte';
   import { cardText, isRed, pairNames, profileOf } from '../lib/format';
   import { director } from '../lib/juice/director.svelte';
-  import { avatarAtSeat, emojiOf } from '../lib/avatars';
+  import { avatarAtSeat, emojiOf, teamColor } from '../lib/avatars';
   import { ring, sparks } from '../lib/juice/particles';
+  import { cssColor } from '../lib/themes';
   import { settings } from '../lib/juice/settings.svelte';
   import { sound } from '../lib/juice/sound';
   import { TIMING } from '../lib/juice/timing';
   import CountUp from './CountUp.svelte';
+  import CallText from './CallText.svelte';
+  import Suit from './Suit.svelte';
 
   // Spec S14: the payoff for hidden hands. The result lands, the score ticks up, then the four
   // hands flip one by one (from declarer's right, in play order) with their HCP counting up.
-  // Tap the panel to skip to the end. It then waits for all four to tap "Next deal".
+  // Tap the panel to skip to the end. It then waits for all four to tap "Next game".
+  // Wording (Ryan): a trick is a "set", a deal is a "game", so a defeated contract is "Defeated".
   let { conn }: { conn: Connection } = $props();
 
   const view = $derived(conn.view!);
@@ -26,7 +30,7 @@
     seatsFrom(contract.declarer).find((s) => sideOf(s, contract) === result.winner)!,
   );
   const winningPair = $derived(view.pairs!.A.includes(view.seating![winningSeat]) ? 'A' : 'B');
-  const verdict = $derived(result.reason === 'conceded' ? 'Conceded' : result.winner === 'declarers' ? 'Made' : 'Set');
+  const verdict = $derived(result.reason === 'conceded' ? 'Conceded' : result.winner === 'declarers' ? 'Made' : 'Defeated');
   const ready = $derived(view.readyForNext.includes(view.me));
 
   // Hands flip in play order, starting from declarer's right.
@@ -60,8 +64,9 @@
           // A big contract: a golden ring and sparks (confetti is kept for winning the night).
           const x = r.left + r.width / 2;
           const y = r.top + r.height / 2;
-          ring(x, y, '#e8c25a', { radius: 120, width: 4, frames: 28 });
-          sparks(x, y, 30, [...colors, '#e8c25a']);
+          const gold = cssColor('--accent', '#e8c25a');
+          ring(x, y, gold, { radius: 120, width: 4, frames: 28 });
+          sparks(x, y, 30, [...colors, gold]);
         }, settings.ms(TIMING.reveal.banner)),
       );
     }
@@ -84,16 +89,16 @@
 <div class="reveal panel" class:skipped class:move={settings.motion} onclick={skip}>
   <h3 bind:this={banner} class="banner {result.winner}">{verdict}: {pairNames(view, profiles, winningPair)} +1</h3>
   <p class="muted">
-    {contract.level}{contract.strain === 'NT' ? 'NT' : cardText({ suit: contract.strain, rank: 2 }).suit} by
+    <CallText call={{ type: 'bid', level: contract.level, strain: contract.strain }} /> by
     {profileOf(profiles, view.seating![contract.declarer]).name} ·
-    declarers took {result.declarerTricks}, defenders {result.defenderTricks}
+    declarers won {result.declarerTricks} sets, defenders {result.defenderTricks}
     {#if result.overUnder !== null}· {result.overUnder >= 0 ? `+${result.overUnder}` : `${result.overUnder}`}{/if}
   </p>
 
   <div class="hands">
     {#each [view.mySeat!, partner(view.mySeat!), next(partner(view.mySeat!)), next(view.mySeat!)] as seat (seat)}
       {@const p = profileOf(profiles, view.seating![seat])}
-      <div class="hand" class:flipped={flipped.includes(seat)} style="--c: {p.color}">
+      <div class="hand" class:flipped={flipped.includes(seat)} style="--c: {teamColor(conn, seat)}">
         <div class="who">
           {emojiOf(avatarAtSeat(conn, seat))} {p.name}{seat === view.mySeat ? ' (you)' : ''}
           <span class="muted">·
@@ -102,7 +107,7 @@
         {#if flipped.includes(seat)}
           <div class="face">
             {#each ['S', 'H', 'D', 'C'] as const as suit (suit)}
-              <div class:red={isRed({ suit, rank: 2 })}>{cardText({ suit, rank: 2 }).suit} {suitLine(seat, suit)}</div>
+              <div class:red={isRed({ suit, rank: 2 })}><Suit {suit} /> {suitLine(seat, suit)}</div>
             {/each}
           </div>
         {:else}
@@ -130,7 +135,7 @@
       conn.intent({ type: 'readyForNext' });
     }}
   >
-    {ready ? 'Waiting for the others…' : 'Next deal'}
+    {ready ? 'Waiting for the others…' : 'Next game'}
   </button>
   <div class="ready">
     {#each view.profiles as id (id)}
@@ -175,7 +180,7 @@
     height: 5.2em;
     margin-top: 2px;
     border-radius: 6px;
-    background: repeating-linear-gradient(45deg, #1d4a36 0 6px, #16392a 6px 12px);
+    background: var(--card-back);
     border: 1px solid var(--line);
   }
   .move .flipped .face {
@@ -218,11 +223,12 @@
     padding-left: 8px;
   }
   .who {
-    font-weight: 650;
-    color: var(--c);
+    font-family: var(--font-name);
+    font-weight: 700;
+    color: var(--ink);
   }
   .red {
-    color: #ff8a7a;
+    color: var(--red-on-felt);
   }
   .ready {
     display: flex;
@@ -235,6 +241,6 @@
   }
   .ready span.on {
     opacity: 1;
-    color: var(--c);
+    color: var(--ink);
   }
 </style>
