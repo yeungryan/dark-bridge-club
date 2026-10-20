@@ -1,0 +1,17 @@
+{
+  "name": "@dark/server",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "typecheck": "tsc --noEmit",
+    "test": "echo 'server is covered by the e2e suite (npm run e2e at the root)'"
+  },
+  "dependencies": {
+    "@dark/engine": "0.1.0"
+  },
+  "devDependencies": {
+    "@cloudflare/workers-types": "^4.20260702.1",
+    "wrangler": "^4.151.2"
+  }
+}

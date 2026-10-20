@@ -1,10 +1,19 @@
 {
   "name": "dark-bridge-club",
   "private": true,
-  "workspaces": ["packages/*"],
+  "workspaces": [
+    "packages/*"
+  ],
   "scripts": {
-    "test": "npm run test --workspaces",
+    "test": "npm run test -w @dark/engine",
     "typecheck": "npm run typecheck --workspaces",
+    "build": "npm run build -w @dark/client",
+    "e2e": "npm run build && playwright test",
+    "dev": "npm run build && cd packages/server && wrangler dev",
+    "deploy": "npm run build && cd packages/server && wrangler deploy",
     "trace": "npm run trace -w @dark/engine"
+  },
+  "devDependencies": {
+    "@playwright/test": "1.56"
   }
 }

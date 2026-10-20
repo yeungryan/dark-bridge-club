@@ -1,0 +1,21 @@
+{
+  "name": "@dark/client",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "vite build",
+    "typecheck": "svelte-check --tsconfig ./tsconfig.json --fail-on-warnings",
+    "test": "echo 'client is covered by the e2e suite (npm run e2e at the root)'"
+  },
+  "dependencies": {
+    "@dark/engine": "0.1.0"
+  },
+  "devDependencies": {
+    "@sveltejs/vite-plugin-svelte": "^5.1.1",
+    "svelte": "^5.57.2",
+    "svelte-check": "^4.7.7",
+    "typescript": "^5.6.3",
+    "vite": "^6.4.4"
+  }
+}

@@ -1,0 +1,42 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>DARK · admin</title>
+    <style>
+      body { margin: 0; padding: 24px 16px; background: #0f2a1e; color: #f3efe4; font: 16px system-ui, sans-serif; }
+      main { max-width: 360px; margin: 0 auto; display: grid; gap: 12px; }
+      input, select, button { font: inherit; min-height: 44px; padding: 0 10px; border-radius: 8px; border: 1px solid #546; }
+      button { background: #e8c25a; border: 0; font-weight: 650; }
+      p { margin: 0; color: #b9b4a5; }
+    </style>
+  </head>
+  <body>
+    <main>
+      <h1>Reset a PIN</h1>
+      <p>Clears a player's PIN and signs them out everywhere. Next time they open the link, they choose a new PIN.</p>
+      <label>Admin key <input id="key" type="password" autocomplete="off" /></label>
+      <label>Player
+        <select id="profile">
+          <option value="darren">Darren</option>
+          <option value="adrian">Adrian</option>
+          <option value="ryan">Ryan</option>
+          <option value="kim">Kim</option>
+        </select>
+      </label>
+      <button id="go">Reset PIN</button>
+      <p id="result" role="status"></p>
+    </main>
+    <script type="module">
+      document.getElementById('go').addEventListener('click', async () => {
+        const res = await fetch('/api/admin/reset-pin', {
+          method: 'POST',
+          headers: { 'content-type': 'application/json' },
+          body: JSON.stringify({ adminKey: document.getElementById('key').value, profile: document.getElementById('profile').value }),
+        });
+        document.getElementById('result').textContent = res.ok ? 'Done. That PIN is cleared.' : 'That admin key is not right.';
+      });
+    </script>
+  </body>
+</html>

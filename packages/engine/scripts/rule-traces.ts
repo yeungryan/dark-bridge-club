@@ -18,6 +18,7 @@ import {
   seatToAct,
   sideOf,
   suitSymbol,
+  tableView,
   trumpSuit,
   type Call,
   type CompletedTrick,
@@ -28,7 +29,7 @@ import {
   type SessionState,
   type Strain,
 } from '../src';
-import { simpleBotCard } from './simple-bot';
+import { botCard } from '../src/bots';
 
 const NAMES: Record<ProfileId, string> = { darren: 'Darren', adrian: 'Adrian', ryan: 'Ryan', kim: 'Kim' };
 const SEED = 'da4cb41d9e5a2c1f0b7d3e8a6c4f2b19';
@@ -197,7 +198,7 @@ function runDeal(n: number, sc: Scenario): void {
       if (!s.deal || s.deal.phase !== 'play') break;
     }
     const seat = seatToAct(s.deal)!;
-    apply({ type: 'deal', by: s.seating![seat], action: { type: 'play', card: simpleBotCard(s.deal) } });
+    apply({ type: 'deal', by: s.seating![seat], action: { type: 'play', card: botCard(tableView(s, s.seating![seat]).deal!, seat) } });
     if (dealPhase() === 'awaitingPlayOn') {
       flushTricks();
       const who = sc.playOn(s);
