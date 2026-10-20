@@ -37,3 +37,5 @@ Keep the four suggested looks, but tie them to the countries that matter to the 
 | ★ **Manila Sleepover** | 🇵🇭 Your Place | Bridge on a bed at a college sleepover in Manila: cards on a bedsheet, pillows, string lights. The rarest roll. |
 
 **UI polish:** Ryan wants the bidding box, the menu and the lobby improved. Because themes restyle every screen anyway, that pass rides with the themes PR (M3 part 2) rather than waiting for a later module.
+- **Fonts:** each theme sets the player-name and card-rank fonts as well (Google Fonts, with system fallbacks): Clubhouse Playfair/Baskerville, Marina Poppins, Shibuya Orbitron/Space Mono, Berlin Bodoni, Bali Marcellus, Manila Patrick Hand/Nunito.
+- **Suits are drawn, not typed:** one SVG per suit at the digits' cap height, used on cards, in the bidding box, the auction, the header and the reveal, so they're the same size as the numbers on every phone.

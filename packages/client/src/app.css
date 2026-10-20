@@ -8,9 +8,12 @@
   --accent-ink: #1d1a10;
   --accent-glow: rgba(232, 194, 90, 0.6);
   --trump: #c58bff;
+  --silver: #c9ced6;
   --card-back: repeating-linear-gradient(45deg, #1d4a35 0 6px, #16392a 6px 12px);
   --font: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
   --font-display: Georgia, 'Times New Roman', serif;
+  --font-name: 'Playfair Display', Georgia, serif;
+  --font-card: 'Libre Baskerville', Georgia, serif;
   --felt-light: #16392a;
   --ink: #f3efe4;
   --ink-dim: #b9b4a5;

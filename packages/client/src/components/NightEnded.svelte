@@ -2,7 +2,6 @@
   import type { Connection } from '../lib/connection.svelte';
   import { onMount } from 'svelte';
   import { pairNames, profileOf } from '../lib/format';
-  import { pairAvatarNames } from '../lib/avatars';
   import { ribbons } from '../lib/juice/particles';
   import { cssColor } from '../lib/themes';
   import { settings } from '../lib/juice/settings.svelte';
@@ -41,7 +40,6 @@
     <h2 bind:this={banner} class="banner">A dead heat</h2>
   {:else}
     <h2 bind:this={banner} class="banner">{pairNames(view, profiles, final.winner)} win the night</h2>
-    {#if pairAvatarNames(conn, final.winner)}<p class="avatars">{pairAvatarNames(conn, final.winner)}</p>{/if}
   {/if}
   {#if final.discardedDeal}<p class="muted">The unfinished last deal didn't count.</p>{/if}
   <button class="primary" onclick={() => conn.send({ type: 'newNight' })}>Start a new night</button>
@@ -70,11 +68,6 @@
   }
   :global(.fx-reduced) .banner {
     animation-name: fade-in;
-  }
-  .avatars {
-    margin-top: -8px;
-    color: var(--ink-dim);
-    font-style: italic;
   }
   .score {
     font-size: 1.2rem;

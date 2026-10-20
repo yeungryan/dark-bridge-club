@@ -478,7 +478,7 @@ export class TableRoom extends DurableObject<Env> {
             pick.avatar.animal,
             pick.avatar.element,
             JSON.stringify(pick.offered),
-            pick.rerolled ? 1 : 0,
+            0, // Rerolls were dropped before launch; the column stays for history.
           );
         }
       }

@@ -111,22 +111,21 @@ test('Drag style: a second tap does not play; it asks for a swipe', async ({ pag
 test('avatars: pick an animal and element, then everyone flips together and shows on the table', async ({ page }) => {
   await page.goto('/practice.html');
   await expect(page.getByText('Who are you tonight?')).toBeVisible();
-  // Three animals on offer; one reroll, then it's used up.
+  // Three animals on offer, no rerolls.
   await expect(page.locator('.picker .animal')).toHaveCount(3);
-  const before = await page.locator('.picker .animal').allTextContents();
-  await page.getByRole('button', { name: /Show me three others/ }).tap();
-  await expect(page.getByRole('button', { name: 'Reroll used' })).toBeDisabled();
-  const after = await page.locator('.picker .animal').allTextContents();
-  expect(after.some((a) => before.includes(a))).toBe(false);
+  await expect(page.getByRole('button', { name: /Show me three others/ })).toHaveCount(0);
 
   await page.locator('.picker .animal').first().tap();
   await page.getByRole('button', { name: /Water/ }).tap();
-  await page.getByRole('button', { name: /^Lock in Water/ }).tap();
-  // The bots pick too; then the four avatars flip, and Ryan's badge carries his.
+  await page.getByRole('button', { name: 'Lock in' }).tap();
+  // The bots pick too; then the four avatars flip. Avatars aren't named in words.
   await expect(page.locator('.reveal .card')).toHaveCount(4, { timeout: 15_000 });
-  const mine = (await page.locator('.reveal .card').filter({ hasText: 'Ryan' }).textContent()) ?? '';
-  expect(mine).toContain('Water');
-  const emojis = await page.locator('.reveal .card .big').allTextContents();
-  expect(new Set(emojis).size).toBe(4);
-  await playUntil(page, () => page.locator('[data-badge-seat] .avatar').first().isVisible());
+  const mine = page.locator('.reveal .card').filter({ hasText: 'Ryan' });
+  await expect(mine.locator('.element')).toHaveText('🌊');
+  await expect(page.locator('.reveal')).not.toContainText('Water');
+  const faces = await page.locator('.reveal .card .face').allTextContents();
+  expect(new Set(faces.map((f) => f.trim())).size).toBe(4);
+  // At the table, each seat shows its avatar with an element badge and cards left.
+  await playUntil(page, () => page.locator('[data-badge-seat] .count').first().isVisible());
+  await expect(page.locator('.seat .element').first()).toBeVisible();
 });

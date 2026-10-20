@@ -5,6 +5,7 @@
   import AuctionStrip from './AuctionStrip.svelte';
   import BiddingBox from './BiddingBox.svelte';
   import Card from './Card.svelte';
+  import CallText from './CallText.svelte';
   import Hand from './Hand.svelte';
   import LastTrickPeek from './LastTrickPeek.svelte';
   import Prompts from './Prompts.svelte';
@@ -12,7 +13,8 @@
   import Reveal from './Reveal.svelte';
   import SeatBadge from './SeatBadge.svelte';
   import MenuSheet from './MenuSheet.svelte';
-  import { avatarOf, emojiOf, pairAvatarNames } from '../lib/avatars';
+  import { avatarOf, emojiOf, teamColor } from '../lib/avatars';
+  import Avatar from './Avatar.svelte';
   import { director } from '../lib/juice/director.svelte';
   import { settings } from '../lib/juice/settings.svelte';
   import { TIMING } from '../lib/juice/timing';
@@ -54,7 +56,7 @@
       deal.defenderTarget! - deal.tricksWon.defenders === 1,
   );
   const canConcede = $derived(deal.phase === 'play' && !deal.clinch && !deal.concession && !deal.playingOn);
-  const myRole = $derived(contract ? (me === contract.declarer ? 'Declarer' : me === partner(contract.declarer) ? 'Declarer’s partner' : 'Defender') : '');
+  const myRole = $derived(contract ? (me === contract.declarer ? 'Declarer' : me === partner(contract.declarer) ? 'Partner' : 'Defender') : '');
   const turnText = $derived.by(() => {
     if (deal.turn === null) return '';
     if (deal.turn === me) return deal.phase === 'auction' ? 'Your call' : 'Your turn to play';
@@ -69,7 +71,7 @@
       {#if contract}
         {#key director.contractPulse}
           <button class="ghost contract" onclick={() => (showAuction = !showAuction)}>
-            {callLabel({ type: 'bid', level: contract.level, strain: contract.strain })} by {nameAtSeat(view, profiles, contract.declarer)}
+            <CallText call={{ type: 'bid', level: contract.level, strain: contract.strain }} /> by {nameAtSeat(view, profiles, contract.declarer)}
             {#if director.contractPulse > 0}<span class="sold" aria-hidden="true">Sold!</span>{/if}
           </button>
         {/key}
@@ -91,10 +93,9 @@
           {#each view.pairs![pair] as id, j (id)}
             {@const p = profileOf(profiles, id)}
             {#if j === 1}<span class="amp">&</span>{/if}
-            <span class="pname {j === 0 ? 'from-left' : 'from-right'}" style="color: {p.color}">{emojiOf(avatarOf(conn, id))} {p.name}</span>
+            <span class="pname {j === 0 ? 'from-left' : 'from-right'}">{emojiOf(avatarOf(conn, id))} {p.name}</span>
           {/each}
         </div>
-        {#if pairAvatarNames(conn, pair)}<div class="pavatars">{pairAvatarNames(conn, pair)}</div>{/if}
       {/each}
     </div>
   {/if}
@@ -131,10 +132,21 @@
     {#if showAuction && deal.phase !== 'auction'}
       <AuctionStrip {conn} />
     {/if}
-    <p class="turn" class:mine={deal.turn === me} style="--c: {profileOf(profiles, view.me).color}">
-      <span class="me" data-badge-seat={me}>{emojiOf(avatarOf(conn, view.me))} {profileOf(profiles, view.me).name}{#if deal.dealer === me} <span class="chip">D</span>{/if}{#if myRole}{' · '}{myRole}{/if}</span>
-      {#if view.phase === 'inDeal' && turnText}<span>— {turnText}</span>{/if}
-    </p>
+    <div class="turn" class:mine={deal.turn === me}>
+      <span class="me" data-badge-seat={me}>
+        <Avatar
+          avatar={avatarOf(conn, view.me)}
+          initial={profileOf(profiles, view.me).name[0]}
+          ring={teamColor(conn, me)}
+          size={30}
+          dealer={deal.dealer === me}
+          turn={deal.turn === me}
+        />
+        <span class="myname">{profileOf(profiles, view.me).name}</span>
+        {#if myRole}<span class="myrole">{myRole}</span>{/if}
+      </span>
+      {#if view.phase === 'inDeal' && turnText}<span class="what">{turnText}</span>{/if}
+    </div>
     {#if myTurnToCall}<BiddingBox {conn} />{/if}
     {#if view.phase === 'inDeal'}<Hand {conn} />{/if}
   </section>
@@ -243,16 +255,11 @@
     animation: fade-in calc(200ms * var(--speed)) backwards;
   }
   .pair {
+    font-family: var(--font-name);
     font-size: 1.4rem;
     font-weight: 750;
     display: flex;
     gap: 8px;
-  }
-  .pavatars {
-    font-size: 0.85rem;
-    font-style: italic;
-    color: var(--ink-dim);
-    margin-top: -4px;
   }
   .vs,
   .amp {
@@ -357,19 +364,30 @@
     color: var(--ink-dim);
     font-size: 15px;
   }
+  .turn {
+    align-items: center;
+  }
   .turn .me {
-    color: var(--c);
-    font-weight: 650;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .myname {
+    font-family: var(--font-name);
+    font-weight: 700;
+    color: var(--ink);
+  }
+  .myrole {
+    font-size: 9.5px;
+    font-weight: 700;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+  }
+  .what::before {
+    content: '— ';
   }
   .turn.mine span:last-child {
     color: var(--accent);
     font-weight: 700;
-  }
-  .chip {
-    font-size: 11px;
-    background: var(--ink);
-    color: var(--felt);
-    border-radius: 50%;
-    padding: 1px 5px;
   }
 </style>

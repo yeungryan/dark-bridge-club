@@ -1,7 +1,8 @@
 <script lang="ts">
   import { LEVELS, STRAINS, type Call, type Level, type Strain } from '@dark/engine';
   import type { Connection } from '../lib/connection.svelte';
-  import { callLabel, nameAtSeat, strainLabel } from '../lib/format';
+  import { nameAtSeat } from '../lib/format';
+  import CallText from './CallText.svelte';
   import { buzz } from '../lib/juice/haptics';
   import { sound } from '../lib/juice/sound';
 
@@ -20,15 +21,10 @@
   const isLegalBid = (l: Level, s: Strain) => legal.some((c) => c.type === 'bid' && c.level === l && c.strain === s);
   const levelOpen = (l: Level) => STRAINS.some((s) => isLegalBid(l, s));
   const strainOpen = (s: Strain) => LEVELS.some((l) => isLegalBid(l, s));
-  const red = (s: Strain) => s === 'H' || s === 'D';
 
   // What you're bidding over, in words.
   const topBid = $derived([...deal.calls].reverse().find((c) => c.call.type === 'bid') ?? null);
-  const context = $derived(
-    topBid
-      ? `To beat: ${callLabel(topBid.call)} by ${topBid.seat === view.mySeat ? 'you' : nameAtSeat(view, conn.room!.profiles, topBid.seat)}`
-      : 'No bids yet: you can open',
-  );
+  const topBy = $derived(topBid ? (topBid.seat === view.mySeat ? 'you' : nameAtSeat(view, conn.room!.profiles, topBid.seat)) : '');
 
   const selected = $derived<Call | null>(
     passing ? { type: 'pass' } : level !== null && strain !== null && isLegalBid(level, strain) ? { type: 'bid', level, strain } : null,
@@ -69,16 +65,14 @@
     strain = null;
   }
 
-  const prompt = $derived.by(() => {
-    if (selected) return selected.type === 'pass' ? 'Confirm Pass' : `Bid ${callLabel(selected)}`;
-    if (level !== null) return `${level}… now a suit`;
-    if (strain !== null) return `…${strainLabel(strain)} now a level`;
-    return 'Choose a call';
-  });
+  // What the confirm button says (the key re-runs its little pop when it changes).
+  const promptKey = $derived(selected ? JSON.stringify(selected) : `${level}:${strain}`);
 </script>
 
 <div class="box">
-  <p class="context">{context}</p>
+  <p class="context">
+    {#if topBid}To beat: <strong><CallText call={topBid.call} /></strong> by {topBy}{:else}No bids yet: you can open{/if}
+  </p>
   <div class="row levels">
     {#each LEVELS as l (l)}
       <button
@@ -95,18 +89,23 @@
       <button
         class="tile strain"
         class:on={strain === s}
-        class:red={red(s)}
-        class:nt={s === 'NT'}
+                class:nt={s === 'NT'}
         class:faint={level !== null && !isLegalBid(level, s)}
         disabled={!strainOpen(s)}
-        onclick={() => pickStrain(s)}>{strainLabel(s)}</button
+        onclick={() => pickStrain(s)}><CallText strain={s} red="var(--card-red)" /></button
       >
     {/each}
   </div>
   <div class="row actions">
     <button class="tile pass" class:on={passing} onclick={pickPass}>Pass</button>
-    {#key prompt}
-      <button class="primary confirm" class:ready={selected !== null} disabled={!selected} onclick={confirm}>{prompt}</button>
+    {#key promptKey}
+      <button class="primary confirm" class:ready={selected !== null} disabled={!selected} onclick={confirm}>
+        {#if selected?.type === 'pass'}Confirm Pass
+        {:else if selected}Bid <CallText call={selected} red="currentColor" />
+        {:else if level !== null}{level}… now a suit
+        {:else if strain !== null}…<CallText {strain} red="currentColor" /> now a level
+        {:else}Choose a call{/if}
+      </button>
     {/key}
   </div>
 </div>
@@ -156,15 +155,12 @@
       box-shadow calc(90ms * var(--speed)),
       opacity calc(120ms * var(--speed));
   }
-  .tile.strain {
-    font-size: 1.45rem;
+  /* Suits are drawn at the digits' height, so both rows read the same size. */
+  .tile {
+    font-family: var(--font-card);
   }
   .tile.nt {
-    font-size: 1.05rem;
     letter-spacing: 0.02em;
-  }
-  .tile.red {
-    color: var(--card-red);
   }
   .tile:active:not(:disabled) {
     transform: translateY(3px);

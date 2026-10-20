@@ -1,109 +1,71 @@
 <script lang="ts">
   import { partner, type Seat } from '@dark/engine';
   import type { Connection } from '../lib/connection.svelte';
-  import { avatarAtSeat, ELEMENT_RING, emojiOf } from '../lib/avatars';
+  import { avatarAtSeat, teamColor } from '../lib/avatars';
   import { profileOf } from '../lib/format';
+  import Avatar from './Avatar.svelte';
 
-  // Spec S10: name + color, presence, dealer chip, turn glow, role.
+  // Spec S10, redesigned: the avatar is the hero. Team-coloured ring, element badge and cards
+  // left on its corners, dealer chip on top; name in the theme's name font underneath, and a
+  // small role tag once the contract is set. Whose turn it is: the ring glows.
   let { conn, seat }: { conn: Connection; seat: Seat } = $props();
 
   const view = $derived(conn.view!);
   const deal = $derived(view.deal);
   const profile = $derived(profileOf(conn.room!.profiles, view.seating?.[seat]));
   const presence = $derived(conn.room!.presence[profile.id]);
-  const isTurn = $derived(deal?.turn === seat);
-  const avatar = $derived(avatarAtSeat(conn, seat));
   const role = $derived.by(() => {
     const c = deal?.contract;
     if (!c) return '';
-    return seat === c.declarer ? 'Declarer' : seat === partner(c.declarer) ? 'Decl. partner' : 'Defender';
+    return seat === c.declarer ? 'Declarer' : seat === partner(c.declarer) ? 'Partner' : 'Defender';
   });
 </script>
 
-<div
-  class="badge"
-  class:turn={isTurn}
-  style="--c: {profile.color}; --el: {avatar ? ELEMENT_RING[avatar.element] : 'transparent'}"
-  data-badge-seat={seat}
->
-  {#if deal?.dealer === seat}<span class="chip" title="Dealer">D</span>{/if}
-  <span class="name">
-    {#if avatar}
-      <span class="avatar" class:away={presence !== 'connected'} title={presence}>{emojiOf(avatar)}</span>
-    {:else}
-      <span class="dot" class:away={presence !== 'connected'} title={presence}></span>
-    {/if}
-    {profile.name}
-  </span>
-  {#if deal}
-    {#if role}<span class="role">{role}</span>{/if}
-    <span class="role">{deal.handCounts[seat]} {deal.handCounts[seat] === 1 ? 'card' : 'cards'}</span>
-  {/if}
+<div class="seat" data-badge-seat={seat} title={presence !== 'connected' ? `${profile.name} is ${presence}` : undefined}>
+  <Avatar
+    avatar={avatarAtSeat(conn, seat)}
+    initial={profile.name[0]}
+    ring={teamColor(conn, seat)}
+    size={44}
+    count={deal ? deal.handCounts[seat] : null}
+    dealer={deal?.dealer === seat}
+    turn={deal?.turn === seat}
+    away={presence !== 'connected'}
+  />
+  <span class="name">{profile.name}</span>
+  {#if role}<span class="role" class:decl={role === 'Declarer'}>{role}</span>{/if}
 </div>
 
 <style>
-  .badge {
-    position: relative;
-    display: inline-flex;
-    flex-direction: column;
-    align-items: center;
-    padding: 4px 6px;
+  .seat {
+    display: inline-grid;
+    justify-items: center;
+    gap: 3px;
     width: 88px;
-    border-radius: 10px;
-    border: 2px solid transparent;
-    background: var(--panel);
     max-width: 100%;
+    padding: 6px 2px 4px;
     text-align: center;
   }
-  .badge.turn {
-    border-color: var(--accent);
-    box-shadow: 0 0 12px var(--accent-glow);
-  }
   .name {
-    font-weight: 650;
-    color: var(--c);
-    display: flex;
-    align-items: center;
-    gap: 4px;
-  }
-  .dot {
-    width: 9px;
-    height: 9px;
-    border-radius: 50%;
-    background: var(--good);
-  }
-  .dot.away {
-    background: var(--bad);
-  }
-  /* Tonight's animal, ringed in its element's colour (S24). Greyed out while away. */
-  .avatar {
+    margin-top: 3px;
+    font-family: var(--font-name);
+    font-weight: 700;
     font-size: 15px;
-    line-height: 1;
-    border-radius: 50%;
-    box-shadow: 0 0 0 2px var(--el);
-    background: rgba(0, 0, 0, 0.25);
-    padding: 2px;
-  }
-  .avatar.away {
-    filter: grayscale(1) opacity(0.5);
-    box-shadow: 0 0 0 2px var(--bad);
-  }
-  .chip {
-    position: absolute;
-    top: -8px;
-    right: -6px;
-    font-size: 11px;
-    background: var(--ink);
-    color: var(--felt);
-    border-radius: 50%;
-    width: 18px;
-    height: 18px;
-    display: grid;
-    place-items: center;
+    line-height: 1.1;
+    color: var(--ink);
+    max-width: 100%;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
   }
   .role {
-    font-size: 12px;
-    line-height: 1.25;
+    font-size: 9.5px;
+    font-weight: 700;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
     color: var(--ink-dim);
+  }
+  .role.decl {
+    color: var(--accent);
   }
 </style>

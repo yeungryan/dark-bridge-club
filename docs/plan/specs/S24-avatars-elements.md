@@ -52,3 +52,10 @@ Tiger · Wolf · Bear · Fox · Otter · Owl · Eagle · Hawk · Badgermole · R
 - *IP note:* "Badgermole" is a creature from the show. The guardrail above was written for a public product. This is a private game for four friends, so the name stays at Ryan's call.
 - *v1 art:* native emoji. Hawk, Lemur, Crane, Koi and Badgermole have no exact emoji, so they use the nearest one, and the animal's name always shows next to it. Custom portraits can come later.
 - *Lobby:* picking happens **in the lobby while waiting for everyone**, instead of as a separate step after the night starts, so it doesn't add 20 s to the start. The night starts once all four are here **and** locked in. A player who hasn't picked 30 s after the other three are ready gets "Surprise me".
+
+## Clean-up before launch (Ryan, 2026-10-20)
+- **No rerolls.** Three animals on offer, pick one.
+- **No avatar names in text** ("Water Bear" is gone everywhere). The avatar speaks for itself.
+- **The element lives on the avatar:** a small element badge on the bottom-right of the avatar circle.
+- **Colour means team during play:** avatar rings, auction underlines, reveal stripes and effects use your pair's theme accent, and silver for the other pair. Names are plain ink in the theme's name font. Personal colours stay in the lobby, crest and history.
+- **Seat badges are avatar-first:** big round avatar, cards left as a tiny card with the number on it (bottom-left), dealer chip (top-right), the name underneath, and a role tag (Declarer / Partner / Defender). On your turn the ring glows.

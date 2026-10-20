@@ -2,7 +2,7 @@
   import type { CompletedTrick, TableView } from '@dark/engine';
   import type { ProfileInfo } from '@dark/engine';
   import { onMount } from 'svelte';
-  import { nameAtSeat, profileOf } from '../lib/format';
+  import { nameAtSeat } from '../lib/format';
   import { buzz } from '../lib/juice/haptics';
   import { settings } from '../lib/juice/settings.svelte';
   import { sound } from '../lib/juice/sound';
@@ -42,7 +42,7 @@
       <div class:winner={lit && play.seat === trick.winner}>
         <Card card={play.card} width={46} highlight={lit && play.seat === trick.winner} />
       </div>
-      <small style="color: {profileOf(profiles, view.seating?.[play.seat]).color}">{nameAtSeat(view, profiles, play.seat)}</small>
+      <small class="who">{nameAtSeat(view, profiles, play.seat)}</small>
     </div>
   {/each}
 </button>
@@ -62,6 +62,10 @@
     display: grid;
     justify-items: center;
     gap: 2px;
+  }
+  .who {
+    font-family: var(--font-name);
+    color: var(--ink);
   }
   .winner {
     border-radius: 6px;

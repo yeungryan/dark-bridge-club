@@ -1,10 +1,11 @@
 <script lang="ts">
   import type { Connection } from '../lib/connection.svelte';
-  import { avatarAtSeat, emojiOf } from '../lib/avatars';
-  import { callLabel, profileOf } from '../lib/format';
+  import { avatarAtSeat, emojiOf, teamColor } from '../lib/avatars';
+  import { profileOf } from '../lib/format';
+  import CallText from './CallText.svelte';
   import { director } from '../lib/juice/director.svelte';
 
-  // Spec S12: each call in turn order, in its player's color. Bids stamp in harder as the
+  // Spec S12: each call in turn order, underlined in its team's colour. Bids stamp in harder as the
   // level rises; passes slide in quietly. After a bid, each pass counts down on it:
   // "Going once…", "Going twice…" (the third pass is the "Sold!" in the header).
   let { conn }: { conn: Connection } = $props();
@@ -20,9 +21,9 @@
   {#each calls as entry, i (i)}
     {@const p = profileOf(profiles, view.seating?.[entry.seat])}
     {@const level = entry.call.type === 'bid' ? entry.call.level : 0}
-    <span class="call" class:pass={level === 0} class:top={i === lastBid} style="--c: {p.color}; --weight: {level}">
+    <span class="call" class:pass={level === 0} class:top={i === lastBid} style="--c: {teamColor(conn, entry.seat)}; --weight: {level}">
       <small>{emojiOf(avatarAtSeat(conn, entry.seat))} {p.name}</small>
-      <strong class:red={entry.call.type === 'bid' && (entry.call.strain === 'H' || entry.call.strain === 'D')}>{callLabel(entry.call)}</strong>
+      <strong><CallText call={entry.call} /></strong>
       {#if i === lastBid && going > 0}
         {#key going}
           <em class="going">{going === 1 ? 'Going once…' : 'Going twice…'}</em>
@@ -99,10 +100,8 @@
     }
   }
   small {
+    font-family: var(--font-name);
     font-size: 12px;
     color: var(--ink-dim);
-  }
-  .red {
-    color: var(--red-on-felt);
   }
 </style>

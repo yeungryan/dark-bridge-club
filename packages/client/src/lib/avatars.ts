@@ -1,4 +1,4 @@
-import { animalById, avatarName, ELEMENT_INFO, type Avatar, type ProfileId, type Seat } from '@dark/engine';
+import { animalById, ELEMENT_INFO, type Avatar, type ProfileId, type Seat } from '@dark/engine';
 import type { Connection } from './connection.svelte';
 import type { Element } from './juice/particles';
 
@@ -21,10 +21,13 @@ export function elementAtSeat(conn: Link, seat: Seat): Element | null {
 export const emojiOf = (a: Avatar | null) => (a ? (animalById(a.animal)?.emoji ?? '') : '');
 export const glyphOf = (a: Avatar | null) => (a ? ELEMENT_INFO[a.element].glyph : '');
 
-/** "Fire Tiger & Water Otter", or '' if either has no avatar. */
-export function pairAvatarNames(conn: Link, pair: 'A' | 'B'): string {
-  const avatars = (conn.view?.pairs?.[pair] ?? []).map((id) => avatarOf(conn, id));
-  return avatars.every((a) => a) ? avatars.map((a) => avatarName(a!)).join(' & ') : '';
+/**
+ * During play, colour means partnership (Ryan's call): your pair wears the theme's accent,
+ * the other pair silver. Personal colours stay for the lobby, crest and history.
+ */
+export function teamColor(conn: Link, seat: Seat): string {
+  const me = conn.view?.mySeat;
+  return me !== null && me !== undefined && (seat - me) % 2 === 0 ? 'var(--accent)' : 'var(--silver)';
 }
 
 /** Element ring colours for badges and cards. */

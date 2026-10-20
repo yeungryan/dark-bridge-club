@@ -4,13 +4,15 @@
   import { onMount } from 'svelte';
   import { cardText, isRed, pairNames, profileOf } from '../lib/format';
   import { director } from '../lib/juice/director.svelte';
-  import { avatarAtSeat, emojiOf } from '../lib/avatars';
+  import { avatarAtSeat, emojiOf, teamColor } from '../lib/avatars';
   import { ring, sparks } from '../lib/juice/particles';
   import { cssColor } from '../lib/themes';
   import { settings } from '../lib/juice/settings.svelte';
   import { sound } from '../lib/juice/sound';
   import { TIMING } from '../lib/juice/timing';
   import CountUp from './CountUp.svelte';
+  import CallText from './CallText.svelte';
+  import Suit from './Suit.svelte';
 
   // Spec S14: the payoff for hidden hands. The result lands, the score ticks up, then the four
   // hands flip one by one (from declarer's right, in play order) with their HCP counting up.
@@ -86,7 +88,7 @@
 <div class="reveal panel" class:skipped class:move={settings.motion} onclick={skip}>
   <h3 bind:this={banner} class="banner {result.winner}">{verdict}: {pairNames(view, profiles, winningPair)} +1</h3>
   <p class="muted">
-    {contract.level}{contract.strain === 'NT' ? 'NT' : cardText({ suit: contract.strain, rank: 2 }).suit} by
+    <CallText call={{ type: 'bid', level: contract.level, strain: contract.strain }} /> by
     {profileOf(profiles, view.seating![contract.declarer]).name} ·
     declarers took {result.declarerTricks}, defenders {result.defenderTricks}
     {#if result.overUnder !== null}· {result.overUnder >= 0 ? `+${result.overUnder}` : `${result.overUnder}`}{/if}
@@ -95,7 +97,7 @@
   <div class="hands">
     {#each [view.mySeat!, partner(view.mySeat!), next(partner(view.mySeat!)), next(view.mySeat!)] as seat (seat)}
       {@const p = profileOf(profiles, view.seating![seat])}
-      <div class="hand" class:flipped={flipped.includes(seat)} style="--c: {p.color}">
+      <div class="hand" class:flipped={flipped.includes(seat)} style="--c: {teamColor(conn, seat)}">
         <div class="who">
           {emojiOf(avatarAtSeat(conn, seat))} {p.name}{seat === view.mySeat ? ' (you)' : ''}
           <span class="muted">·
@@ -104,7 +106,7 @@
         {#if flipped.includes(seat)}
           <div class="face">
             {#each ['S', 'H', 'D', 'C'] as const as suit (suit)}
-              <div class:red={isRed({ suit, rank: 2 })}>{cardText({ suit, rank: 2 }).suit} {suitLine(seat, suit)}</div>
+              <div class:red={isRed({ suit, rank: 2 })}><Suit {suit} /> {suitLine(seat, suit)}</div>
             {/each}
           </div>
         {:else}
@@ -220,8 +222,9 @@
     padding-left: 8px;
   }
   .who {
-    font-weight: 650;
-    color: var(--c);
+    font-family: var(--font-name);
+    font-weight: 700;
+    color: var(--ink);
   }
   .red {
     color: var(--red-on-felt);
@@ -237,6 +240,6 @@
   }
   .ready span.on {
     opacity: 1;
-    color: var(--c);
+    color: var(--ink);
   }
 </style>

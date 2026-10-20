@@ -18,7 +18,7 @@ export type ClientMessage =
   | { type: 'snapshot' }
   /** After a night has ended: open a fresh lobby. */
   | { type: 'newNight' }
-  /** In the lobby: reroll, lock in or change your avatar (S24). */
+  /** In the lobby: lock in or change your avatar (S24). */
   | { type: 'avatar'; action: AvatarAction };
 
 export type Presence = 'connected' | 'reconnecting' | 'away';

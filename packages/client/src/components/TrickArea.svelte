@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { suitSymbol, trumpSuit, winningPlay, type CompletedTrick, type PlayedCard, type Seat } from '@dark/engine';
+  import { trumpSuit, winningPlay, type CompletedTrick, type PlayedCard, type Seat } from '@dark/engine';
   import type { Connection } from '../lib/connection.svelte';
   import { spotOf } from '../lib/format';
   import { director } from '../lib/juice/director.svelte';
@@ -7,6 +7,7 @@
   import { settings } from '../lib/juice/settings.svelte';
   import { TIMING } from '../lib/juice/timing';
   import Card from './Card.svelte';
+  import Suit from './Suit.svelte';
 
   // Spec S13/S16: each card flies in from where it came from (your finger, or the player's
   // name) and lands with a squash. The card currently winning the trick wears a gold ring.
@@ -98,7 +99,7 @@
 <div class="area" class:armed={launch.armed} bind:clientWidth={size} style="transform: translate({director.shakeX}px, {director.shakeY}px)">
   {#if director.flash}
     {#key director.flash.id}
-      <span class="flash" class:big={director.flash.big} aria-hidden="true">{suitSymbol(director.flash.suit)}</span>
+      <span class="flash" class:big={director.flash.big} aria-hidden="true"><Suit suit={director.flash.suit} label={false} /></span>
     {/key}
   {/if}
   {#each showing as play (play.seat + ':' + play.card.suit + play.card.rank)}

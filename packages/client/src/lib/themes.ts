@@ -1,7 +1,8 @@
 import type { ThemeId } from '@dark/engine';
 
 // Spec S18: each theme is only design values (colours, textures, fonts, sound tweaks and a
-// greeting). Timing never changes between themes. Adding a theme = adding an entry here.
+// greeting). Player names and card ranks take the theme's fonts (loaded from Google Fonts in
+// the HTML; system fonts stand in until they arrive). Timing never changes between themes. Adding a theme = adding an entry here.
 // Every theme must pass the contrast checks in themes.test.ts.
 
 export interface Theme {
@@ -20,6 +21,8 @@ const base = {
   '--good': '#63c58b',
   '--bad': '#e2725b',
   '--trump': '#c58bff',
+  /* The other pair's colour during play (yours is --accent). */
+  '--silver': '#c9ced6',
   '--font': "system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif",
   '--font-display': "system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif",
 };
@@ -33,6 +36,8 @@ export const THEMES: Record<ThemeId, Theme> = {
     sound: { pitch: 1 },
     tokens: {
       ...base,
+      '--font-name': "'Playfair Display', Georgia, serif",
+      '--font-card': "'Libre Baskerville', Georgia, serif",
       '--felt': '#0f2a1e',
       '--felt-light': '#16392a',
       '--felt-bg':
@@ -61,6 +66,8 @@ export const THEMES: Record<ThemeId, Theme> = {
     sound: { pitch: 1.04 },
     tokens: {
       ...base,
+      '--font-name': "'Poppins', 'Avenir Next', system-ui, sans-serif",
+      '--font-card': "'Poppins', 'Avenir Next', system-ui, sans-serif",
       '--felt': '#0c3440',
       '--felt-light': '#134654',
       '--felt-bg':
@@ -88,6 +95,8 @@ export const THEMES: Record<ThemeId, Theme> = {
     sound: { pitch: 1.07 },
     tokens: {
       ...base,
+      '--font-name': "'Orbitron', 'Avenir Next', system-ui, sans-serif",
+      '--font-card': "'Space Mono', 'SF Mono', Menlo, monospace",
       '--felt': '#130b26',
       '--felt-light': '#22163f',
       '--felt-bg':
@@ -116,6 +125,8 @@ export const THEMES: Record<ThemeId, Theme> = {
     sound: { pitch: 0.94 },
     tokens: {
       ...base,
+      '--font-name': "'Bodoni Moda', Didot, Georgia, serif",
+      '--font-card': "'Bodoni Moda', Didot, Georgia, serif",
       '--felt': '#0d1630',
       '--felt-light': '#18244a',
       '--felt-bg':
@@ -144,6 +155,8 @@ export const THEMES: Record<ThemeId, Theme> = {
     sound: { pitch: 1, bellPartial: 2.76 },
     tokens: {
       ...base,
+      '--font-name': "'Marcellus', Optima, Georgia, serif",
+      '--font-card': "'Marcellus', Optima, Georgia, serif",
       '--felt': '#3a2414',
       '--felt-light': '#4e321d',
       '--felt-bg':
@@ -171,6 +184,8 @@ export const THEMES: Record<ThemeId, Theme> = {
     sound: { pitch: 0.97 },
     tokens: {
       ...base,
+      '--font-name': "'Patrick Hand', 'Comic Sans MS', system-ui, sans-serif",
+      '--font-card': "'Nunito', 'Arial Rounded MT Bold', system-ui, sans-serif",
       '--felt': '#1c2140',
       '--felt-light': '#283058',
       '--felt-bg':

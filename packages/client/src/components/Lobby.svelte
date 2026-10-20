@@ -1,8 +1,8 @@
 <script lang="ts">
   import type { Connection } from '../lib/connection.svelte';
-  import { animalById, avatarName } from '@dark/engine';
   import { tick } from 'svelte';
-  import { avatarOf, ELEMENT_RING } from '../lib/avatars';
+  import { avatarOf } from '../lib/avatars';
+  import Avatar from './Avatar.svelte';
   import { elementBurst } from '../lib/juice/particles';
   import { themeOf } from '../lib/themes';
   import { sound } from '../lib/juice/sound';
@@ -55,10 +55,9 @@
     <div class="reveal">
       {#each room.profiles as p, i (p.id)}
         {@const a = avatarOf(conn, p.id)}
-        <div class="card" bind:this={cards[i]} style="--c: {p.color}; --el: {a ? ELEMENT_RING[a.element] : 'var(--line)'}">
-          <span class="big">{a ? animalById(a.animal)?.emoji : '❔'}</span>
-          <strong style="color: {p.color}">{p.name}</strong>
-          <small>{a ? avatarName(a) : ''}</small>
+        <div class="card" bind:this={cards[i]} style="--c: {p.color}">
+          <Avatar avatar={a} initial={p.name[0]} ring={p.color} size={64} />
+          <strong>{p.name}</strong>
         </div>
       {/each}
     </div>
@@ -148,15 +147,13 @@
     padding: 12px 6px;
     border-radius: 12px;
     background: var(--panel);
-    box-shadow: 0 0 0 2px var(--el), 0 0 18px var(--el);
+    box-shadow: 0 0 0 1px var(--line), 0 0 18px color-mix(in srgb, var(--c) 35%, transparent);
     animation: flip-in calc(600ms * var(--speed)) cubic-bezier(0.3, 1.4, 0.6, 1) calc(300ms * var(--speed)) backwards;
   }
-  .card .big {
-    font-size: 46px;
-    line-height: 1.1;
-  }
-  .card small {
-    color: var(--ink-dim);
+  .card strong {
+    margin-top: 8px;
+    font-family: var(--font-name);
+    color: var(--c);
   }
   @keyframes flip-in {
     0% {

@@ -1,6 +1,7 @@
 <script lang="ts">
   import type { Card } from '@dark/engine';
   import { cardText, isRed } from '../lib/format';
+  import Suit from './Suit.svelte';
 
   let {
     card,
@@ -13,8 +14,9 @@
 </script>
 
 <div class="card" class:red={isRed(card)} class:dim class:highlight style="--w: {width}px" aria-label="{text.rank} of {text.suit}">
-  <span class="corner">{text.rank}<br />{text.suit}</span>
-  <span class="pip">{text.suit}</span>
+  <!-- The corner: rank over a suit drawn at the rank's height. -->
+  <span class="corner"><span class="rank">{text.rank}</span><Suit suit={card.suit} label={false} /></span>
+  <span class="pip"><Suit suit={card.suit} label={false} /></span>
 </div>
 
 <style>
@@ -42,16 +44,22 @@
     position: absolute;
     top: 3px;
     left: 4px;
+    display: grid;
+    justify-items: center;
+    gap: 1px;
+    font-family: var(--font-card);
     font-weight: 700;
     font-size: max(14px, calc(var(--w) * 0.28));
     line-height: 1;
-    text-align: center;
+  }
+  .rank {
+    letter-spacing: -0.04em;
   }
   .pip {
     position: absolute;
-    right: 6%;
-    bottom: 4%;
+    right: 7%;
+    bottom: 6%;
     font-size: calc(var(--w) * 0.5);
-    line-height: 1;
+    line-height: 0;
   }
 </style>

@@ -1,20 +1,21 @@
 <script lang="ts">
-  import { animalById, avatarName, ELEMENT_INFO, ELEMENTS, type Element } from '@dark/engine';
+  import { animalById, ELEMENT_INFO, ELEMENTS, type Element } from '@dark/engine';
+  import Avatar from './Avatar.svelte';
   import { onDestroy } from 'svelte';
   import type { Connection } from '../lib/connection.svelte';
   import { ELEMENT_RING } from '../lib/avatars';
   import { buzz } from '../lib/juice/haptics';
   import { sound } from '../lib/juice/sound';
 
-  // Spec S24: pick tonight's animal (from three, one reroll) and element, privately, while
-  // waiting in the lobby. Nobody sees anyone's choice until everyone flips together.
+  // Spec S24: pick tonight's animal (from three) and element, privately, while waiting in the
+  // lobby. Nobody sees anyone's choice until everyone flips together.
   let { conn }: { conn: Connection } = $props();
 
   const pick = $derived(conn.myAvatar);
   let animal = $state<string | null>(null);
   let element = $state<Element | null>(null);
 
-  // A reroll replaces the offer, so forget a choice that's no longer on it.
+  // A new night brings a new offer: forget a choice that's no longer on it.
   $effect(() => {
     if (animal && pick && !pick.offered.includes(animal)) animal = null;
   });
@@ -42,12 +43,11 @@
 {#if pick}
   <section class="picker panel" aria-label="Tonight's avatar">
     {#if pick.avatar}
-      {@const a = animalById(pick.avatar.animal)}
-      <div class="locked" style="--el: {ELEMENT_RING[pick.avatar.element]}">
-        <span class="big">{a?.emoji}</span>
+      <div class="locked">
+        <Avatar avatar={pick.avatar} size={56} ring="var(--accent)" />
         <div>
-          <strong>{avatarName(pick.avatar)}</strong>
-          <p class="muted">Locked in. Everyone flips together when the night starts.</p>
+          <strong>Locked in</strong>
+          <p class="muted">Everyone flips together when the night starts.</p>
         </div>
         <button class="ghost" onclick={() => send({ type: 'avatar', action: { type: 'unlock' } })}>Change</button>
       </div>
@@ -69,14 +69,6 @@
           </button>
         {/each}
       </div>
-      <button
-        class="ghost reroll"
-        disabled={pick.rerolled}
-        onclick={() => {
-          tap();
-          send({ type: 'avatar', action: { type: 'reroll' } });
-        }}>{pick.rerolled ? 'Reroll used' : '↻ Show me three others (once)'}</button
-      >
       <div class="elements">
         {#each ELEMENTS as e (e)}
           <button
@@ -96,7 +88,7 @@
       <div class="actions">
         <button class="ghost" onclick={() => send({ type: 'avatar', action: { type: 'surprise' } })}>Surprise me</button>
         <button class="primary" disabled={!animal || !element} onclick={lock}>
-          {animal && element ? `Lock in ${ELEMENT_INFO[element].name} ${animalById(animal)?.name}` : 'Pick an animal and an element'}
+          {animal && element ? 'Lock in' : 'Pick an animal and an element'}
         </button>
       </div>
       {#if surpriseIn !== null}<p class="muted hurry">Everyone else is ready: surprise pick in {surpriseIn}s</p>{/if}
@@ -144,10 +136,6 @@
       transform: scale(1.08);
     }
   }
-  .reroll {
-    font-size: 14px;
-    min-height: 36px;
-  }
   .elements {
     display: grid;
     grid-template-columns: repeat(4, 1fr);
@@ -182,11 +170,6 @@
     gap: 12px;
     align-items: center;
     text-align: left;
-  }
-  .locked .big {
-    border-radius: 50%;
-    padding: 6px;
-    box-shadow: 0 0 0 3px var(--el), 0 0 16px var(--el);
   }
   .locked p {
     margin: 2px 0 0;
