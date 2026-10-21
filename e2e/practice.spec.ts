@@ -180,8 +180,9 @@ test('seats stay put from bidding to play; the newest set on the scoreboard open
   };
   await playUntil(page, () => page.locator('.box .ladder').isVisible());
   const bidding = await centres();
-  // Play on until a set has been won.
-  await playUntil(page, () => page.locator('.pip.latest').isVisible());
+  // Play on until a set has been won, measuring while the game is still being played (a slow
+  // machine can reach the end of the game first; then it plays on into the next one).
+  await playUntil(page, async () => (await page.locator('.pip.latest').isVisible()) && (await page.locator('.hand .slot').count()) > 0);
   const playing = await centres();
   playing.forEach((p, i) => {
     expect(Math.abs(p.x - bidding[i].x), `${seats[i]} x`).toBeLessThanOrEqual(1);

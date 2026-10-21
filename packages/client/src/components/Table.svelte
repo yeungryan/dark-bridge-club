@@ -185,7 +185,13 @@
     </div>
     <!-- Whose turn is shown on the seats themselves (S10); this line is for screen readers. -->
     {#if view.phase === 'inDeal' && turnText}<p class="sr-only" aria-live="polite">{turnText}</p>{/if}
-    {#if view.phase === 'inDeal' && deal}<Hand {conn} />{:else if shuffling}<div class="hand hand-space" bind:clientWidth={handWidth} style="height: {handHeight}px"></div>{/if}
+    <!-- The hand's space is kept while shuffling and through the clinch before the reveal, so the
+         table never jumps. -->
+    {#if view.phase === 'inDeal' && deal}<Hand {conn} />{:else if shuffling || director.revealHold}<div
+        class="hand hand-space"
+        bind:clientWidth={handWidth}
+        style="height: {handHeight}px"
+      ></div>{/if}
     {#if director.dealing && deal && view.mySeat !== null}
       {#key director.dealing.id}<DealFlight dealer={director.dealing.dealer} me={view.mySeat} />{/key}
     {/if}
