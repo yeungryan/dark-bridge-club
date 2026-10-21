@@ -34,6 +34,10 @@ import {
   type SessionAction,
   type SessionEvent,
   type SessionState,
+  type Avatar,
+  type SavedGame,
+  type SavedGameDetail,
+  type SavedNight,
 } from '@dark/engine';
 import type { Env } from './index';
 import { isProfile, PROFILE_IDS, PROFILES, USUAL_PARTNER } from './profiles';
@@ -201,6 +205,10 @@ export class TableRoom extends DurableObject<Env> {
           return await this.handleResetPin(request);
         case '/api/admin/set-pin':
           return await this.handleSetPin(request);
+        case '/api/history':
+          return await this.handleHistory(url);
+        case '/api/history/game':
+          return await this.handleHistoryGame(url);
         default:
           return json({ error: 'NOT_FOUND' }, 404);
       }
@@ -307,6 +315,91 @@ export class TableRoom extends DurableObject<Env> {
     );
     this.sql.exec('DELETE FROM devices WHERE profile_id = ?', body.profile);
     return json({ ok: true });
+  }
+
+  // ------------------------------------------------------------------ history (S20)
+
+  /** Every night so far, newest first, with its games (for the four of you only). */
+  private async handleHistory(url: URL): Promise<Response> {
+    if (!(await this.profileForToken(url.searchParams.get('token') ?? ''))) return json({ error: 'NOT_SIGNED_IN' }, 401);
+    const rows = this.sql
+      .exec<SessionRow>(`SELECT rowid AS rid, ${SESSION_COLUMNS} FROM sessions WHERE pairs_json IS NOT NULL ORDER BY started_at DESC`)
+      .toArray();
+    return json({ nights: rows.map((row) => this.savedNight(row)) });
+  }
+
+  /** One saved game in full, for the replay. */
+  private async handleHistoryGame(url: URL): Promise<Response> {
+    if (!(await this.profileForToken(url.searchParams.get('token') ?? ''))) return json({ error: 'NOT_SIGNED_IN' }, 401);
+    const rid = Number(url.searchParams.get('night'));
+    const dealNumber = Number(url.searchParams.get('game'));
+    const row = this.sql.exec<SessionRow>(`SELECT rowid AS rid, ${SESSION_COLUMNS} FROM sessions WHERE rowid = ?`, rid).toArray()[0];
+    if (!row || !row.pairs_json) return json({ error: 'NOT_FOUND' }, 404);
+    const deal = this.sql
+      .exec<{ auction_json: string | null; tricks_json: string | null; hands_json: string | null }>(
+        'SELECT auction_json, tricks_json, hands_json FROM deals WHERE session_id = ? AND deal_number = ?',
+        row.id,
+        dealNumber,
+      )
+      .toArray()[0];
+    const night = this.savedNight(row);
+    const game = night.games.find((g) => g.dealNumber === dealNumber);
+    if (!deal || !game || !deal.hands_json || !deal.tricks_json || !deal.auction_json) return json({ error: 'NOT_FOUND' }, 404);
+    const detail: SavedGameDetail = {
+      night,
+      game,
+      calls: JSON.parse(deal.auction_json),
+      hands: JSON.parse(deal.hands_json),
+      tricks: JSON.parse(deal.tricks_json),
+    };
+    return json(detail);
+  }
+
+  /** A night as history shows it. Its id is the row number, never its seed (which would give
+   *  away the hands of the games still to come tonight). */
+  private savedNight(row: SessionRow): SavedNight {
+    const games = this.sql
+      .exec<{ record_json: string; replayable: number }>(
+        'SELECT record_json, hands_json IS NOT NULL AS replayable FROM deals WHERE session_id = ? ORDER BY deal_number',
+        row.id,
+      )
+      .toArray()
+      .map((g): SavedGame => {
+        const record = JSON.parse(g.record_json) as DealRecord;
+        return {
+          dealNumber: record.dealNumber,
+          dealer: record.dealer,
+          contract: record.contract,
+          result: record.result,
+          winningPair: record.winningPair,
+          replayable: g.replayable === 1,
+        };
+      });
+    const avatarRows = this.sql
+      .exec<{ profile_id: string; animal: string; element: Avatar['element'] }>(
+        'SELECT profile_id, animal, element FROM session_avatars WHERE session_id = ?',
+        row.id,
+      )
+      .toArray();
+    // The night's awards are saved in order of priority, so the first is its headline.
+    const award = this.sql
+      .exec<{ kind: string; profile_id: string; payload_json: string }>(
+        'SELECT kind, profile_id, payload_json FROM awards WHERE session_id = ? ORDER BY rowid LIMIT 1',
+        row.id,
+      )
+      .toArray()[0];
+    return {
+      id: String(row.rid),
+      startedAt: row.started_at,
+      endedAt: row.ended_at,
+      theme: row.theme,
+      pairs: JSON.parse(row.pairs_json!),
+      seating: row.seating_json ? JSON.parse(row.seating_json) : null,
+      avatars: avatarRows.length ? Object.fromEntries(avatarRows.map((a) => [a.profile_id, { animal: a.animal, element: a.element }])) : null,
+      final: row.final_json ? JSON.parse(row.final_json) : null,
+      games,
+      topAward: award ? { kind: award.kind, profile: award.profile_id, payload: JSON.parse(award.payload_json) } : null,
+    };
   }
 
   private async handleWebSocket(request: Request, url: URL): Promise<Response> {
@@ -714,6 +807,18 @@ function send(ws: WebSocket, message: ServerMessage): void {
     // The socket closed between checks; its close handler will run.
   }
 }
+
+const SESSION_COLUMNS = 'id, started_at, ended_at, pairs_json, final_json, theme, seating_json';
+type SessionRow = {
+  rid: number;
+  id: string;
+  started_at: number;
+  ended_at: number | null;
+  pairs_json: string | null;
+  final_json: string | null;
+  theme: string | null;
+  seating_json: string | null;
+};
 
 function json(body: unknown, status = 200): Response {
   return new Response(JSON.stringify(body), { status, headers: { 'content-type': 'application/json' } });

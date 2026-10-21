@@ -26,7 +26,10 @@ export class Connection {
   private listeners = new Set<(events: readonly PublicEvent[]) => void>();
 
   /** `offline`: no server (the practice table drives this connection itself). */
+  readonly offline: boolean;
+
   constructor(offline = false) {
+    this.offline = offline;
     if (offline) {
       this.status = 'open';
       return;

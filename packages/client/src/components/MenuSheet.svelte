@@ -11,7 +11,8 @@
     canConcede,
     start = 'menu',
     onClose,
-  }: { conn: Connection; canConcede: boolean; start?: 'menu' | 'settings'; onClose: () => void } = $props();
+    onHistory,
+  }: { conn: Connection; canConcede: boolean; start?: 'menu' | 'settings'; onClose: () => void; onHistory: () => void } = $props();
 
   const view = $derived(conn.view!);
   const room = $derived(conn.room!);
@@ -57,6 +58,13 @@
       <button class="row" onclick={() => act(() => conn.intent({ type: 'voteEndNight' }))}>
         <span class="icon" aria-hidden="true">🌙</span>
         <span class="text"><strong>End the night</strong><small>All four have to agree{votes ? ` · ${votes}/4 so far` : ''}</small></span>
+      </button>
+    {/if}
+
+    {#if !conn.offline}
+      <button class="row" onclick={() => act(onHistory)}>
+        <span class="icon" aria-hidden="true">📜</span>
+        <span class="text"><strong>History &amp; rivals</strong><small>Head to head, partnerships, and every past game</small></span>
       </button>
     {/if}
 
