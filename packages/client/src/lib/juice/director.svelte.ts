@@ -94,12 +94,18 @@ class Director {
         this.reset();
         if (dealt.type === 'dealStarted' && settings.animated) {
           this.dealing = { id: ++this.fxId, dealer: dealt.dealer };
-          // Never leave the hand hidden if the flight can't run (the page was hidden, etc.).
+          // Never leave the hand hidden if the flight never starts (the page was hidden, etc.).
+          // Once it starts it ends itself (flightStarted), so a slow phone never cuts it short.
           clearTimeout(this.dealSafety);
-          this.dealSafety = setTimeout(() => this.finishDeal(), settings.ms(3500));
+          this.dealSafety = setTimeout(() => this.finishDeal(), settings.ms(3500) + 1500);
         }
       }
     });
+  }
+
+  /** The deal's flight is running: it will call finishDeal when its last card lands. */
+  flightStarted(): void {
+    clearTimeout(this.dealSafety);
   }
 
   /** The deal has landed. */

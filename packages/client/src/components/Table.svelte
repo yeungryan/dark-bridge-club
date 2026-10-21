@@ -34,7 +34,9 @@
   const me = $derived(view.mySeat!);
   // The dealer is shuffling: nothing is dealt until they tap Deal (Ryan).
   const shuffling = $derived(view.phase === 'awaitingDeal' || !deal);
-  const iDeal = $derived(shuffling && view.dealer === me);
+  // Only once the next dealer is known: between games `dealer` is still the last one (whose Deal
+  // button would otherwise flash up and do nothing).
+  const iDeal = $derived(view.phase === 'awaitingDeal' && view.dealer === me);
   const contract = $derived(deal?.contract ?? null);
   // Bid once your cards have landed.
   const myTurnToCall = $derived(deal?.phase === 'auction' && deal.turn === me && !conn.room!.paused && !director.dealing);

@@ -11,6 +11,9 @@ test.describe.configure({ mode: 'parallel' });
 const PRACTICE = '/practice.html?turbo=1';
 
 const sounds = (page: Page) => page.evaluate(() => (window as unknown as { __darkSounds: string[] }).__darkSounds.slice());
+/** How many times a sound has played since the page opened (never trimmed, unlike `sounds`). */
+const soundCount = (page: Page, name: string) =>
+  page.evaluate((n) => (window as unknown as { __darkSoundCount: Record<string, number> }).__darkSoundCount[n] ?? 0, name);
 
 async function tap(locator: Locator): Promise<boolean> {
   return locator.tap({ timeout: 3000 }).then(
@@ -89,12 +92,12 @@ test('the bid ladder: tap a bid to see what it needs, then Bid; Pass is one tap'
   await expect(page.locator('.strip .call').filter({ hasText: 'Ryan' }).last()).toContainText(label);
   // Next time it's my call (this auction or the next game's), Pass goes straight in.
   await playUntil(page, () => page.locator('.box .ladder').isVisible(), { noPass: true });
-  const before = (await sounds(page)).filter((s) => s === 'pass').length;
+  const before = await soundCount(page, 'pass');
   await page.getByRole('button', { name: 'Pass', exact: true }).tap();
   // One tap and it's in: the box closes (no longer my call) and the pass is heard. (At test
   // speed the bots may finish the auction at once, so the strip itself may already be gone.)
   await expect(page.locator('.box .ladder')).toBeHidden();
-  await expect.poll(async () => (await sounds(page)).filter((s) => s === 'pass').length).toBeGreaterThan(before);
+  await expect.poll(async () => soundCount(page, 'pass')).toBeGreaterThan(before);
 });
 
 test('a whole deal by dragging cards: every beat of the feel ladder fires', async ({ page }) => {
@@ -182,7 +185,8 @@ test('seats stay put from bidding to play; the newest set on the scoreboard open
   const playing = await centres();
   playing.forEach((p, i) => {
     expect(Math.abs(p.x - bidding[i].x), `${seats[i]} x`).toBeLessThanOrEqual(1);
-    expect(Math.abs(p.y - bidding[i].y), `${seats[i]} y`).toBeLessThanOrEqual(1);
+    // (On failure, every seat's centre at both moments, to tell a real shift from a race.)
+    expect(Math.abs(p.y - bidding[i].y), `${seats[i]} y ${JSON.stringify({ bidding, playing })}`).toBeLessThanOrEqual(1);
   });
   // No separate "Last set" button any more: the latest silhouette is the way in.
   await expect(page.getByRole('button', { name: /^Last set$/ })).toHaveCount(0);
@@ -225,22 +229,24 @@ test('each game waits for its dealer: shuffle, tap Deal, and 52 cards fly out', 
   await page.goto(PRACTICE);
   const dealButton = page.getByRole('button', { name: 'Deal', exact: true });
   const shuffling = page.getByText(/is shuffling…/);
-  // Play along until a game is waiting to be dealt (by me, or by a bot).
-  await playUntil(page, async () => (await dealButton.isVisible()) || (await shuffling.isVisible()), { noDeal: true });
-  await expect(page.locator('.deck')).toBeVisible();
-  if (await shuffling.isVisible()) {
+  // Play along until a game is waiting to be dealt (by me, or by a bot). Note which: at test
+  // speed a bot deals within a fraction of a second, so it can't be checked again afterwards.
+  let botDeals = false;
+  await playUntil(page, async () => (await dealButton.isVisible()) || (botDeals = await shuffling.isVisible()), { noDeal: true });
+  if (botDeals) {
     // A bot is dealing: no Deal button for me, and the cards arrive when it deals.
     await expect(dealButton).toHaveCount(0);
     await expect(page.locator('.hand .slot')).toHaveCount(13, { timeout: 15_000 });
     return;
   }
-  // I'm the dealer: nothing happens until I tap Deal (no automatic deal).
+  // I'm the dealer: the deck shuffles, and nothing happens until I tap Deal (no automatic deal).
+  await expect(page.locator('.deck')).toBeVisible();
   await page.waitForTimeout(2500);
   await expect(dealButton).toBeVisible();
   await expect(page.locator('.hand .slot')).toHaveCount(0);
-  const before = (await sounds(page)).filter((s) => s === 'dealCard').length;
+  const before = await soundCount(page, 'dealCard');
   await dealButton.tap();
   await expect(page.locator('.hand .slot')).toHaveCount(13);
-  await expect.poll(async () => (await sounds(page)).filter((s) => s === 'dealCard').length - before).toBe(52);
+  await expect.poll(async () => (await soundCount(page, 'dealCard')) - before).toBe(52);
   await expect.poll(async () => (await sounds(page)).includes('fan')).toBe(true);
 });

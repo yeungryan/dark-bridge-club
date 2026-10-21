@@ -18,6 +18,7 @@
   onMount(() => {
     const timers: ReturnType<typeof setTimeout>[] = [];
     const finish = () => director.finishDeal();
+    director.flightStarted();
     void tick().then(() => {
       const center = document.querySelector('.center')?.getBoundingClientRect();
       if (!layer || !center) return finish();
