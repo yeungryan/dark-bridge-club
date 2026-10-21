@@ -69,6 +69,15 @@ describe('S20 rivalry and history', () => {
     expect(all.reduce((t, m) => t + m.games, 0)).toBe(nights.flatMap((n) => n.games).filter((g) => g.winningPair).length);
   });
 
+  it('an offline night counts its games and its winner, like any other', () => {
+    const offline: SavedNight = { ...night('o1', 50, ['darren', 'kim'], ['adrian', 'ryan'], [], 'A'), offline: { wins: { A: 5, B: 3 } } };
+    const dk = headToHead(P, [offline]).find((m) => m.nights === 1)!;
+    expect(dk.games).toBe(8);
+    const side = dk.sides.find((s) => pairKey(s.players) === pairKey(['darren', 'kim']))!;
+    expect(side).toMatchObject({ nightsWon: 1, gamesWon: 5 });
+    expect(partnerRecords('ryan', P, [offline]).find((r) => r.partner === 'adrian')).toMatchObject({ nights: 1, nightsWon: 0, games: 8, gamesWon: 3 });
+  });
+
   it('partner records: nights and games with each partner', () => {
     const nights = [
       night('1', 100, ['darren', 'kim'], ['adrian', 'ryan'], ['A', 'B', 'A'], 'A'),

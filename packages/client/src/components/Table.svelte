@@ -140,6 +140,12 @@
             <Deck riffleSound={iDeal && shuffling} />
           {:else if deal.phase === 'auction'}
             <div class="auction"><AuctionStrip {conn} /></div>
+            <!-- After a bid, each pass counts it down (Ryan: on the table, where nothing covers it). -->
+            {#if director.going > 0}
+              {#key director.going}
+                <div class="going" role="status">🔨 {director.going === 1 ? 'Going once…' : 'Going twice…'}</div>
+              {/key}
+            {/if}
           {:else}
             <TrickArea {conn} />
           {/if}
@@ -359,6 +365,36 @@
     align-items: center;
     min-width: 0;
     aspect-ratio: 1 / 1;
+  }
+  /* "Going once / twice": a solid pill straddling the table's bottom rim, clear of the calls. */
+  .going {
+    position: absolute;
+    bottom: 0;
+    left: 50%;
+    z-index: 2;
+    translate: -50% 45%;
+    padding: 5px 14px;
+    border-radius: 999px;
+    background: var(--accent);
+    color: var(--accent-ink);
+    font-size: 13px;
+    font-weight: 800;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    white-space: nowrap;
+    box-shadow:
+      0 4px 14px rgba(0, 0, 0, 0.45),
+      0 0 18px var(--accent-glow);
+    animation: going-in calc(var(--spring-pop-ms, 380ms) * var(--speed)) var(--spring-pop, cubic-bezier(0.3, 1.6, 0.6, 1)) backwards;
+  }
+  @keyframes going-in {
+    from {
+      scale: 1.6;
+      opacity: 0;
+    }
+  }
+  :global(.fx-reduced) .going {
+    animation: fade-in calc(250ms * var(--speed)) backwards;
   }
   .auction {
     position: relative;

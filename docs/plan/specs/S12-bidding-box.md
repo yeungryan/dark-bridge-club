@@ -33,3 +33,5 @@ Replaces the level and suit rows.
 - **Height:** the box is a little shorter than the old one, so the table never shrinks and seats never move.
 - **Revised (Ryan):** Bid and Pass are two tall buttons in a row to the right of NT: Bid (with the picked bid under the word), then Pass.
 - **Suit order everywhere** (Ryan): hands, the reveal and the replay all use the bidding box's order, ♣ ♦ ♥ ♠, left to right or top to bottom, highest card first within each suit (`sortHand`).
+
+**Going once / twice (Ryan):** no longer small text above the top bid (where it collided with the calls and got clipped). It's a solid accent pill, "🔨 Going once…", straddling the table's bottom rim, clear of the calls however many rows they take.

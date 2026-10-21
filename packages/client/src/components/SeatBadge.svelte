@@ -1,13 +1,13 @@
 <script lang="ts">
-  import { partner, type Seat } from '@dark/engine';
+  import type { Seat } from '@dark/engine';
   import type { Connection } from '../lib/connection.svelte';
   import { avatarAtSeat, teamColor } from '../lib/avatars';
   import { profileOf } from '../lib/format';
   import Avatar from './Avatar.svelte';
 
   // Spec S10, redesigned: the avatar is the hero (team-coloured ring, element inside it), then
-  // one line with the name and cards left (a tiny card), then a small role tag once the
-  // contract is set. Whose turn it is: the ring glows. Used for all four seats, you included.
+  // one line with the name and cards left (a tiny card). No role tags (Ryan): the scoreboard says
+  // who declared. Whose turn it is: the ring glows. Used for all four seats, you included.
   let { conn, seat }: { conn: Connection; seat: Seat } = $props();
 
   const view = $derived(conn.view!);
@@ -19,11 +19,6 @@
   const turn = $derived(deal?.turn === seat && (deal.phase === 'auction' || deal.phase === 'play'));
   const waiting = $derived(deal?.turn !== null && deal?.turn !== undefined && !turn && (deal.phase === 'auction' || deal.phase === 'play'));
   const mine = $derived(seat === view.mySeat);
-  const role = $derived.by(() => {
-    const c = deal?.contract;
-    if (!c) return '';
-    return seat === c.declarer ? 'Declarer' : seat === partner(c.declarer) ? 'Partner' : 'Defender';
-  });
 </script>
 
 <div class="seat" class:turn class:waiting class:mine data-badge-seat={seat} title={presence !== 'connected' ? `${profile.name} is ${presence}` : undefined}>
@@ -42,7 +37,6 @@
       <span class="count" aria-label="{n} {n === 1 ? 'card' : 'cards'} left">{n}</span>
     {/if}
   </span>
-  {#if role}<span class="role" class:decl={role === 'Declarer'}>{role}</span>{/if}
 </div>
 
 <style>
@@ -52,10 +46,10 @@
     grid-template-columns: minmax(0, 1fr);
     justify-items: center;
     gap: 3px;
-    /* A fixed size, with room for the role tag before there is one, so no seat shifts when
-       the tag appears or the card count changes (fonts differ from phone to phone). */
+    /* A fixed size, so no seat shifts when the card count changes (fonts differ from phone to
+       phone). */
     width: 84px;
-    height: 96px;
+    height: 80px;
     align-content: start;
     padding: 6px 2px 4px;
     text-align: center;
@@ -118,19 +112,5 @@
   }
   .seat.turn.mine {
     transform: translateY(-4px);
-  }
-  .role {
-    max-width: 100%;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-    font-size: 9.5px;
-    font-weight: 700;
-    letter-spacing: 0.12em;
-    text-transform: uppercase;
-    color: var(--ink-dim);
-  }
-  .role.decl {
-    color: var(--accent);
   }
 </style>

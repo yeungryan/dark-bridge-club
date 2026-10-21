@@ -28,3 +28,10 @@ Make history matter (promise D) and give each night a link to the last one.
 - **Server:** `GET /api/history` and `GET /api/history/game?night=&game=`, signed-in only. A night's id is its row number, never its seed (which would give away the hands of games still to come).
 - **Engine (`rivalry.ts`):** `headToHead`, `partnerRecords`, `partnershipRecords`, `winRate`, `lastNight`, all worked out from the saved nights and games on every request.
 - Still to come: player cards, the moments wall, element and animal records.
+
+## Offline nights (Ryan)
+- History keeps every night, all time: nothing is ever trimmed, and every number is recalculated from all of them.
+- **Add an offline night** (History → Nights): the date, who partnered whom (the three splits), and the games each pair won. It goes to the others for approval and counts only once **all four** approve; any one can turn it down. Taking an offline night back out also needs all four.
+- Waiting changes show at the top of History (Approve / Turn down, or Withdraw your own) and as a nudge on the lobby's Last time card. At most 5 wait at once.
+- Offline nights count in head to head and partnerships (their games and winner), show in the night log marked "Offline" (no games to replay), and can be the "Last time…" night.
+- Server: an `offline_nights` table, the waiting changes in storage, `POST /api/history/change` (propose / approve / reject), signed-in only; the engine's `historyChanges.ts` holds the rules (unit tested).

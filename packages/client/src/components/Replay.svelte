@@ -67,6 +67,32 @@
   ]);
   const laneOf = (seat: Seat) => (seat % 2 === contract.declarer % 2 ? 0 : 1);
   const initials = (seats: Seat[]) => seats.map((seat) => game.name(seat)[0]).join('·');
+
+  // Drag along the set strip to scrub through the game: the column under your finger lights up.
+  let lanesEl = $state<HTMLElement>();
+  let scrubbing = false;
+  function scrubTo(x: number) {
+    if (!lanesEl) return;
+    for (const el of lanesEl.querySelectorAll<HTMLElement>('.set')) {
+      const r = el.getBoundingClientRect();
+      if (x >= r.left && x <= r.right) return go(Number(el.dataset.step));
+    }
+    const bids = lanesEl.querySelector('.bids')?.getBoundingClientRect();
+    if (bids && x <= bids.right) go(0);
+    else if (x > lanesEl.getBoundingClientRect().right - 2) go(steps.length - 1);
+  }
+  function scrubStart(e: PointerEvent) {
+    if (!e.isPrimary) return;
+    scrubbing = true;
+    lanesEl?.setPointerCapture(e.pointerId);
+    scrubTo(e.clientX);
+  }
+  function scrubMove(e: PointerEvent) {
+    if (scrubbing) scrubTo(e.clientX);
+  }
+  function scrubEnd() {
+    scrubbing = false;
+  }
 </script>
 
 <svelte:window onkeydown={key} />
@@ -125,38 +151,49 @@
   {#if step.decisive}<p class="note decisive">⭐ This set decided it.</p>{/if}
   {#if step.stoppedHere}<p class="note">The game stopped here; the rest were never played.</p>{/if}
 
+  <!-- ◀ and ▶ span the strip and the score line; drag along the strip to scrub (Ryan). -->
   <nav class="controls" aria-label="Replay controls">
-    <div class="lanes" style="--n: {steps.length - 1}">
-      <button class="bids" class:on={at === 0} aria-label="The bidding" aria-current={at === 0 ? 'step' : undefined} onclick={() => go(0)}>Bids</button>
-      {#each lanes as lane, l (lane.side)}
-        <span class="lane-name" style="--t: {game.color(lane.seats[0]!)}; grid-row: {l + 2}">{initials(lane.seats)}</span>
-      {/each}
-      {#each steps.slice(1) as s, i (i)}
-        {@const w = s.trick!.winner}
-        <button
-          class="set"
-          class:on={i + 1 === at}
-          class:decisive={s.decisive}
-          style="grid-column: {i + 3}; --t: {game.color(w)}"
-          aria-label="Set {i + 1}, won by {game.name(w)}{s.decisive ? ' (decided it)' : ''}"
-          aria-current={i + 1 === at ? 'step' : undefined}
-          onclick={() => go(i + 1)}
-        >
-          <span class="num">{s.decisive ? '★' : i + 1}</span>
-          <span class="slot" style="grid-row: {laneOf(w) + 2}"><AnimalIcon animal={game.animal(w)} silhouette="var(--t)" /></span>
-        </button>
-      {/each}
-    </div>
-    <div class="nav">
-      <button class="step" onclick={() => go(at - 1)} disabled={at === 0} aria-label="Previous set">◀</button>
+    <button class="step" onclick={() => go(at - 1)} disabled={at === 0} aria-label="Previous set">◀</button>
+    <div class="mid">
+      <!-- svelte-ignore a11y_no_static_element_interactions -->
+      <div
+        class="lanes"
+        bind:this={lanesEl}
+        style="--n: {steps.length - 1}"
+        onpointerdown={scrubStart}
+        onpointermove={scrubMove}
+        onpointerup={scrubEnd}
+        onpointercancel={scrubEnd}
+      >
+        <button class="bids" class:on={at === 0} aria-label="The bidding" aria-current={at === 0 ? 'step' : undefined} onclick={() => go(0)}>Bids</button>
+        {#each lanes as lane, l (lane.side)}
+          <span class="lane-name" style="--t: {game.color(lane.seats[0]!)}; grid-row: {l + 2}">{initials(lane.seats)}</span>
+        {/each}
+        {#each steps.slice(1) as s, i (i)}
+          {@const w = s.trick!.winner}
+          <button
+            class="set"
+            class:on={i + 1 === at}
+            class:decisive={s.decisive}
+            data-step={i + 1}
+            style="grid-column: {i + 3}; --t: {game.color(w)}"
+            aria-label="Set {i + 1}, won by {game.name(w)}{s.decisive ? ' (decided it)' : ''}"
+            aria-current={i + 1 === at ? 'step' : undefined}
+            onclick={() => go(i + 1)}
+          >
+            <span class="num">{s.decisive ? '★' : i + 1}</span>
+            <span class="slot" style="grid-row: {laneOf(w) + 2}"><AnimalIcon animal={game.animal(w)} silhouette="var(--t)" /></span>
+          </button>
+        {/each}
+      </div>
       <p class="status">
         <strong>{label}</strong>
         {#if step.set > 0}
           <br />Declarers {step.tally.declarers}/{targets.declarers} · Defenders {step.tally.defenders}/{targets.defenders}
         {/if}
       </p>
-      <button class="step" onclick={() => go(at + 1)} disabled={at === steps.length - 1} aria-label="Next set">▶</button>
     </div>
+    <button class="step" onclick={() => go(at + 1)} disabled={at === steps.length - 1} aria-label="Next set">▶</button>
   </nav>
 </div>
 
@@ -364,16 +401,27 @@
   }
   .controls {
     display: grid;
-    gap: 8px;
+    grid-template-columns: 40px minmax(0, 1fr) 40px;
+    gap: 6px;
+    align-items: stretch;
   }
+  .mid {
+    display: grid;
+    gap: 6px;
+    min-width: 0;
+  }
+  /* Tall enough to span the strip and the score line. */
   .step {
-    min-height: 48px;
+    min-height: 0;
+    height: 100%;
+    padding: 0;
     font-size: 1.1rem;
   }
   /* The strip: a "Bids" column, the two team lanes' initials, then one column per set. */
   .lanes {
     display: grid;
-    grid-template-columns: 34px 30px repeat(var(--n), minmax(0, 26px));
+    grid-template-columns: 26px 24px repeat(var(--n), minmax(0, 22px));
+    touch-action: none;
     grid-template-rows: 14px 28px 28px;
     justify-content: center;
     column-gap: 1px;
@@ -404,7 +452,7 @@
   .lane-name {
     grid-column: 1;
     font-family: var(--font-name);
-    font-size: 11px;
+    font-size: 9.5px;
     font-weight: 700;
     color: var(--t);
     white-space: nowrap;
@@ -436,7 +484,7 @@
   }
   .slot {
     display: grid;
-    font-size: 21px;
+    font-size: 18px;
   }
   /* Where you are: the column lights up. */
   .set.on {
@@ -446,11 +494,5 @@
   .set.on .num {
     color: var(--ink);
     font-weight: 700;
-  }
-  .nav {
-    display: grid;
-    grid-template-columns: 52px 1fr 52px;
-    align-items: center;
-    gap: 6px;
   }
 </style>

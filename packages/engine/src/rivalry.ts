@@ -41,6 +41,8 @@ export interface SavedNight {
   readonly final: NightResult | null;
   readonly games: readonly SavedGame[];
   readonly topAward: SavedAward | null;
+  /** A night played away from the app, added with everyone's approval (Ryan): just its games won. */
+  readonly offline?: { readonly wins: Readonly<Record<PairId, number>>; readonly note?: string };
 }
 
 /** A saved game with everything the replay needs. */
@@ -50,6 +52,14 @@ export interface SavedGameDetail {
   readonly calls: readonly { readonly seat: Seat; readonly call: Call }[];
   readonly hands: PerSeat<readonly Card[]>;
   readonly tricks: readonly CompletedTrick[];
+}
+
+/** Games won by each pair in a night: counted from its saved games, or an offline night's tally. */
+export function gamesWonIn(night: SavedNight): Record<PairId, number> {
+  if (night.offline) return { A: night.offline.wins.A, B: night.offline.wins.B };
+  const won = { A: 0, B: 0 };
+  for (const g of night.games) if (g.winningPair) won[g.winningPair]++;
+  return won;
 }
 
 /** Stats show "—" until there are at least this many games behind them (S20 rules). */
@@ -101,10 +111,10 @@ export function headToHead(profiles: readonly ProfileId[], nights: readonly Save
       if (!isThis) continue;
       lastPlayed = Math.max(lastPlayed ?? 0, night.startedAt);
       const sideOf = (pair: PairId) => (keys[pair] === ka ? 'a' : 'b');
-      for (const g of night.games) {
-        if (!g.winningPair) continue;
-        if (sideOf(g.winningPair) === 'a') gamesA++;
-        else gamesB++;
+      const won = gamesWonIn(night);
+      for (const pair of ['A', 'B'] as const) {
+        if (sideOf(pair) === 'a') gamesA += won[pair];
+        else gamesB += won[pair];
       }
       if (night.final) {
         finished++;
@@ -148,11 +158,9 @@ export function partnerRecords(profile: ProfileId, profiles: readonly ProfileId[
       for (const night of nights) {
         const mine = (['A', 'B'] as const).find((pair) => night.pairs[pair].includes(profile));
         if (!mine || !night.pairs[mine].includes(partner)) continue;
-        for (const game of night.games) {
-          if (!game.winningPair) continue;
-          g++;
-          if (game.winningPair === mine) gWon++;
-        }
+        const won = gamesWonIn(night);
+        g += won.A + won.B;
+        gWon += won[mine];
         if (night.final) {
           n++;
           if (night.final.winner === mine) nWon++;

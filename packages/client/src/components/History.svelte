@@ -1,20 +1,36 @@
 <script lang="ts">
-  import { headToHead, partnershipRecords, winRate, type ProfileInfo, type SavedNight, type ThemeId } from '@dark/engine';
+  import { headToHead, partnershipRecords, winRate, type PendingChange, type ProfileInfo, type SavedNight, type ThemeId } from '@dark/engine';
   import { onMount } from 'svelte';
   import { profileOf } from '../lib/format';
-  import { loadGame, loadNights, nightLine, pairName, shortDate } from '../lib/history';
+  import { loadGame, loadHistory, nightLine, pairName, sendChange, shortDate, type HistoryData } from '../lib/history';
   import { sound } from '../lib/juice/sound';
   import { savedReplay, type ReplayGame } from '../lib/replayGame';
   import { themeOf } from '../lib/themes';
   import CallText from './CallText.svelte';
   import Replay from './Replay.svelte';
   import TableScene from './TableScene.svelte';
+  import PendingChanges from './PendingChanges.svelte';
+  import OfflineNightForm from './OfflineNightForm.svelte';
 
   // Spec S20 (first part): the rivalry board (the three ways the four of you can pair up, and
   // every partnership's record) and the night log, where any saved game opens in the replay.
   let { profiles, me, theme, onClose }: { profiles: readonly ProfileInfo[]; me: string; theme: ThemeId; onClose: () => void } = $props();
 
   let nights = $state<SavedNight[] | null>(null);
+  let pending = $state<PendingChange[]>([]);
+  let adding = $state(false);
+  const update = (d: HistoryData) => {
+    nights = d.nights;
+    pending = d.pending;
+  };
+  // Ask to take an offline night back out (also needs everyone's OK).
+  async function askRemove(night: SavedNight) {
+    try {
+      update(await sendChange({ type: 'propose', change: { kind: 'remove', nightId: night.id } }));
+    } catch {
+      failed = true;
+    }
+  }
   let failed = $state(false);
   let tab = $state<'rivals' | 'nights'>('rivals');
   let open = $state<string | null>(null);
@@ -22,8 +38,8 @@
   let loadingGame = $state<string | null>(null);
 
   onMount(() => {
-    loadNights()
-      .then((n) => (nights = n))
+    loadHistory()
+      .then(update)
       .catch(() => (failed = true));
   });
 
@@ -76,7 +92,9 @@
       <p class="muted">Couldn't load the history. Try again in a moment.</p>
     {:else if !nights}
       <p class="muted">Loading…</p>
-    {:else if tab === 'rivals'}
+    {:else}
+      <PendingChanges {profiles} {me} {pending} {nights} onUpdate={update} />
+      {#if tab === 'rivals'}
       <section aria-label="Head to head">
         <h3>Head to head</h3>
         {#each board as m, i (i)}
@@ -121,16 +139,28 @@
       </section>
     {:else}
       <section aria-label="Night log">
+        {#if adding}
+          <OfflineNightForm {profiles} onUpdate={update} onCancel={() => (adding = false)} />
+        {:else}
+          <button class="add" onclick={() => (adding = true)}>＋ Add an offline night</button>
+        {/if}
         {#if nights.length === 0}<p class="muted">No nights yet.</p>{/if}
         {#each nights as night (night.id)}
           {@const t = themeOf((night.theme ?? 'clubhouse') as ThemeId)}
           <article class="night" class:open={open === night.id}>
             <button class="night-head" aria-expanded={open === night.id} onclick={() => (open = open === night.id ? null : night.id)}>
-              <span class="when">{shortDate(night.startedAt)} · {t.flag} {t.name}</span>
+              <span class="when">{shortDate(night.startedAt)} · {#if night.offline}<b class="tag">Offline</b>{:else}{t.flag} {t.name}{/if}</span>
               <strong>{nightLine(night, profiles)}</strong>
               <span class="pairs">{pairName(profiles, night.pairs.A)} vs {pairName(profiles, night.pairs.B)}</span>
             </button>
-            {#if open === night.id}
+            {#if open === night.id && night.offline}
+              <div class="offline-body">
+                <p>Played away from the app: games {night.offline.wins.A}–{night.offline.wins.B}.</p>
+                {#if !pending.some((p) => p.change.kind === 'remove' && p.change.nightId === night.id)}
+                  <button class="ghost" onclick={() => askRemove(night)}>Ask to take it out</button>
+                {/if}
+              </div>
+            {:else if open === night.id}
               <ol class="games">
                 {#each night.games as g (g.dealNumber)}
                   <li>
@@ -162,6 +192,7 @@
           </article>
         {/each}
       </section>
+      {/if}
     {/if}
   </div>
 </div>
@@ -360,6 +391,33 @@
   }
   .what {
     font-family: var(--font-card);
+  }
+  .add {
+    min-height: 46px;
+  }
+  .tag {
+    padding: 0 6px;
+    border-radius: 6px;
+    background: color-mix(in srgb, var(--accent) 25%, transparent);
+    color: var(--ink);
+    font-size: 11px;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+  }
+  .offline-body {
+    display: grid;
+    gap: 8px;
+    padding: 0 12px 12px;
+    font-size: 14px;
+  }
+  .offline-body p {
+    margin: 0;
+    color: var(--ink-dim);
+  }
+  .offline-body button {
+    justify-self: start;
+    min-height: 36px;
+    font-size: 13.5px;
   }
   .watch {
     min-height: 36px;

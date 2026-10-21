@@ -1,29 +1,37 @@
 <script lang="ts">
   import { lastNight, type ProfileInfo, type SavedNight, type ThemeId } from '@dark/engine';
   import { onMount } from 'svelte';
-  import { loadNights, nightLine, pairName, shortDate, topAwardOf } from '../lib/history';
+  import { loadHistory, nightLine, pairName, shortDate, topAwardOf } from '../lib/history';
   import { awardText } from '../lib/stories';
   import { themeOf } from '../lib/themes';
 
   // Spec S20: as a night begins, a card recalls the last one: when and where, who won, and its
   // headline award, so tonight picks up where that left off. Nothing shows before the first night.
-  let { profiles, onHistory }: { profiles: readonly ProfileInfo[]; onHistory: () => void } = $props();
+  let { profiles, me, onHistory }: { profiles: readonly ProfileInfo[]; me: string; onHistory: () => void } = $props();
 
   let last = $state<SavedNight | null>(null);
+  // History changes (offline nights) still waiting for your OK.
+  let needsMe = $state(0);
   onMount(() => {
-    loadNights()
-      .then((nights) => (last = lastNight(nights)))
+    loadHistory()
+      .then((h) => {
+        last = lastNight(h.nights);
+        needsMe = h.pending.filter((p) => !p.approvals.includes(me)).length;
+      })
       .catch(() => {});
   });
 
   const loser = (n: SavedNight) => (n.final?.winner === 'A' ? 'B' : 'A');
 </script>
 
+{#if needsMe}
+  <button class="ask panel" onclick={onHistory}>📝 {needsMe} history {needsMe === 1 ? 'change needs' : 'changes need'} your OK ›</button>
+{/if}
 {#if last}
   {@const t = themeOf((last.theme ?? 'clubhouse') as ThemeId)}
   {@const award = topAwardOf(last)}
   <section class="last panel" aria-label="Last time">
-    <p class="when">Last time · {shortDate(last.startedAt)} · {t.flag} {t.name}</p>
+    <p class="when">Last time · {shortDate(last.startedAt)} · {#if last.offline}offline{:else}{t.flag} {t.name}{/if}</p>
     <strong class="line">{nightLine(last, profiles)}</strong>
     {#if last.final && last.final.winner !== 'tie'}
       <span class="vs">over {pairName(profiles, last.pairs[loser(last)])}</span>
@@ -37,6 +45,16 @@
 {/if}
 
 <style>
+  .ask {
+    width: 100%;
+    margin-top: 18px;
+    padding: 10px 14px;
+    border-radius: 14px;
+    text-align: left;
+    font-weight: 650;
+    color: var(--ink);
+    box-shadow: 0 0 0 1.5px var(--accent);
+  }
   .last {
     display: grid;
     gap: 3px;

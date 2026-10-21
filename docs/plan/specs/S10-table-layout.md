@@ -31,3 +31,5 @@ A table you can read at a glance on a phone while faces are talking in a floatin
 - The header holds the menu button (top-left), "Game N", and a Settings gear (top-right, Ryan); the theme's scene owns the rest of the top of the screen. Settings left the menu.
 - The contract and the race to each side's target moved to where "X to play" was, above your hand. The "X to play" line is gone.
 - **Whose turn:** the active player's avatar ring breathes and their name lights in the accent colour, and the other seats dim slightly. On your own turn your seat lifts and the cards you can play glow. A hidden live region still announces the turn to screen readers.
+
+**No role tags (Ryan):** the seats no longer say Declarer / Partner / Defender under the names; the scoreboard shows who declared. Seat badges are 80px tall (was 96).

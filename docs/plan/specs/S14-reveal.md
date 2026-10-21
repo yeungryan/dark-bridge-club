@@ -34,3 +34,5 @@ Balatro's lesson: **if you hide something, the reveal has to be worth it.** Hand
 
 ## Trimmed (Ryan, before M4)
 The result screen is now: one bold result ("Made +1", "Defeated −2", "Conceded"), one quiet line (contract · declarer's animal and name · "7–5 sets") and who take the game; the moments; the four hands (unchanged, with each hand's HCP as a small pill); then a square **rewind** icon (the replay) beside a wide **Next game**, and the four animals lighting up as each player is ready. Gone: the "Tonight" tally (the scoreboard shows tonight's games), "Tap to skip" (tapping still skips) and "(you)".
+
+**Scrub and tall arrows (Ryan):** drag along the set strip and the highlighted column follows your finger, set by set. ◀ and ▶ now stand either side of the strip and the score line, spanning their full height. The lane initials and columns are a little narrower so 13 sets still fit a phone.

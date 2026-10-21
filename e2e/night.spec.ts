@@ -347,6 +347,38 @@ test.describe.serial('a night at the DARK table', () => {
     await expect(history).toBeHidden();
   });
 
+  test('an offline night joins the all-time scores once all four approve', async ({ request }) => {
+    const page = ryan().page;
+    await page.getByRole('region', { name: 'Last time' }).getByRole('button', { name: /History/ }).click();
+    const history = page.getByRole('dialog', { name: 'History' });
+    const gamesBefore = await history.locator('.match .sub').allTextContents();
+    await history.getByRole('tab', { name: 'Nights' }).click();
+    await history.getByRole('button', { name: /Add an offline night/ }).click();
+    const form = history.getByRole('region', { name: 'Add an offline night' });
+    const ones = form.getByRole('button', { name: 'One more' });
+    for (let i = 0; i < 3; i++) await ones.first().click();
+    await ones.last().click();
+    await form.getByRole('button', { name: 'Send for approval' }).click();
+    const pending = history.getByRole('region', { name: 'Changes waiting for approval' });
+    await expect(pending).toContainText(/Add an offline night: .* 3–1 /);
+    await expect(pending).toContainText('1 of 4 OK');
+    // Not counted yet.
+    await expect(history.locator('.night .tag')).toHaveCount(0);
+    // The other three approve from their own logins; Kim's OK completes it.
+    const id = (await (await request.get(`/api/history?token=${await tokenOf(page)}`)).json()).pending[0].id;
+    for (const seat of SEATS.filter((s) => s.id !== 'ryan')) {
+      const login = await (await request.post('/api/login', { data: { k: 'dev', profile: seat.id, pin: seat.pin } })).json();
+      expect((await request.post('/api/history/change', { data: { token: login.token, action: { type: 'approve', id } } })).ok()).toBe(true);
+    }
+    await history.getByRole('button', { name: 'Close the history' }).click();
+    await page.getByRole('region', { name: 'Last time' }).getByRole('button', { name: /History/ }).click();
+    await expect(history.locator('.match .sub')).not.toHaveText(gamesBefore);
+    await history.getByRole('tab', { name: 'Nights' }).click();
+    await expect(history.locator('.night .tag', { hasText: 'Offline' })).toHaveCount(1);
+    await expect(history.getByRole('region', { name: 'Changes waiting for approval' })).toHaveCount(0);
+    await history.getByRole('button', { name: 'Close the history' }).click();
+  });
+
   test('the admin page can set a player\'s PIN (and only with the admin key)', async ({ request }) => {
     const setPin = (adminKey: string, pin: string) => request.post('/api/admin/set-pin', { data: { adminKey, profile: 'kim', pin } });
     const login = (pin: string) => request.post('/api/login', { data: { k: 'dev', profile: 'kim', pin } });
