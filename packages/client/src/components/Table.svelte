@@ -53,7 +53,8 @@
   const handHeight = $derived(Math.min(76, Math.max(46, Math.floor(handWidth / 6.2))) * 1.4 + 22);
   const pairOf = (seat: Seat) => `${nameAtSeat(view, profiles, seat)} & ${nameAtSeat(view, profiles, partner(seat))}`;
 
-  let menuOpen = $state(false);
+  // The menu, or (from the gear, top-right) straight into Settings.
+  let menuOpen = $state<'menu' | 'settings' | null>(null);
 
   // The pairs for the night are announced as the first deal starts; it doesn't block bidding.
   let showPairs = $state(false);
@@ -87,13 +88,20 @@
 
 <div class="table" class:decider data-turn={iDeal ? 'my-deal' : deal?.turn === me ? (deal.phase === 'auction' ? 'my-call' : deal.phase === 'play' ? 'my-play' : '') : ''}>
   <header>
-    <button class="ghost menu" aria-label="Menu" onclick={() => (menuOpen = !menuOpen)}>☰</button>
+    <button class="ghost menu" aria-label="Menu" onclick={() => (menuOpen = menuOpen ? null : 'menu')}>☰</button>
     <h1 class="game">Game {shuffling ? view.dealNumber + 1 : view.dealNumber}</h1>
-    <span aria-hidden="true"></span>
+    <button class="ghost gear" aria-label="Settings" onclick={() => (menuOpen = menuOpen ? null : 'settings')}>
+      <svg viewBox="0 0 24 24" width="21" height="21" aria-hidden="true"
+        ><path
+          fill="currentColor"
+          d="M19.4 13a7.6 7.6 0 0 0 0-2l2.1-1.6-2-3.5-2.5 1a7.4 7.4 0 0 0-1.7-1L15 3.3h-4l-.4 2.6a7.4 7.4 0 0 0-1.7 1l-2.5-1-2 3.5L6.6 11a7.6 7.6 0 0 0 0 2l-2.1 1.6 2 3.5 2.5-1a7.4 7.4 0 0 0 1.7 1l.4 2.6h4l.4-2.6a7.4 7.4 0 0 0 1.7-1l2.5 1 2-3.5zM12 15.5a3.5 3.5 0 1 1 0-7 3.5 3.5 0 0 1 0 7z"
+        /></svg
+      >
+    </button>
   </header>
 
   {#if menuOpen}
-    <MenuSheet {conn} {canConcede} onClose={() => (menuOpen = false)} />
+    <MenuSheet {conn} {canConcede} start={menuOpen} onClose={() => (menuOpen = null)} />
   {/if}
   {#if showPairs}
     <div class="pairs" aria-live="polite">
@@ -192,8 +200,8 @@
     padding: 6px 16px max(8px, env(safe-area-inset-bottom));
     overflow: hidden;
   }
-  /* Just the menu button: the rest of the top belongs to the theme's scene (and, top-right,
-     to Messenger's floating video, S10). */
+  /* The menu top-left and Settings top-right (Ryan); the rest of the top belongs to the theme's
+     scene. (Messenger's floating video bubble can be dragged off the gear.) */
   header {
     display: grid;
     grid-template-columns: 48px 1fr 48px;
@@ -212,6 +220,12 @@
   .menu {
     font-size: 1.3rem;
     padding: 0 12px;
+  }
+  .gear {
+    display: grid;
+    place-items: center;
+    padding: 0 12px;
+    color: var(--ink);
   }
   .sr-only {
     position: absolute;

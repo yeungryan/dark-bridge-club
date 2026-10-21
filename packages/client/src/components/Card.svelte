@@ -8,12 +8,13 @@
     width = 56,
     dim = false,
     highlight = false,
-  }: { card: Card; width?: number; dim?: boolean; highlight?: boolean } = $props();
+    trump = false,
+  }: { card: Card; width?: number; dim?: boolean; highlight?: boolean; trump?: boolean } = $props();
 
   const text = $derived(cardText(card));
 </script>
 
-<div class="card" class:red={isRed(card)} class:dim class:highlight style="--w: {width}px" aria-label="{text.rank} of {text.suit}">
+<div class="card" class:red={isRed(card)} class:dim class:highlight class:trump style="--w: {width}px" aria-label="{text.rank} of {text.suit}">
   <!-- The corner: rank over a suit drawn at the rank's height. -->
   <span class="corner"><span class="rank">{text.rank}</span><Suit suit={card.suit} label={false} /></span>
   <span class="pip"><Suit suit={card.suit} label={false} /></span>
@@ -39,6 +40,18 @@
   }
   .card.highlight {
     box-shadow: 0 0 0 3px var(--accent), 0 2px 6px rgba(0, 0, 0, 0.5);
+  }
+  /* A trump in your hand (Ryan; option D): a purple stripe along the top and a faint tint. */
+  .card.trump {
+    background: linear-gradient(180deg, color-mix(in srgb, var(--trump) 16%, var(--card)), var(--card) 60%);
+  }
+  .card.trump::before {
+    content: '';
+    position: absolute;
+    inset: 0 0 auto;
+    height: max(3px, calc(var(--w) * 0.06));
+    border-radius: calc(var(--w) * 0.1) calc(var(--w) * 0.1) 0 0;
+    background: var(--trump);
   }
   .corner {
     position: absolute;

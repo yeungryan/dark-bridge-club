@@ -28,6 +28,6 @@ Balatro's lesson: **if you hide something, the reveal has to be worth it.** Hand
   - The player who led gets a "led" tag and the winner gets "won" plus the gold ring; one player who did both gets "led · won".
   - Every hand shows what that player still holds, with the card they just played struck through.
   - A running tally shows both sides' progress toward their targets.
-- **Getting around:** ◀ ▶ buttons, swiping, the arrow keys, or a dot per step. The set that decided the game is starred.
+- **Getting around:** ◀ ▶ buttons, swiping, the arrow keys, or a mark per step. Each set's mark is the animal of the player who won it, in their team colour, as on the scoreboard (the bidding is an empty circle). The set that decided the game has a small star over it.
 - **Games that stopped early:** a game stopped at the clinch ends with "The game stopped here", and the unplayed cards stay in hand.
 - **When the data arrives:** every set (`DealView.playedTricks`) is sent only once the game is complete. During play, only the last set is ever sent (R8: remembering cards is part of the skill).

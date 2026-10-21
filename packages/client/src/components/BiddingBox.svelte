@@ -27,9 +27,10 @@
   const topBid = $derived([...deal.calls].reverse().find((c) => c.call.type === 'bid') ?? null);
   const topBy = $derived(topBid ? (topBid.seat === view.mySeat ? 'you' : nameAtSeat(view, conn.room!.profiles, topBid.seat)) : '');
 
-  // Your hand raises the cards the picked bid is about (cleared when the box closes).
+  // Your hand raises the cards the picked bid is about; with nothing picked, the cards of the
+  // bid to beat (Ryan). Cleared when the box closes.
   $effect(() => {
-    bidPreview.strain = selected?.type === 'bid' ? selected.strain : null;
+    bidPreview.strain = selected?.type === 'bid' ? selected.strain : topBid?.call.type === 'bid' ? topBid.call.strain : null;
   });
   onDestroy(() => (bidPreview.strain = null));
 

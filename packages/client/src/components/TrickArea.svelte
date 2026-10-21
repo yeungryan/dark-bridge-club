@@ -118,7 +118,7 @@
           class:win={celebrating && winner === play.seat}
           class:trumpwin={celebrating && winner === play.seat && fx?.kind !== 'normal'}
         >
-          <Card card={play.card} width={cardWidth} highlight={leading === play.seat || (celebrating && winner === play.seat)} />
+          <Card card={play.card} width={cardWidth} highlight={leading === play.seat || (celebrating && winner === play.seat)} trump={play.card.suit === trump} />
         </div>
       </div>
     </div>

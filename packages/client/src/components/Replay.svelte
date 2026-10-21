@@ -122,15 +122,19 @@
 
   <nav class="controls" aria-label="Replay controls">
     <button class="step" onclick={() => go(at - 1)} disabled={at === 0} aria-label="Previous set">◀</button>
+    <!-- One mark per set: the animal that won it, in its team colour, as on the scoreboard (Ryan). -->
     <div class="dots">
       {#each steps as s, i (i)}
+        {@const w = s.trick?.winner}
         <button
           class="dot"
+          class:set={w !== undefined}
           class:on={i === at}
           class:decisive={s.decisive}
-          aria-label={i === 0 ? 'The bidding' : `Set ${i}${s.decisive ? ' (decided it)' : ''}`}
+          style={w !== undefined ? `--t: ${teamColor(conn, w)}` : ''}
+          aria-label={i === 0 ? 'The bidding' : `Set ${i}${w !== undefined ? `, won by ${nameAtSeat(view, profiles, w)}` : ''}${s.decisive ? ' (decided it)' : ''}`}
           aria-current={i === at ? 'step' : undefined}
-          onclick={() => go(i)}>{s.decisive ? '★' : ''}</button
+          onclick={() => go(i)}>{w !== undefined ? emojiOf(avatarAtSeat(conn, w)) || '●' : ''}</button
         >
       {/each}
     </div>
@@ -353,30 +357,59 @@
   .dots {
     display: flex;
     justify-content: center;
-    gap: 3px;
+    align-items: center;
+    gap: 1px;
+    min-width: 0;
   }
   .dot {
+    position: relative;
     display: grid;
     place-items: center;
     flex: none;
-    width: 14px;
-    height: 14px;
+    width: 16px;
+    height: 20px;
     min-height: 0;
     padding: 0;
+    border: 0;
+    border-radius: 50%;
+    background: none;
+    font-size: 13px;
+    line-height: 1;
+    transition: transform calc(150ms * var(--speed));
+  }
+  /* The bidding: an empty outline, like a set still to come on the scoreboard. */
+  .dot:not(.set)::before {
+    content: '';
+    width: 8px;
+    height: 8px;
     border-radius: 50%;
     border: 1.5px solid var(--ink-dim);
-    background: none;
-    color: var(--accent);
+  }
+  /* A set: its winner's animal as a solid shape in the team colour. */
+  .dot.set {
+    color: transparent;
+    text-shadow: 0 0 0 var(--t);
+  }
+  /* The set that decided the game: a little gold star over it. */
+  .dot.decisive::after {
+    content: '★';
+    position: absolute;
+    top: -9px;
+    left: 50%;
+    translate: -50% 0;
     font-size: 9px;
-    line-height: 1;
+    color: var(--accent);
+    text-shadow: none;
   }
-  .dot.decisive {
-    border-color: var(--accent);
-  }
+  /* Where you are: bigger, on a lit disc. */
   .dot.on {
-    background: var(--accent);
+    transform: scale(1.35);
+    z-index: 1;
+    background: color-mix(in srgb, var(--accent) 30%, transparent);
+    box-shadow: 0 0 0 1.5px var(--accent);
+  }
+  .dot.on:not(.set)::before {
     border-color: var(--accent);
-    color: var(--accent-ink);
-    transform: scale(1.15);
+    background: var(--accent);
   }
 </style>

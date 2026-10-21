@@ -47,7 +47,7 @@ Each award goes to **whoever earns it** on the night, so the joke's namesake can
 - **Engine** (`moments.ts`, `captions.ts`): every detector and award is calculated from saved history (`DealHistory` / `NightHistory`) by replaying the saved sets against the contract, so old nights can be re-run with the same result.
 - **Thinking time** (`thinkclock.ts`): the clock runs for whoever is due to call or play. It stops while the table is paused, and one turn counts as 3 minutes at most. Totals are saved per game (`deals.think_json`).
 - **Saved data:** each night's seating (`sessions.seating_json`) and the `moments` and `awards` tables.
-- **On screen:** the reveal shows the game's moments as caption chips once all four hands are face up. At the end of the night, up to five award cards flip in one at a time after the winners' banner.
+- **On screen:** the reveal shows the game's moments as caption chips once all four hands are face up. At the end of the night, the top two award cards (Ryan: two, for impact) flip in side by side, one at a time, after the winners' banner.
 - **Award selection:**
   - Each award is scored against a "clearly earned" level.
   - House awards get a bonus.

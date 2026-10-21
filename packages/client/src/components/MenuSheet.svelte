@@ -5,15 +5,20 @@
   import SettingsSheet from './SettingsSheet.svelte';
 
   // The table menu (S10): a sheet that rises from the bottom, within thumb reach, over a dimmed
-  // table. Tap outside to close. Settings open inside it.
-  let { conn, canConcede, onClose }: { conn: Connection; canConcede: boolean; onClose: () => void } = $props();
+  // table. Tap outside to close. Settings open from the gear, top-right of the table (Ryan).
+  let {
+    conn,
+    canConcede,
+    start = 'menu',
+    onClose,
+  }: { conn: Connection; canConcede: boolean; start?: 'menu' | 'settings'; onClose: () => void } = $props();
 
   const view = $derived(conn.view!);
   const room = $derived(conn.room!);
   const theme = $derived(themeOf(room.theme));
   const votes = $derived(view.endNightVotes.length);
   const voted = $derived(view.endNightVotes.includes(view.me));
-  let page = $state<'menu' | 'settings'>('menu');
+  const page = $derived(start);
 
   function act(fn: () => void) {
     fn();
@@ -23,11 +28,10 @@
 
 <!-- svelte-ignore a11y_click_events_have_key_events, a11y_no_static_element_interactions -->
 <div class="backdrop" onclick={onClose}></div>
-<div class="sheet" role="dialog" aria-label="Menu">
+<div class="sheet" role="dialog" aria-label={page === 'settings' ? 'Settings' : 'Menu'}>
   <div class="handle" aria-hidden="true"></div>
   {#if page === 'settings'}
-    <button class="ghost back" onclick={() => (page = 'menu')}>‹ Menu</button>
-    <SettingsSheet onClose={() => (page = 'menu')} />
+    <SettingsSheet {onClose} />
   {:else}
     <div class="night">
       <span class="theme">{theme.name} <small>{theme.place}</small></span>
@@ -55,11 +59,6 @@
         <span class="text"><strong>End the night</strong><small>All four have to agree{votes ? ` · ${votes}/4 so far` : ''}</small></span>
       </button>
     {/if}
-
-    <button class="row" onclick={() => (page = 'settings')}>
-      <span class="icon" aria-hidden="true">⚙️</span>
-      <span class="text"><strong>Settings</strong><small>Effects, speed, playing cards, sound, vibration</small></span>
-    </button>
 
     <a class="row" href="lab.html" target="_blank" rel="noopener">
       <span class="icon" aria-hidden="true">🔊</span>
@@ -168,12 +167,7 @@
     color: var(--ink-dim);
     font-size: 13px;
   }
-  .close,
-  .back {
+  .close {
     justify-self: stretch;
-  }
-  .back {
-    justify-self: start;
-    min-height: 36px;
   }
 </style>

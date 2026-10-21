@@ -71,6 +71,11 @@ test('no sound before the first tap; after it, the game is audible', async ({ pa
 test('the bid ladder: tap a bid to see what it needs, then Bid; Pass is one tap', async ({ page }) => {
   await page.goto('/practice.html');
   await playUntil(page, () => page.locator('.box .ladder').isVisible());
+  // Nothing picked yet: the bid to beat's suit is raised, as many as the top line counts.
+  const context = (await page.locator('.box .context').textContent()) ?? '';
+  const held = /you hold (\d+|no)(?! aces?)\b/.exec(context);
+  if (held) await expect(page.locator('.hand .slot.preview')).toHaveCount(held[1] === 'no' ? 0 : Number(held[1]));
+  else if (context.startsWith('No bids yet')) await expect(page.locator('.hand .slot.preview')).toHaveCount(0);
   // A suit bid (not NT): picking it raises exactly my cards of that suit.
   const tile = page.locator('.ladder .tile:not([disabled]):not([aria-label$="no trumps"])').first();
   const label = ((await tile.textContent()) ?? '').trim();
@@ -204,6 +209,10 @@ test('after a game, replay it set by set with every hand face up', async ({ page
   // One player led and one won (the same player gets a single "led · won" tag).
   await expect(replay.locator('.tag.led')).toHaveCount(1);
   await expect(replay.locator('.tag.won')).toHaveCount(1);
+  // Each set's mark is the animal of the player who won it (as on the scoreboard).
+  await expect(replay.locator('.dot.set')).toHaveCount(sets);
+  const winner = (await replay.locator('.hand').filter({ has: page.locator('.tag.won') }).locator('.who > span').first().textContent())?.trim();
+  await expect(replay.locator('.dot.set').first()).toHaveText(winner!);
   // Jump to the set that decided it, then close.
   await replay.locator('.dot.decisive').tap();
   await expect(replay.getByText('This set decided it.')).toBeVisible();

@@ -52,10 +52,12 @@
 
   const cardWidth = $derived(Math.min(76, Math.max(46, Math.floor(width / 6.2))));
   const step = $derived(deal.hand.length > 1 ? Math.min(cardWidth * 0.82, (width - cardWidth) / (deal.hand.length - 1)) : 0);
-  // The bid you've picked (not yet confirmed) raises the cards it's about: its suit, or your
-  // honours for NT. Your screen only.
+  // The bid you've picked (or, before you pick, the bid to beat) raises the cards it's about:
+  // its suit, or your honours for NT. Your screen only.
   const previewed = (c: CardT) =>
     bidPreview.strain !== null && (bidPreview.strain === 'NT' ? c.rank >= 11 : c.suit === bidPreview.strain);
+  // Once the contract is set, your trumps carry a purple stripe for the rest of the game.
+  const trumpSuit = $derived(deal.contract && deal.contract.strain !== 'NT' ? deal.contract.strain : null);
   const isLegal = (c: CardT) => deal.legalPlays.some((l) => sameCard(l, c));
   const tapStyle = $derived(settings.playStyle === 'tap');
 
@@ -219,7 +221,7 @@
             class:suit-start={i > 0 && deal.hand[i - 1]!.suit !== card.suit}
             style="--rx: {l?.rx ?? 0}deg; --ry: {l?.ry ?? 0}deg; --sx: {50 + (l?.ry ?? 0) * 2.2}%; --sy: {50 - (l?.rx ?? 0) * 2.2}%"
           >
-            <Card {card} width={cardWidth} dim={myTurnToPlay && !isLegal(card)} highlight={up || held} />
+            <Card {card} width={cardWidth} dim={myTurnToPlay && !isLegal(card)} highlight={up || held} trump={card.suit === trumpSuit} />
             <!-- A sheen of light that slides across the face as the card turns. -->
             {#if l}<span class="sheen" aria-hidden="true"></span>{/if}
           </div>
