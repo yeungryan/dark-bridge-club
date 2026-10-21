@@ -96,6 +96,15 @@ describe('S06 per-player views', () => {
     });
   });
 
+  it('every set is visible for the replay only once the game is complete', () => {
+    botNight(3, (s) => {
+      if (!s.deal) return;
+      const tricks = tableView(s, 'ryan').deal!.playedTricks;
+      if (s.deal.phase === 'complete') expect(tricks).toEqual(s.deal.tricks);
+      else expect(tricks).toBeNull();
+    });
+  });
+
   it('legal options are only given to the player whose turn it is', () => {
     botNight(3, (s) => {
       if (!s.deal || (s.deal.phase !== 'auction' && s.deal.phase !== 'play')) return;

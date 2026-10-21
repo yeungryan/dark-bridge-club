@@ -21,3 +21,13 @@ Balatro's lesson: **if you hide something, the reveal has to be worth it.** Hand
 - [ ] Before `Revealed`, no other player's card exists in any client's memory or network log.
 - [ ] The reveal never starts a new deal by itself. The "all 4 ready" gate holds.
 - [ ] Skipping jumps straight to the final, fully revealed layout.
+
+## The replay (Ryan, M3)
+- **Opening it:** "▶ Replay this game" on the reveal opens a step-through of the finished game, on that phone only. It isn't synced; to show the others, share your screen on the Messenger call.
+- **The steps:** step 0 is the bidding with all four hands as dealt. Each later step puts that set's four cards on the table.
+  - The player who led gets a "led" tag and the winner gets "won" plus the gold ring; one player who did both gets "led · won".
+  - Every hand shows what that player still holds, with the card they just played struck through.
+  - A running tally shows both sides' progress toward their targets.
+- **Getting around:** ◀ ▶ buttons, swiping, the arrow keys, or a dot per step. The set that decided the game is starred.
+- **Games that stopped early:** a game stopped at the clinch ends with "The game stopped here", and the unplayed cards stay in hand.
+- **When the data arrives:** every set (`DealView.playedTricks`) is sent only once the game is complete. During play, only the last set is ever sent (R8: remembering cards is part of the skill).
