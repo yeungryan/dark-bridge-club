@@ -5,6 +5,8 @@
   import CallText from './CallText.svelte';
   import { buzz } from '../lib/juice/haptics';
   import { sound } from '../lib/juice/sound';
+  import { bidPreview } from '../lib/bidPreview.svelte';
+  import { onDestroy } from 'svelte';
 
   // Spec S12, the bid ladder (Ryan): every legal bid is its own little card, cheapest first,
   // two levels showing at a time; scroll for jumps and it snaps to a whole level. Tap a card to
@@ -24,6 +26,25 @@
   // What you're bidding over, in words.
   const topBid = $derived([...deal.calls].reverse().find((c) => c.call.type === 'bid') ?? null);
   const topBy = $derived(topBid ? (topBid.seat === view.mySeat ? 'you' : nameAtSeat(view, conn.room!.profiles, topBid.seat)) : '');
+
+  // Your hand raises the cards the picked bid is about (cleared when the box closes).
+  $effect(() => {
+    bidPreview.strain = selected?.type === 'bid' ? selected.strain : null;
+  });
+  onDestroy(() => (bidPreview.strain = null));
+
+  // With nothing picked, the top line counts what you hold of the bid to beat.
+  const myHand = $derived(deal.hand);
+  const holding = $derived.by(() => {
+    if (!topBid || topBid.call.type !== 'bid') return '';
+    const strain = topBid.call.strain;
+    if (strain === 'NT') {
+      const aces = myHand.filter((c) => c.rank === 14).length;
+      return aces === 0 ? 'you hold no aces' : `you hold ${aces} ${aces === 1 ? 'ace' : 'aces'}`;
+    }
+    const n = myHand.filter((c) => c.suit === strain).length;
+    return n === 0 ? 'you hold no' : `you hold ${n}`;
+  });
 
   const selected = $derived<Call | null>(picked && isLegal(picked.level, picked.strain) ? { type: 'bid', ...picked } : null);
 
@@ -59,7 +80,8 @@
     {#if selected?.type === 'bid'}
       <strong><CallText call={selected} /></strong>: you need <strong>{declarerTarget(selected.level)} sets</strong>, they need
       <strong>{defenderTarget(selected.level)}</strong>
-    {:else if topBid}To beat: <strong><CallText call={topBid.call} /></strong> by {topBy}
+    {:else if topBid}To beat: <strong><CallText call={topBid.call} /></strong> by {topBy}{#if holding}
+        · {holding}{#if topBid.call.type === 'bid' && topBid.call.strain !== 'NT'}&nbsp;<CallText strain={topBid.call.strain} />{/if}{/if}
     {:else}No bids yet: you can open{/if}
   </p>
   <div class="body">

@@ -71,10 +71,14 @@ test('no sound before the first tap; after it, the game is audible', async ({ pa
 test('the bid ladder: tap a bid to see what it needs, then Bid; Pass is one tap', async ({ page }) => {
   await page.goto('/practice.html');
   await playUntil(page, () => page.locator('.box .ladder').isVisible());
-  const tile = page.locator('.ladder .tile:not([disabled])').first();
+  // A suit bid (not NT): picking it raises exactly my cards of that suit.
+  const tile = page.locator('.ladder .tile:not([disabled]):not([aria-label$="no trumps"])').first();
   const label = ((await tile.textContent()) ?? '').trim();
+  const strain = ((await tile.getAttribute('aria-label')) ?? '').split(' ')[1] as 'C' | 'D' | 'H' | 'S';
+  const symbol = { C: '♣', D: '♦', H: '♥', S: '♠' }[strain];
   await tile.tap();
   await expect(page.locator('.box .context')).toContainText(/you need \d+ sets, they need \d+/);
+  await expect(page.locator('.hand .slot.preview')).toHaveCount(await page.locator(`.hand .card[aria-label$="of ${symbol}"]`).count());
   await expect(page.locator('.confirm')).toContainText(/Bid\s*\d/);
   await page.locator('.confirm').tap();
   await expect(page.locator('.strip .call').filter({ hasText: 'Ryan' }).last()).toContainText(label);

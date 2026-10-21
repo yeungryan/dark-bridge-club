@@ -55,3 +55,4 @@ Each award goes to **whoever earns it** on the night, so the joke's namesake can
   - A player gets at most two awards, unless that's needed to reach three.
   - A kind given last night is skipped unless it's clearly earned again.
 - **Epic Attic** counts how far short the declarers would still be even if they had won every set that wasn't played (games stop at the clinch). A defeat qualifies when it's 2+ short or at level 4 or higher. A one-short loss on the last set is a Heartbreak, not an attic.
+- **Award cards trimmed (Ryan):** no avatars. The house awards lead with their joke line as the headline, and the others with their name. One plain line follows: the player · the fact (e.g. "Darren · 2♠, made exactly").

@@ -23,7 +23,8 @@ const base = {
   '--good': '#63c58b',
   '--bad': '#e2725b',
   '--trump': '#c58bff',
-  /* The other pair's colour during play (yours is --accent). */
+  /* Team colours in every theme (Ryan): your pair is gold, the other pair silver. */
+  '--gold': '#e8c25a',
   '--silver': '#c9ced6',
   '--font': "system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif",
   '--font-display': "system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif",

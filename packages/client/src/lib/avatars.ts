@@ -27,7 +27,7 @@ export const glyphOf = (a: Avatar | null) => (a ? ELEMENT_INFO[a.element].glyph 
  */
 export function teamColor(conn: Link, seat: Seat): string {
   const me = conn.view?.mySeat;
-  return me !== null && me !== undefined && (seat - me) % 2 === 0 ? 'var(--accent)' : 'var(--silver)';
+  return me !== null && me !== undefined && (seat - me) % 2 === 0 ? 'var(--gold)' : 'var(--silver)';
 }
 
 /** Element ring colours for badges and cards. */

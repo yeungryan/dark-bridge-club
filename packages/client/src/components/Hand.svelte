@@ -5,6 +5,7 @@
   import { buzz } from '../lib/juice/haptics';
   import { launch } from '../lib/juice/launch.svelte';
   import { director } from '../lib/juice/director.svelte';
+  import { bidPreview } from '../lib/bidPreview.svelte';
   import { settings } from '../lib/juice/settings.svelte';
   import { sound } from '../lib/juice/sound';
   import { TIMING } from '../lib/juice/timing';
@@ -51,6 +52,10 @@
 
   const cardWidth = $derived(Math.min(76, Math.max(46, Math.floor(width / 6.2))));
   const step = $derived(deal.hand.length > 1 ? Math.min(cardWidth * 0.82, (width - cardWidth) / (deal.hand.length - 1)) : 0);
+  // The bid you've picked (not yet confirmed) raises the cards it's about: its suit, or your
+  // honours for NT. Your screen only.
+  const previewed = (c: CardT) =>
+    bidPreview.strain !== null && (bidPreview.strain === 'NT' ? c.rank >= 11 : c.suit === bidPreview.strain);
   const isLegal = (c: CardT) => deal.legalPlays.some((l) => sameCard(l, c));
   const tapStyle = $derived(settings.playStyle === 'tap');
 
@@ -190,6 +195,7 @@
       class:gone={isPending(card)}
       class:tilt={settings.motion}
       class:fan={fanning}
+      class:preview={!up && !held && previewed(card)}
       style="--i: {i}; --dx: {width / 2 - cardWidth / 2 - i * step}px; left: {i * step}px; {held ? `transform: translate(${drag!.dx}px, ${drag!.dy}px) rotate(${drag!.dx * 0.04}deg) scale(1.1)` : ''}"
       onpointerdown={(e) => down(e, card)}
       onpointermove={move}
@@ -210,6 +216,7 @@
             class="glowable"
             class:playable={myTurnToPlay && isLegal(card) && !up && !held}
             class:leaning={l !== null}
+            class:suit-start={i > 0 && deal.hand[i - 1]!.suit !== card.suit}
             style="--rx: {l?.rx ?? 0}deg; --ry: {l?.ry ?? 0}deg; --sx: {50 + (l?.ry ?? 0) * 2.2}%; --sy: {50 - (l?.rx ?? 0) * 2.2}%"
           >
             <Card {card} width={cardWidth} dim={myTurnToPlay && !isLegal(card)} highlight={up || held} />
@@ -252,6 +259,17 @@
     transition-timing-function: var(--spring-pop, cubic-bezier(0.34, 1.56, 0.64, 1));
   }
   /* A lifted card rises, grows, and sits on top of its neighbours. */
+  /* Raised for the bid you've picked. */
+  .slot.preview {
+    transform: translateY(-16px);
+  }
+  /* Where a suit starts (Ryan): a deeper shadow and a thin outline on its first card, so ♦
+     and ♥ (and ♣ and ♠) never run together. */
+  .glowable.suit-start :global(.card:not(.highlight)) {
+    box-shadow:
+      -5px 0 7px rgba(0, 0, 0, 0.55),
+      0 0 0 1.5px rgba(29, 29, 29, 0.55);
+  }
   /* While the deal flies in, the hand is empty; then it fans open from the middle. */
   .hand.dealing .slot {
     visibility: hidden;

@@ -6,8 +6,6 @@
   import { cssColor } from '../lib/themes';
   import { settings } from '../lib/juice/settings.svelte';
   import CountUp from './CountUp.svelte';
-  import Avatar from './Avatar.svelte';
-  import { avatarOf } from '../lib/avatars';
   import { awardText } from '../lib/stories';
   import { pop } from '../lib/juice/particles';
   import { sound } from '../lib/juice/sound';
@@ -77,12 +75,11 @@
       {#each awards.slice(0, shown) as award, i (award.kind)}
         {@const text = awardText(award, profiles)}
         {@const p = profileOf(profiles, award.profile)}
-        <article class="award" bind:this={cards[i]} style="--c: {p.color}">
+        <article class="award" bind:this={cards[i]} style="--c: {p.color}" aria-label={text.title}>
           <span class="emoji" aria-hidden="true">{text.emoji}</span>
           <div>
-            <h4>{text.title}</h4>
-            <p class="who"><Avatar avatar={avatarOf(conn, award.profile)} initial={p.name[0]} ring={p.color} size={22} /> {p.name}</p>
-            <p class="caption">{text.caption}</p>
+            <h4>{text.headline}</h4>
+            <p class="who">{text.line}</p>
           </div>
         </article>
       {/each}
@@ -169,19 +166,10 @@
     font-size: 1.05rem;
     color: var(--accent);
   }
+  /* One plain line: who, and what they did. */
   .who {
-    display: flex;
-    align-items: center;
-    gap: 6px;
-    margin: 4px 0 2px;
-    font-family: var(--font-name);
-    font-weight: 700;
-    color: var(--c);
-  }
-  .caption {
-    margin: 0;
+    margin: 3px 0 0;
     font-size: 13.5px;
-    font-style: italic;
     color: var(--ink-dim);
   }
   button {
