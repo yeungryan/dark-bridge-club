@@ -3,6 +3,15 @@
 
 export const SPEED = { normal: 1, fast: 0.6 } as const;
 
+/**
+ * Tests only: `?turbo=1` on the practice page plays everything at 0.15× and makes the bots
+ * answer at once, so end-to-end tests don't spend minutes watching animations. Players never
+ * see it (it's not a setting).
+ */
+export const TURBO = typeof location !== 'undefined' && new URLSearchParams(location.search).has('turbo');
+const TURBO_SPEED = 0.15;
+export const speedFactor = (mode: keyof typeof SPEED) => (TURBO ? TURBO_SPEED : SPEED[mode]);
+
 export const TIMING = {
   /** Card lifts when tapped. */
   raise: 160,

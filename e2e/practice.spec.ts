@@ -4,6 +4,12 @@ import { expect, test, type Locator, type Page } from '@playwright/test';
 // which also lets us check what a real night can't easily show: that sound switches on
 // after a tap, and that every step of the feel ladder actually fires.
 
+// Practice tests run side by side. The ones that only check where things end up run at test
+// speed (?turbo=1: animations at 0.15×, instant bots); the ones that check timing or look at a
+// passing moment (sound, the feel ladder, the bid ladder's strip, the avatar flip) run for real.
+test.describe.configure({ mode: 'parallel' });
+const PRACTICE = '/practice.html?turbo=1';
+
 const sounds = (page: Page) => page.evaluate(() => (window as unknown as { __darkSounds: string[] }).__darkSounds.slice());
 
 async function tap(locator: Locator): Promise<boolean> {
@@ -29,7 +35,8 @@ async function dragToTable(page: Page, card: Locator): Promise<void> {
 
 /** Move along (captain draw, partner pick, Next game, passing) until `until` is true. */
 async function playUntil(page: Page, until: () => Promise<boolean>, opts: { stayOnReveal?: boolean; noPass?: boolean } = {}): Promise<void> {
-  const deadline = Date.now() + 150_000;
+  // Only catches a game that has truly stopped (a busy machine can be slow, not stuck).
+  const deadline = Date.now() + 240_000;
   while (!(await until())) {
     if (Date.now() > deadline) throw new Error('Practice table got stuck');
     const skip = page.getByRole('button', { name: 'Skip the captain draw' });
@@ -71,8 +78,12 @@ test('the bid ladder: tap a bid to see what it needs, then Bid; Pass is one tap'
   await expect(page.locator('.strip .call').filter({ hasText: 'Ryan' }).last()).toContainText(label);
   // Next time it's my call (this auction or the next game's), Pass goes straight in.
   await playUntil(page, () => page.locator('.box .ladder').isVisible(), { noPass: true });
+  const before = (await sounds(page)).filter((s) => s === 'pass').length;
   await page.getByRole('button', { name: 'Pass', exact: true }).tap();
-  await expect(page.locator('.strip .call').filter({ hasText: 'Ryan' }).last()).toContainText('Pass');
+  // One tap and it's in: the box closes (no longer my call) and the pass is heard. (At test
+  // speed the bots may finish the auction at once, so the strip itself may already be gone.)
+  await expect(page.locator('.box .ladder')).toBeHidden();
+  await expect.poll(async () => (await sounds(page)).filter((s) => s === 'pass').length).toBeGreaterThan(before);
 });
 
 test('a whole deal by dragging cards: every beat of the feel ladder fires', async ({ page }) => {
@@ -88,7 +99,7 @@ test('a whole deal by dragging cards: every beat of the feel ladder fires', asyn
 
 test('Tap twice style: the second tap plays the raised card', async ({ page }) => {
   await page.addInitScript(() => localStorage.setItem('dark.main.settings', JSON.stringify({ playStyle: 'tap', v: 2 })));
-  await page.goto('/practice.html');
+  await page.goto(PRACTICE);
   await playUntil(page, () => page.locator('.table[data-turn="my-play"]').isVisible());
   const before = await page.locator('.hand .slot').count();
   const card = page.locator('.hand .slot').filter({ has: page.locator('.card:not(.dim)') }).first();
@@ -99,7 +110,7 @@ test('Tap twice style: the second tap plays the raised card', async ({ page }) =
 });
 
 test('Drag style: a second tap does not play; it asks for a swipe', async ({ page }) => {
-  await page.goto('/practice.html');
+  await page.goto(PRACTICE);
   await playUntil(page, () => page.locator('.table[data-turn="my-play"]').isVisible());
   const before = await page.locator('.hand .slot').count();
   const card = page.locator('.hand .slot').filter({ has: page.locator('.card:not(.dim)') }).first();
@@ -136,7 +147,7 @@ test('avatars: two animals, tap one and an element to lock in; the crest shows w
 });
 
 test('seats stay put from bidding to play; the newest set on the scoreboard opens the last set', async ({ page }) => {
-  await page.goto('/practice.html');
+  await page.goto(PRACTICE);
   // Each seat's avatar (the badge itself is centred, so its edge moves a hair with the role
   // tag or the card count; the avatar is what has to stay put).
   const seats = ['top', 'left', 'right', 'me'];
@@ -168,7 +179,7 @@ test('seats stay put from bidding to play; the newest set on the scoreboard open
 });
 
 test('after a game, replay it set by set with every hand face up', async ({ page }) => {
-  await page.goto('/practice.html');
+  await page.goto(PRACTICE);
   const open = page.getByRole('button', { name: /Replay this game/ });
   // Never tap "Next game" here: the reveal must still be up when the replay opens.
   await playUntil(page, () => open.isVisible(), { stayOnReveal: true });

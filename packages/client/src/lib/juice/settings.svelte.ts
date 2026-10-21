@@ -1,6 +1,6 @@
 import { options } from '../session';
 import { installSprings } from './spring';
-import { SPEED } from './timing';
+import { SPEED, speedFactor } from './timing';
 
 // Spec S16/S17: per-player feel settings, remembered on this device.
 //  - effects: full = everything; reduced = fades only (no shake, particles or movement); off = static.
@@ -85,7 +85,7 @@ class Settings {
         }
         // CSS reads these: --speed scales durations; fx-* classes switch animation styles.
         const root = document.documentElement;
-        root.style.setProperty('--speed', String(SPEED[this.speed]));
+        root.style.setProperty('--speed', String(speedFactor(this.speed)));
         root.classList.remove('fx-full', 'fx-reduced', 'fx-off');
         root.classList.add(`fx-${this.effects}`);
         if (!root.style.getPropertyValue('--spring-pop')) installSprings(root);
@@ -95,7 +95,7 @@ class Settings {
 
   /** Duration at the current speed. */
   ms(base: number): number {
-    return Math.round(base * SPEED[this.speed]);
+    return Math.round(base * speedFactor(this.speed));
   }
 
   get motion(): boolean {

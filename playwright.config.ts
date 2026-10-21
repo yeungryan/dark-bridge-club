@@ -7,7 +7,9 @@ const TEST_SEED = '000000080000dea100b21d9e0000c1ab';
 export default defineConfig({
   testDir: 'e2e',
   timeout: 5 * 60_000,
-  workers: 1,
+  // The night tests share one server and run in order in a single worker (describe.serial); the
+  // practice tests are independent and run alongside them.
+  workers: 2,
   // On GitHub, also report failures as annotations so they're readable from the API.
   reporter: process.env.CI ? [['list'], ['github']] : [['list']],
   use: {
