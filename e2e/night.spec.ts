@@ -126,7 +126,7 @@ async function playAsHuman(player: Player, deals: number): Promise<void> {
     }
     const pass = page.getByRole('button', { name: 'Pass', exact: true });
     if (await pass.isVisible()) {
-      if (await tap(pass)) await tap(page.getByRole('button', { name: 'Confirm Pass' }));
+      await tap(pass);
       continue;
     }
     if (await page.locator('.table[data-turn="my-play"]').isVisible()) {
@@ -153,7 +153,7 @@ async function reachMyTurnToPlay(player: Player): Promise<void> {
     else if (await partnerButton.isVisible()) await tap(partnerButton);
     else if ((await nextDeal.isVisible()) && (await isEnabledNow(nextDeal))) await tap(nextDeal);
     else if (await pass.isVisible()) {
-      if (await tap(pass)) await tap(page.getByRole('button', { name: 'Confirm Pass' }));
+      await tap(pass);
     } else await page.waitForTimeout(200);
   }
 }

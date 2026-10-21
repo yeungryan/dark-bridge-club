@@ -28,7 +28,7 @@ async function dragToTable(page: Page, card: Locator): Promise<void> {
 }
 
 /** Move along (captain draw, partner pick, Next game, passing) until `until` is true. */
-async function playUntil(page: Page, until: () => Promise<boolean>, opts: { bidSuitFirst?: boolean; stayOnReveal?: boolean } = {}): Promise<void> {
+async function playUntil(page: Page, until: () => Promise<boolean>, opts: { stayOnReveal?: boolean; noPass?: boolean } = {}): Promise<void> {
   const deadline = Date.now() + 150_000;
   while (!(await until())) {
     if (Date.now() > deadline) throw new Error('Practice table got stuck');
@@ -42,9 +42,8 @@ async function playUntil(page: Page, until: () => Promise<boolean>, opts: { bidS
     } else if (await skip.isVisible()) await tap(skip);
     else if (await partner.isVisible()) await tap(partner);
     else if (!opts.stayOnReveal && (await next.isVisible()) && (await next.isEnabled())) await tap(next);
-    else if (await pass.isVisible()) {
-      if (await tap(pass)) await tap(page.getByRole('button', { name: 'Confirm Pass' }));
-    } else if (await page.locator('.table[data-turn="my-play"]').isVisible()) {
+    else if (!opts.noPass && (await pass.isVisible())) await tap(pass);
+    else if (await page.locator('.table[data-turn="my-play"]').isVisible()) {
       await dragToTable(page, page.locator('.hand .slot').filter({ has: page.locator('.card:not(.dim)') }).first());
       await page.waitForTimeout(200);
     } else await page.waitForTimeout(150);
@@ -60,17 +59,20 @@ test('no sound before the first tap; after it, the game is audible', async ({ pa
   expect(await page.evaluate(() => (window as unknown as { __darkSounds: string[] }).__darkSounds.length)).toBeGreaterThan(0);
 });
 
-test('a bid can be chosen suit first, then level', async ({ page }) => {
+test('the bid ladder: tap a bid to see what it needs, then Bid; Pass is one tap', async ({ page }) => {
   await page.goto('/practice.html');
-  await playUntil(page, () => page.locator('.box .strains').isVisible());
-  const strain = page.locator('.strains button:not([disabled])').last();
-  await strain.tap();
-  await expect(page.locator('.box .context')).toContainText('now a level');
-  await page.locator('.levels button:not([disabled]):not(.faint)').first().tap();
+  await playUntil(page, () => page.locator('.box .ladder').isVisible());
+  const tile = page.locator('.ladder .tile:not([disabled])').first();
+  const label = ((await tile.textContent()) ?? '').trim();
+  await tile.tap();
+  await expect(page.locator('.box .context')).toContainText(/you need \d+ sets, they need \d+/);
   await expect(page.locator('.confirm')).toContainText(/^Bid \d/);
-  const label = ((await page.locator('.confirm').textContent()) ?? '').replace('Bid ', '').trim();
   await page.locator('.confirm').tap();
   await expect(page.locator('.strip .call').filter({ hasText: 'Ryan' }).last()).toContainText(label);
+  // Next time round, Pass goes straight in.
+  await playUntil(page, () => page.locator('.box .ladder').isVisible(), { stayOnReveal: true, noPass: true });
+  await page.getByRole('button', { name: 'Pass', exact: true }).tap();
+  await expect(page.locator('.strip .call').filter({ hasText: 'Ryan' }).last()).toContainText('Pass');
 });
 
 test('a whole deal by dragging cards: every beat of the feel ladder fires', async ({ page }) => {
@@ -150,7 +152,7 @@ test('seats stay put from bidding to play; the newest set on the scoreboard open
     await still.evaluate((el) => el.remove());
     return out;
   };
-  await playUntil(page, () => page.locator('.box .strains').isVisible());
+  await playUntil(page, () => page.locator('.box .ladder').isVisible());
   const bidding = await centres();
   // Play on until a set has been won.
   await playUntil(page, () => page.locator('.pip.latest').isVisible());
