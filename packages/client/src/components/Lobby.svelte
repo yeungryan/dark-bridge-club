@@ -11,7 +11,7 @@
   import LastTime from './LastTime.svelte';
 
   // Spec S15, cleaned up (Ryan): the DARK crest is the guest list. A letter is dim grey until
-  // its player arrives, lights up in their colour when they're here, and fills solid with a
+  // its player arrives, lights up when they're here (all four in one colour), and fills solid with a
   // small check once they've picked their animal. No list, no counts, no extra words.
   let { conn, complete = false }: { conn: Connection; complete?: boolean } = $props();
   let showHistory = $state(false);
@@ -56,7 +56,6 @@
       <span
         class:lit={isHere}
         class:ready
-        style="--c: {p.color}"
         title="{p.name}: {!isHere ? 'not here yet' : ready ? 'ready' : 'picking'}"
         aria-label="{p.name}: {!isHere ? 'not here yet' : ready ? 'ready' : 'picking'}"
       >
@@ -101,7 +100,9 @@
     padding: 200px 16px 24px;
     text-align: center;
   }
+  /* One colour for all four letters (Ryan), the theme's accent: the crest reads as the title. */
   .crest {
+    --c: var(--accent);
     display: flex;
     justify-content: center;
     gap: 10px;
@@ -133,7 +134,7 @@
   }
   /* Picked: filled solid, with a small check. */
   .crest span.ready {
-    color: #ffffff;
+    color: var(--accent-ink);
     background: var(--c);
     box-shadow: 0 0 16px color-mix(in srgb, var(--c) 55%, transparent);
     animation: fill calc(420ms * var(--speed)) cubic-bezier(0.3, 1.6, 0.6, 1);

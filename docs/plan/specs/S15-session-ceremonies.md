@@ -35,3 +35,5 @@ Make each night feel like an **event** (promise B), spending the big ceremonies 
 - **Shuffling:** each game waits for its dealer (engine phase `awaitingDeal`). The deck riffles in the middle of the table; only the dealer's phone plays the riffle sound. The dealer gets a glowing **Deal** button with a shuffle icon, and everyone else sees "Kim is shuffling…". There's **no automatic deal**: starting the game is the dealer's moment. Only the dealer can deal, and no hand exists until they do.
 - **Dealing:** after the tap, 52 cards fly from the deck round the table from the dealer's left, one every 27 ms, each with a light flick that rises in pitch. Your 13 land in your hand, which fans open with a paper sweep. Bidding opens once the cards have landed.
 - **Pass-outs:** the next dealer shuffles and deals again.
+
+**Crest colour (Ryan):** all four DARK letters share one colour, the theme's accent (dim until the player arrives, lit when here, solid once they've picked), as does "DARK" on the sign-in screen: the name reads as the title.

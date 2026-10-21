@@ -98,13 +98,21 @@
 
 <!-- svelte-ignore a11y_click_events_have_key_events, a11y_no_static_element_interactions -->
 <div class="reveal panel" class:skipped class:move={settings.motion} onclick={skip}>
-  <h3 bind:this={banner} class="banner {result.winner}">{verdict}: {pairNames(view, profiles, winningPair)} +1</h3>
-  <p class="muted">
-    <CallText call={{ type: 'bid', level: contract.level, strain: contract.strain }} /> by
-    {profileOf(profiles, view.seating![contract.declarer]).name} ·
-    declarers won {result.declarerTricks} sets, defenders {result.defenderTricks}
-    {#if result.overUnder !== null}· {result.overUnder >= 0 ? `+${result.overUnder}` : `${result.overUnder}`}{/if}
-  </p>
+  <!-- The result (Ryan: trimmed): one bold line, one quiet line, then the hands. Tap to skip. -->
+  <header class="result">
+    <h3 bind:this={banner} class="banner {result.winner}">
+      {verdict}{#if result.overUnder !== null && result.overUnder !== 0}
+        <span class="margin">{result.overUnder > 0 ? `+${result.overUnder}` : `−${-result.overUnder}`}</span>{/if}
+    </h3>
+    <p class="line">
+      <span class="bid"><CallText call={{ type: 'bid', level: contract.level, strain: contract.strain }} /></span>
+      <span class="by"><AnimalIcon animal={avatarAtSeat(conn, contract.declarer)?.animal} /> {profileOf(profiles, view.seating![contract.declarer]).name}</span>
+      <span class="sets" aria-label="Sets: declarers {result.declarerTricks}, defenders {result.defenderTricks}"
+        >{result.declarerTricks}–{result.defenderTricks} sets</span
+      >
+    </p>
+    <p class="winners">{pairNames(view, profiles, winningPair)} take the game</p>
+  </header>
 
   {#if moments.length > 0 && allFlipped}
     <ul class="moments" aria-label="Moments">
@@ -119,9 +127,9 @@
       {@const p = profileOf(profiles, view.seating![seat])}
       <div class="hand" class:flipped={flipped.includes(seat)} style="--c: {teamColor(conn, seat)}">
         <div class="who">
-          <AnimalIcon animal={avatarAtSeat(conn, seat)?.animal} /> {p.name}{seat === view.mySeat ? ' (you)' : ''}
-          <span class="muted">·
-            {#if flipped.includes(seat)}<CountUp value={hcp(hands[seat])} />{:else}?{/if} HCP</span>
+          <AnimalIcon animal={avatarAtSeat(conn, seat)?.animal} />
+          <span class="name">{p.name}</span>
+          <span class="hcp" aria-label="high-card points">{#if flipped.includes(seat)}<CountUp value={hcp(hands[seat])} />{:else}?{/if}</span>
         </div>
         {#if flipped.includes(seat)}
           <div class="face">
@@ -136,38 +144,36 @@
     {/each}
   </div>
 
-  <p class="tally">
-    Tonight: {pairNames(view, profiles, 'A')}
-    <strong class:scored={winningPair === 'A'}><CountUp value={view.wins.A} from={winningPair === 'A' ? view.wins.A - 1 : view.wins.A} delay={TIMING.reveal.banner} ticks /></strong>
-    ·
-    <strong class:scored={winningPair === 'B'}><CountUp value={view.wins.B} from={winningPair === 'B' ? view.wins.B - 1 : view.wins.B} delay={TIMING.reveal.banner} ticks /></strong>
-    {pairNames(view, profiles, 'B')}
-  </p>
-  {#if !skipped}<p class="skip muted">Tap to skip</p>{/if}
-
-  <button
-    class="ghost replay-open"
-    onclick={(e) => {
-      e.stopPropagation();
-      skip();
-      replaying = true;
-    }}>▶ Replay this game</button
-  >
-  <button
-    class="primary"
-    disabled={ready}
-    onclick={(e) => {
-      e.stopPropagation();
-      skip();
-      conn.intent({ type: 'readyForNext' });
-    }}
-  >
-    {ready ? 'Waiting for the others…' : 'Next game'}
-  </button>
-  <div class="ready">
+  <div class="actions">
+    <button
+      class="ghost rewind"
+      aria-label="Replay this game"
+      title="Replay this game"
+      onclick={(e) => {
+        e.stopPropagation();
+        skip();
+        replaying = true;
+      }}
+      ><svg viewBox="0 0 24 24" width="24" height="24" aria-hidden="true"><path fill="currentColor" d="M11 6v12L2.5 12zm10 0v12l-8.5-6z" /></svg></button
+    >
+    <button
+      class="primary next"
+      disabled={ready}
+      onclick={(e) => {
+        e.stopPropagation();
+        skip();
+        conn.intent({ type: 'readyForNext' });
+      }}
+    >
+      {ready ? 'Waiting for the others…' : 'Next game'}
+    </button>
+  </div>
+  <!-- Who's ready for the next game: their animals light up. -->
+  <div class="ready" aria-label="Ready for the next game">
     {#each view.profiles as id (id)}
       {@const p = profileOf(profiles, id)}
-      <span class:on={view.readyForNext.includes(id)} style="--c: {p.color}">{p.name}</span>
+      {@const on = view.readyForNext.includes(id)}
+      <span class:on title={p.name} aria-label="{p.name}{on ? ' is ready' : ''}"><AnimalIcon animal={conn.room!.avatars?.[id]?.animal} /></span>
     {/each}
   </div>
 </div>
@@ -175,17 +181,63 @@
 {#if replaying}<Replay game={liveReplay(conn)} onClose={() => (replaying = false)} />{/if}
 
 <style>
-  .replay-open {
-    min-height: 44px;
-  }
   .reveal {
     display: grid;
-    gap: 10px;
+    gap: 18px;
+    padding: 18px 16px 16px;
     text-align: center;
+  }
+  p {
+    margin: 0;
+  }
+  .result {
+    display: grid;
+    gap: 6px;
   }
   h3 {
     margin: 0;
-    font-size: 1.25rem;
+    font-family: var(--font-display);
+    font-size: 1.9rem;
+    line-height: 1.05;
+  }
+  .margin {
+    font-size: 0.7em;
+    opacity: 0.85;
+  }
+  .banner.declarers,
+  .banner.defenders {
+    color: var(--accent);
+  }
+  .line {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 14px;
+    font-size: 15px;
+    color: var(--ink);
+  }
+  .bid {
+    font-family: var(--font-card);
+    font-weight: 800;
+    font-size: 1.15rem;
+  }
+  .by {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    font-family: var(--font-name);
+    font-weight: 700;
+  }
+  .sets {
+    padding: 1px 8px;
+    border-radius: 999px;
+    border: 1px solid var(--line);
+    font-variant-numeric: tabular-nums;
+    color: var(--ink-dim);
+  }
+  .winners {
+    font-size: 13px;
+    color: var(--ink-dim);
   }
   /* Moments: little caption chips that spring in one after another. */
   .moments {
@@ -227,16 +279,50 @@
       opacity: 0;
     }
   }
-  .banner.declarers,
-  .banner.defenders {
-    color: var(--accent);
-  }
   .skipped .banner {
     animation: none;
   }
+  /* The four hands, two by two, each edged in its team colour. */
+  .hands {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px 14px;
+    text-align: left;
+    font-size: 14.5px;
+    line-height: 1.45;
+  }
+  .hand div {
+    white-space: nowrap;
+  }
+  .hand {
+    border-left: 3px solid var(--c);
+    padding-left: 10px;
+  }
+  .who {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    margin-bottom: 2px;
+    font-family: var(--font-name);
+    font-weight: 700;
+    color: var(--ink);
+  }
+  .hcp {
+    margin-left: auto;
+    padding: 0 7px;
+    border-radius: 999px;
+    background: color-mix(in srgb, var(--ink) 10%, transparent);
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--ink-dim);
+    font-variant-numeric: tabular-nums;
+  }
+  .red {
+    color: var(--red-on-felt);
+  }
   /* Face-down until each hand's turn, then it flips over. */
   .back {
-    height: 5.2em;
+    height: 5.8em;
     margin-top: 2px;
     border-radius: 6px;
     background: var(--card-back);
@@ -258,48 +344,37 @@
       opacity: 0;
     }
   }
-  .scored {
-    color: var(--accent);
-  }
-  .skip {
-    font-size: 12px;
-  }
-  p {
-    margin: 0;
-  }
-  .hands {
+  /* Rewind (the replay) beside a wide Next game. */
+  .actions {
     display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 8px 10px;
-    text-align: left;
-    font-size: 14px;
+    grid-template-columns: 56px 1fr;
+    gap: 10px;
   }
-  .hand div {
-    white-space: nowrap;
+  .rewind {
+    display: grid;
+    place-items: center;
+    min-height: 52px;
+    padding: 0;
   }
-  .hand {
-    border-left: 4px solid var(--c);
-    padding-left: 8px;
-  }
-  .who {
-    font-family: var(--font-name);
-    font-weight: 700;
-    color: var(--ink);
-  }
-  .red {
-    color: var(--red-on-felt);
+  .next {
+    min-height: 52px;
   }
   .ready {
     display: flex;
     justify-content: center;
-    gap: 8px;
-    font-size: 13px;
+    gap: 12px;
+    font-size: 22px;
   }
   .ready span {
-    opacity: 0.4;
+    display: grid;
+    opacity: 0.25;
+    filter: grayscale(1);
+    transition:
+      opacity calc(200ms * var(--speed)),
+      filter calc(200ms * var(--speed));
   }
   .ready span.on {
     opacity: 1;
-    color: var(--ink);
+    filter: none;
   }
 </style>
