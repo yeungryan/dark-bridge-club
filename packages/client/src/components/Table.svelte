@@ -145,7 +145,9 @@
             <!-- After a bid, each pass counts it down, in the middle of the table. -->
             {#if director.going > 0}
               {#key director.going}
-                <div class="going" role="status">🔨 {director.going === 1 ? 'Going once…' : 'Going twice…'}</div>
+                <div class="going" role="status" aria-label={director.going === 1 ? 'Going once…' : 'Going twice…'}>
+                  <small aria-hidden="true">🔨 Going</small><b aria-hidden="true">{director.going === 1 ? 'once…' : 'twice…'}</b>
+                </div>
               {/key}
             {/if}
           {:else}
@@ -367,27 +369,40 @@
     align-items: center;
     min-width: 0;
     aspect-ratio: 1 / 1;
+    container-type: inline-size;
   }
-  /* "Going once / twice": a solid pill in the middle of the table, clear of the calls. */
+  /* "Going once / twice": a small stamp in the middle of the table, narrow enough to sit between
+     the side seats' calls. */
   .going {
     position: absolute;
     top: 50%;
     left: 50%;
     z-index: 2;
     translate: -50% -50%;
-    padding: 5px 14px;
-    border-radius: 999px;
+    display: grid;
+    justify-items: center;
+    gap: 1px;
+    padding: min(5px, 3cqw) min(8px, 4.5cqw) min(6px, 3.5cqw);
+    border-radius: min(12px, 7cqw);
     background: var(--accent);
     color: var(--accent-ink);
-    font-size: 13px;
-    font-weight: 800;
-    letter-spacing: 0.06em;
+    line-height: 1;
     text-transform: uppercase;
     white-space: nowrap;
     box-shadow:
       0 4px 14px rgba(0, 0, 0, 0.45),
       0 0 18px var(--accent-glow);
     animation: going-in calc(var(--spring-pop-ms, 380ms) * var(--speed)) var(--spring-pop, cubic-bezier(0.3, 1.6, 0.6, 1)) backwards;
+  }
+  .going small {
+    font-size: min(9px, 5.4cqw);
+    font-weight: 700;
+    letter-spacing: 0.08em;
+  }
+  .going b {
+    font-size: min(15px, 9cqw);
+    font-weight: 850;
+    letter-spacing: 0.02em;
   }
   @keyframes going-in {
     from {

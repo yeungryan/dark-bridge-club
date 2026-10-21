@@ -69,6 +69,8 @@
   .calls {
     position: absolute;
     inset: 4px;
+    /* Tiles scale with the table, so a small phone's small table still fits four seats of calls. */
+    container-type: size;
   }
   .spot {
     position: absolute;
@@ -105,9 +107,9 @@
     display: grid;
     /* The call sits at the tile's leading corner, so it still reads when the next call overlaps. */
     place-items: center start;
-    padding-left: 4px;
-    width: 34px;
-    height: 24px;
+    padding-left: min(4px, 2.5cqw);
+    width: min(34px, 20cqw);
+    height: min(24px, 14cqw);
     flex: none;
     border-radius: 4px;
     background: var(--card);
@@ -116,28 +118,28 @@
     box-shadow: 0 1px 3px rgba(0, 0, 0, 0.5);
     font-family: var(--font-card);
     font-weight: 800;
-    font-size: 13px;
+    font-size: min(13px, 8cqw);
     line-height: 1;
   }
   /* Each call overlaps the one before it; the latest is on top. */
   .at-top .tile + .tile,
   .at-bottom .tile + .tile {
-    margin-left: -13px;
+    margin-left: max(-13px, -7.6cqw);
   }
   .at-left .tile,
   .at-right .tile {
     align-items: start;
-    padding-top: 4px;
+    padding-top: min(4px, 2.4cqw);
   }
   .at-left .tile + .tile,
   .at-right .tile + .tile {
-    margin-top: -9px;
+    margin-top: max(-9px, -5.3cqw);
   }
   /* A pass is the green card of a bidding box, and quieter. */
   .tile.pass {
     background: #3f8f5a;
     color: #f2fff5;
-    font-size: 9.5px;
+    font-size: min(9.5px, 5.8cqw);
   }
   /* The bid to beat. */
   .tile.top {
