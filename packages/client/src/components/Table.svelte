@@ -146,7 +146,7 @@
             {#if director.going > 0}
               {#key director.going}
                 <div class="going" role="status" aria-label={director.going === 1 ? 'Going once…' : 'Going twice…'}>
-                  <small aria-hidden="true">🔨 Going</small><b aria-hidden="true">{director.going === 1 ? 'once…' : 'twice…'}</b>
+                  <small aria-hidden="true">Going</small><b aria-hidden="true">{director.going === 1 ? 'once…' : 'twice…'}</b>
                 </div>
               {/key}
             {/if}

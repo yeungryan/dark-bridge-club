@@ -57,7 +57,7 @@
   {#each bySeat as { seat, calls: mine } (seat)}
     <ol class="spot at-{spotOf(seat, me)}" data-calls-seat={seat} style="--c: {color(seat)}">
       {#each mine as c (c.i)}
-        <li class="tile" class:pass={c.call.type === 'pass'} class:top={c.i === lastBid} use:arrive={seat}>
+        <li class="tile" data-call={c.i} class:pass={c.call.type === 'pass'} class:top={c.i === lastBid} use:arrive={seat}>
           <CallText call={c.call} red="var(--card-red)" />
         </li>
       {/each}
