@@ -20,9 +20,11 @@ const config: SessionConfig = {
   seed: '11112222333344445555666677778888',
 };
 
-function apply(state: SessionState, action: SessionAction): SessionState {
+function apply(state: SessionState, action: SessionAction, autoDeal = true): SessionState {
   const out = applySessionAction(state, action);
   if (!out.ok) throw new Error(`${action.type} rejected: ${out.error.code}`);
+  // Most tests aren't about dealing: the dealer deals at once.
+  if (autoDeal && out.state.phase === 'awaitingDeal') return apply(out.state, { type: 'dealCards', by: out.state.seating![out.state.dealer!] });
   return out.state;
 }
 
@@ -58,6 +60,44 @@ function allReady(s: SessionState): SessionState {
 }
 
 describe('S05 session', () => {
+  it('each game waits for its dealer to deal; nobody else can, and nothing is dealt before', () => {
+    let s = apply(newSession(config), { type: 'start' });
+    s = apply(s, { type: 'pickPartner', by: s.captain!, partner: s.suggestedPartner! }, false);
+    expect(s.phase).toBe('awaitingDeal');
+    expect(s.deal).toBeNull();
+    expect(s.dealNumber).toBe(0);
+    const dealer = s.seating![s.dealer!];
+    for (const other of config.profiles.filter((p) => p !== dealer)) {
+      const out = applySessionAction(s, { type: 'dealCards', by: other });
+      expect(out.ok ? 'ok' : out.error.code).toBe('NOT_DEALER');
+    }
+    // Nothing can be played before the deal.
+    expect(applySessionAction(s, { type: 'deal', by: dealer, action: { type: 'call', call: PASS } }).ok).toBe(false);
+    const out = applySessionAction(s, { type: 'dealCards', by: dealer });
+    expect(out.ok).toBe(true);
+    if (!out.ok) return;
+    expect(out.state.phase).toBe('inDeal');
+    expect(out.state.dealNumber).toBe(1);
+    expect(out.events.map((e) => e.type)).toEqual(['dealStarted']);
+    // Dealing twice is refused.
+    expect(applySessionAction(out.state, { type: 'dealCards', by: dealer }).ok).toBe(false);
+  });
+
+  it('after everyone is ready, the next dealer deals the next game (and a pass-out waits too)', () => {
+    let s = playDeal(seated());
+    const nextDealer = next(s.dealer!);
+    for (const by of config.profiles) s = apply(s, { type: 'readyForNext', by }, false);
+    expect(s.phase).toBe('awaitingDeal');
+    expect(s.dealer).toBe(nextDealer);
+    s = apply(s, { type: 'dealCards', by: s.seating![nextDealer] });
+    expect(s.phase).toBe('inDeal');
+    // Four passes: the next dealer shuffles and deals again.
+    const passedDealer = s.dealer!;
+    for (let i = 0; i < 4; i++) s = apply(s, { type: 'deal', by: actor(s), action: { type: 'call', call: PASS } }, false);
+    expect(s.phase).toBe('awaitingDeal');
+    expect(s.dealer).toBe(next(passedDealer));
+  });
+
   it('draws a captain and pre-selects their usual partner', () => {
     const s = apply(newSession(config), { type: 'start' });
     expect(s.phase).toBe('partnerPick');

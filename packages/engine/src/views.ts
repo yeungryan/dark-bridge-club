@@ -54,6 +54,8 @@ export interface TableView {
   readonly pairs: Readonly<Record<PairId, readonly [ProfileId, ProfileId]>> | null;
   readonly seating: PerSeat<ProfileId> | null;
   readonly dealNumber: number;
+  /** Who deals the current (or next, while shuffling) game. */
+  readonly dealer: Seat | null;
   readonly wins: Readonly<Record<PairId, number>>;
   readonly passOuts: number;
   readonly readyForNext: readonly ProfileId[];
@@ -74,6 +76,7 @@ export function tableView(state: SessionState, me: ProfileId): TableView {
     pairs: state.pairs,
     seating: state.seating,
     dealNumber: state.dealNumber,
+    dealer: state.dealer,
     wins: state.wins,
     passOuts: state.passOuts,
     readyForNext: state.readyForNext,

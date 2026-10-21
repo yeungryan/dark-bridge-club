@@ -18,17 +18,39 @@
   import { settings } from '../lib/juice/settings.svelte';
   import { TIMING } from '../lib/juice/timing';
   import TrickArea from './TrickArea.svelte';
+  import Deck from './Deck.svelte';
+  import DealFlight from './DealFlight.svelte';
+  import { buzz } from '../lib/juice/haptics';
+  import { sound } from '../lib/juice/sound';
 
   // Spec S10: you at the bottom, partner on top, the next player (counter-clockwise) on your right.
   // The top-right corner is kept clear for Messenger's floating video.
   let { conn }: { conn: Connection } = $props();
 
   const view = $derived(conn.view!);
-  const deal = $derived(view.deal!);
+  const deal = $derived(view.deal);
   const profiles = $derived(conn.room!.profiles);
   const me = $derived(view.mySeat!);
-  const contract = $derived(deal.contract);
-  const myTurnToCall = $derived(deal.phase === 'auction' && deal.turn === me && !conn.room!.paused);
+  // The dealer is shuffling: nothing is dealt until they tap Deal (Ryan).
+  const shuffling = $derived(view.phase === 'awaitingDeal' || !deal);
+  const iDeal = $derived(shuffling && view.dealer === me);
+  const contract = $derived(deal?.contract ?? null);
+  // Bid once your cards have landed.
+  const myTurnToCall = $derived(deal?.phase === 'auction' && deal.turn === me && !conn.room!.paused && !director.dealing);
+  let dealt = $state(false);
+  function dealCards() {
+    if (dealt) return;
+    dealt = true;
+    sound.dealButton();
+    buzz('sold');
+    conn.intent({ type: 'dealCards' });
+  }
+  $effect(() => {
+    if (!shuffling) dealt = false;
+  });
+  // The hand's space is kept while shuffling, so nothing moves when the cards arrive.
+  let handWidth = $state(360);
+  const handHeight = $derived(Math.min(76, Math.max(46, Math.floor(handWidth / 6.2))) * 1.4 + 22);
   const pairOf = (seat: Seat) => `${nameAtSeat(view, profiles, seat)} & ${nameAtSeat(view, profiles, partner(seat))}`;
 
   let menuOpen = $state(false);
@@ -37,7 +59,7 @@
   let showPairs = $state(false);
   let announced = false;
   $effect(() => {
-    if (!announced && view.dealNumber === 1 && deal.phase === 'auction' && deal.calls.length === 0 && settings.animated) {
+    if (!announced && view.dealNumber === 1 && deal?.phase === 'auction' && deal.calls.length === 0 && !director.dealing && settings.animated) {
       announced = true;
       showPairs = true;
       setTimeout(() => (showPairs = false), settings.ms(TIMING.ceremony.pairSnap));
@@ -48,25 +70,25 @@
 
   // Both sides one trick away: the table lights dim for the decider (S13, intensity 4).
   const decider = $derived(
-    deal.phase === 'play' &&
+    deal?.phase === 'play' &&
       !deal.clinch &&
       contract !== null &&
       deal.declarerTarget! - deal.tricksWon.declarers === 1 &&
       deal.defenderTarget! - deal.tricksWon.defenders === 1,
   );
-  const canConcede = $derived(deal.phase === 'play' && !deal.clinch && !deal.concession && !deal.playingOn);
+  const canConcede = $derived(deal?.phase === 'play' && !deal.clinch && !deal.concession && !deal.playingOn);
   const myRole = $derived(contract ? (me === contract.declarer ? 'Declarer' : me === partner(contract.declarer) ? 'Partner' : 'Defender') : '');
   const turnText = $derived.by(() => {
-    if (deal.turn === null) return '';
+    if (!deal || deal.turn === null) return iDeal ? 'Your deal' : '';
     if (deal.turn === me) return deal.phase === 'auction' ? 'Your call' : 'Your turn to play';
     return `${nameAtSeat(view, profiles, deal.turn)} to ${deal.phase === 'auction' ? 'call' : 'play'}`;
   });
 </script>
 
-<div class="table" class:decider data-turn={deal.turn === me ? (deal.phase === 'auction' ? 'my-call' : deal.phase === 'play' ? 'my-play' : '') : ''}>
+<div class="table" class:decider data-turn={iDeal ? 'my-deal' : deal?.turn === me ? (deal.phase === 'auction' ? 'my-call' : deal.phase === 'play' ? 'my-play' : '') : ''}>
   <header>
     <button class="ghost menu" aria-label="Menu" onclick={() => (menuOpen = !menuOpen)}>☰</button>
-    <h1 class="game">Game {view.dealNumber}</h1>
+    <h1 class="game">Game {shuffling ? view.dealNumber + 1 : view.dealNumber}</h1>
     <span aria-hidden="true"></span>
   </header>
 
@@ -88,7 +110,7 @@
     </div>
   {/if}
 
-  {#if view.phase === 'betweenDeals' && deal.result && !director.revealHold}
+  {#if view.phase === 'betweenDeals' && deal?.result && !director.revealHold}
     <section class="reveal-area"><Reveal {conn} /></section>
   {:else}
     <section class="middle">
@@ -100,7 +122,9 @@
         <div class="center">
           <!-- The table itself, in tonight's theme (felt and wood, an infinity pool, neon...). -->
           <div class="surface" aria-hidden="true"></div>
-          {#if deal.phase === 'auction'}
+          {#if shuffling || !deal}
+            <Deck riffleSound={iDeal} />
+          {:else if deal.phase === 'auction'}
             <div class="auction"><AuctionStrip {conn} /></div>
           {:else}
             <TrickArea {conn} />
@@ -112,7 +136,7 @@
     </section>
   {/if}
 
-  {#if peek && deal.lastTrick}
+  {#if peek && deal?.lastTrick}
     {#key deal.tricksPlayed}
       <LastTrickPeek trick={deal.lastTrick} {view} {profiles} onClose={() => (peek = false)} />
     {/key}
@@ -124,16 +148,35 @@
          Its slot is the same height in bidding and play, and the bidding box and the auction
          float up from it over the empty felt, so the table never moves (Ryan). -->
     <div class="board" class:covered={myTurnToCall}>
-      <Scoreboard {conn} onPeek={() => (peek = !peek)} onAuction={() => (showAuction = !showAuction)} />
+      {#if shuffling}
+        <!-- The dealer deals when they're ready; everyone else waits on them. -->
+        <div class="dealing">
+          {#if iDeal}
+            <button class="primary deal" onclick={dealCards} disabled={dealt}>
+              <svg class="shuffle" viewBox="0 0 24 24" aria-hidden="true"
+                ><path d="M3 7h3.5c2 0 3.2 1 4.3 2.7l2.4 4.6C14.3 16 15.5 17 17.5 17H21M3 17h3.5c2 0 3.2-1 4.3-2.7M13.2 9.7C14.3 8 15.5 7 17.5 7H21M18 4l3 3-3 3M18 14l3 3-3 3" /></svg
+              >
+              Deal
+            </button>
+          {:else}
+            <p class="waiting-deal">{view.dealer !== null ? nameAtSeat(view, profiles, view.dealer) : 'The dealer'} is shuffling…</p>
+          {/if}
+        </div>
+      {:else}
+        <Scoreboard {conn} onPeek={() => (peek = !peek)} onAuction={() => (showAuction = !showAuction)} />
+      {/if}
       {#if myTurnToCall}
         <div class="float"><BiddingBox {conn} /></div>
-      {:else if showAuction && deal.phase !== 'auction'}
+      {:else if showAuction && deal && deal.phase !== 'auction'}
         <div class="float above"><AuctionStrip {conn} /></div>
       {/if}
     </div>
     <!-- Whose turn is shown on the seats themselves (S10); this line is for screen readers. -->
     {#if view.phase === 'inDeal' && turnText}<p class="sr-only" aria-live="polite">{turnText}</p>{/if}
-    {#if view.phase === 'inDeal'}<Hand {conn} />{/if}
+    {#if view.phase === 'inDeal' && deal}<Hand {conn} />{:else if shuffling}<div class="hand hand-space" bind:clientWidth={handWidth} style="height: {handHeight}px"></div>{/if}
+    {#if director.dealing && deal && view.mySeat !== null}
+      {#key director.dealing.id}<DealFlight dealer={director.dealing.dealer} me={view.mySeat} />{/key}
+    {/if}
   </section>
 </div>
 
@@ -304,6 +347,47 @@
     display: grid;
     gap: 6px;
     justify-items: stretch;
+  }
+  /* While the dealer shuffles: the Deal button (with a shuffle icon), or who we're waiting on. */
+  .dealing {
+    display: grid;
+    place-items: center;
+    height: 100%;
+  }
+  .deal {
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    min-height: 56px;
+    padding: 0 34px;
+    font-size: 1.25rem;
+    font-weight: 800;
+    letter-spacing: 0.03em;
+    box-shadow: 0 0 22px var(--accent-glow);
+  }
+  :global(.fx-full) .deal:not(:disabled) {
+    animation: deal-ready calc(1600ms * var(--speed)) ease-in-out infinite;
+  }
+  @keyframes deal-ready {
+    50% {
+      transform: scale(1.04);
+      box-shadow: 0 0 32px var(--accent-glow);
+    }
+  }
+  .shuffle {
+    width: 24px;
+    height: 24px;
+    fill: none;
+    stroke: currentColor;
+    stroke-width: 2.2;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+  }
+  .waiting-deal {
+    margin: 0;
+    font-family: var(--font-name);
+    font-size: 15px;
+    color: var(--ink-dim);
   }
   /* The scoreboard's slot: one fixed height in every phase. */
   .board {

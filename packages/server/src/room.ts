@@ -81,7 +81,7 @@ interface Stored {
   awards: Award[] | null;
 }
 
-const IN_PROGRESS = new Set(['partnerPick', 'inDeal', 'betweenDeals']);
+const IN_PROGRESS = new Set(['partnerPick', 'awaitingDeal', 'inDeal', 'betweenDeals']);
 
 export class TableRoom extends DurableObject<Env> {
   private readonly sql: SqlStorage;

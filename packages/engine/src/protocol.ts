@@ -10,6 +10,7 @@ export type ClientIntent =
   | { type: 'pickPartner'; partner: ProfileId }
   | { type: 'deal'; action: PlayerDealAction }
   | { type: 'readyForNext' }
+  | { type: 'dealCards' }
   | { type: 'voteEndNight' }
   | { type: 'cancelEndNight' };
 

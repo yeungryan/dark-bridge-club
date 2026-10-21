@@ -4,6 +4,7 @@
   import { sameCard } from '../lib/format';
   import { buzz } from '../lib/juice/haptics';
   import { launch } from '../lib/juice/launch.svelte';
+  import { director } from '../lib/juice/director.svelte';
   import { settings } from '../lib/juice/settings.svelte';
   import { sound } from '../lib/juice/sound';
   import { TIMING } from '../lib/juice/timing';
@@ -33,6 +34,19 @@
     void handKey;
     raised = null;
     pending = null;
+  });
+
+  // The deal: hidden while the cards fly, then the hand fans open from the middle.
+  // (The fan class comes off once it has played, so a later animation can't replay it.)
+  let fanning = $state(false);
+  let wasDealing = false;
+  $effect(() => {
+    const dealing = director.dealing !== null;
+    if (wasDealing && !dealing && settings.motion) {
+      fanning = true;
+      setTimeout(() => (fanning = false), settings.ms(1200));
+    }
+    wasDealing = dealing;
   });
 
   const cardWidth = $derived(Math.min(76, Math.max(46, Math.floor(width / 6.2))));
@@ -162,7 +176,7 @@
   const isPending = (card: CardT) => pending !== null && sameCard(pending.card, card);
 </script>
 
-<div class="hand" bind:clientWidth={width} style="height: {cardWidth * 1.4 + 22}px">
+<div class="hand" class:dealing={director.dealing !== null} bind:clientWidth={width} style="height: {cardWidth * 1.4 + 22}px">
   {#each deal.hand as card, i (card.suit + card.rank)}
     {@const up = raised !== null && sameCard(raised, card)}
     {@const held = dragging(card)}
@@ -175,7 +189,8 @@
       class:armed={held && launch.armed}
       class:gone={isPending(card)}
       class:tilt={settings.motion}
-      style="left: {i * step}px; {held ? `transform: translate(${drag!.dx}px, ${drag!.dy}px) rotate(${drag!.dx * 0.04}deg) scale(1.1)` : ''}"
+      class:fan={fanning}
+      style="--i: {i}; --dx: {width / 2 - cardWidth / 2 - i * step}px; left: {i * step}px; {held ? `transform: translate(${drag!.dx}px, ${drag!.dy}px) rotate(${drag!.dx * 0.04}deg) scale(1.1)` : ''}"
       onpointerdown={(e) => down(e, card)}
       onpointermove={move}
       onpointerup={release}
@@ -237,6 +252,20 @@
     transition-timing-function: var(--spring-pop, cubic-bezier(0.34, 1.56, 0.64, 1));
   }
   /* A lifted card rises, grows, and sits on top of its neighbours. */
+  /* While the deal flies in, the hand is empty; then it fans open from the middle. */
+  .hand.dealing .slot {
+    visibility: hidden;
+  }
+  .slot.fan {
+    animation: fan-in calc(var(--spring-pop-ms, 400ms) * var(--speed)) var(--spring-pop, cubic-bezier(0.3, 1.5, 0.6, 1))
+      calc(var(--i) * 22ms * var(--speed)) backwards;
+  }
+  @keyframes fan-in {
+    from {
+      transform: translateX(var(--dx)) translateY(18px) rotate(calc((var(--i) - 6) * 3deg));
+      opacity: 0;
+    }
+  }
   .slot.up {
     transform: translateY(-26px) scale(1.12);
     z-index: 2;
