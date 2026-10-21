@@ -6,6 +6,7 @@
   import { buzz } from '../lib/juice/haptics';
   import { sound } from '../lib/juice/sound';
   import AnimalIcon from './AnimalIcon.svelte';
+  import { elementArt } from '../lib/animalArt';
 
   // Spec S24, simplified (Ryan): two animals, four elements, no words and no buttons to confirm.
   // Picking one of each locks you in; tapping another changes it until the night starts.
@@ -66,7 +67,7 @@
           style="--el: {ELEMENT_RING[e]}"
           aria-label={ELEMENT_INFO[e].name}
           aria-pressed={element === e}
-          onclick={() => choose({ element: e })}>{ELEMENT_INFO[e].glyph}</button
+          onclick={() => choose({ element: e })}><img class="el-art" src={elementArt(e)} alt="" draggable="false" /></button
         >
       {/each}
     </div>
@@ -103,6 +104,12 @@
     transition:
       transform calc(160ms * var(--speed)) cubic-bezier(0.3, 1.6, 0.6, 1),
       box-shadow calc(160ms * var(--speed));
+  }
+  .el-art {
+    width: 30px;
+    height: 30px;
+    pointer-events: none;
+    filter: drop-shadow(0 1px 1px rgba(0, 0, 0, 0.35));
   }
   .elements {
     display: grid;

@@ -9,6 +9,7 @@
   import CallText from './CallText.svelte';
   import Suit from './Suit.svelte';
   import AnimalIcon from './AnimalIcon.svelte';
+  import TableScene from './TableScene.svelte';
 
   // The replay (Ryan): after a game, step back through it set by set with every hand face up:
   // who led each set, who won it, and what everyone still held. Each player steps through on
@@ -73,6 +74,8 @@
 <svelte:window onkeydown={key} />
 
 <div class="replay" role="dialog" aria-modal="true" aria-label="Replay of game {view.dealNumber}">
+  <!-- Tonight's scene along the top, as at the table (the replay's felt would hide the page's). -->
+  <TableScene theme={conn.room!.theme} />
   <header>
     <button class="ghost close" aria-label="Close the replay" onclick={onClose}>✕</button>
     <h2>Replay · Game {view.dealNumber}</h2>

@@ -9,9 +9,9 @@ export type Element = 'fire' | 'air' | 'water' | 'earth';
 export const ELEMENTS: readonly Element[] = ['fire', 'air', 'water', 'earth'];
 export const ELEMENT_INFO: Record<Element, { name: string; glyph: string }> = {
   fire: { name: 'Fire', glyph: '🔥' },
-  air: { name: 'Air', glyph: '🌬️' },
-  water: { name: 'Water', glyph: '🌊' },
-  earth: { name: 'Earth', glyph: '🪨' },
+  air: { name: 'Air', glyph: '💨' },
+  water: { name: 'Water', glyph: '💧' },
+  earth: { name: 'Earth', glyph: '⛰️' },
 };
 
 export interface Animal {
@@ -50,7 +50,7 @@ export const ANIMALS: readonly Animal[] = [
   { id: 'rhino', name: 'Rhino', emoji: '🦏' },
   { id: 'dragon', name: 'Dragon', emoji: '🐲' },
   { id: 'shark', name: 'Shark', emoji: '🦈' },
-  { id: 'koi', name: 'Koi', emoji: '🎏' },
+  { id: 'koi', name: 'Koi', emoji: '🐠' },
   { id: 'octopus', name: 'Octopus', emoji: '🐙' },
 ];
 
