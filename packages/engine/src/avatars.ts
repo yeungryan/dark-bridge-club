@@ -21,35 +21,60 @@ export interface Animal {
   readonly emoji: string;
 }
 
-/** The 24-animal roster (Ryan's edits: Dragon, Badgermole and Koi replace Red Panda, Badger and Raccoon). */
+/**
+ * The 24-animal roster, all faces (Ryan): earlier edits brought in Dragon, Badgermole and Koi; then
+ * ten became face icons (Otter → Dog, Owl → Raccoon, Hawk → Chicken, Badgermole → Hamster,
+ * Elephant → Gorilla, Turtle → Frog, Penguin → Polar bear, Lemur → Monkey, Bison → Cow,
+ * Crane → Deer). The client draws them with Twemoji art; `emoji` is the matching character.
+ */
 export const ANIMALS: readonly Animal[] = [
   { id: 'tiger', name: 'Tiger', emoji: '🐯' },
   { id: 'wolf', name: 'Wolf', emoji: '🐺' },
   { id: 'bear', name: 'Bear', emoji: '🐻' },
   { id: 'fox', name: 'Fox', emoji: '🦊' },
-  { id: 'otter', name: 'Otter', emoji: '🦦' },
-  { id: 'owl', name: 'Owl', emoji: '🦉' },
-  { id: 'eagle', name: 'Eagle', emoji: '🦅' },
-  { id: 'hawk', name: 'Hawk', emoji: '🪶' },
-  { id: 'badgermole', name: 'Badgermole', emoji: '🦡' },
-  { id: 'rhino', name: 'Rhino', emoji: '🦏' },
-  { id: 'elephant', name: 'Elephant', emoji: '🐘' },
   { id: 'lion', name: 'Lion', emoji: '🦁' },
   { id: 'panda', name: 'Panda', emoji: '🐼' },
-  { id: 'dragon', name: 'Dragon', emoji: '🐉' },
-  { id: 'turtle', name: 'Turtle', emoji: '🐢' },
   { id: 'koala', name: 'Koala', emoji: '🐨' },
-  { id: 'penguin', name: 'Penguin', emoji: '🐧' },
-  { id: 'shark', name: 'Shark', emoji: '🦈' },
-  { id: 'octopus', name: 'Octopus', emoji: '🐙' },
-  { id: 'lemur', name: 'Lemur', emoji: '🐒' },
-  { id: 'bison', name: 'Bison', emoji: '🦬' },
   { id: 'boar', name: 'Boar', emoji: '🐗' },
-  { id: 'crane', name: 'Crane', emoji: '🦢' },
-  { id: 'koi', name: 'Koi', emoji: '🐠' },
+  { id: 'dog', name: 'Dog', emoji: '🐶' },
+  { id: 'raccoon', name: 'Raccoon', emoji: '🦝' },
+  { id: 'chicken', name: 'Chicken', emoji: '🐔' },
+  { id: 'hamster', name: 'Hamster', emoji: '🐹' },
+  { id: 'gorilla', name: 'Gorilla', emoji: '🦍' },
+  { id: 'frog', name: 'Frog', emoji: '🐸' },
+  { id: 'polarbear', name: 'Polar bear', emoji: '🐻‍❄️' },
+  { id: 'monkey', name: 'Monkey', emoji: '🐵' },
+  { id: 'cow', name: 'Cow', emoji: '🐮' },
+  { id: 'deer', name: 'Deer', emoji: '🦌' },
+  { id: 'eagle', name: 'Eagle', emoji: '🦅' },
+  { id: 'rhino', name: 'Rhino', emoji: '🦏' },
+  { id: 'dragon', name: 'Dragon', emoji: '🐲' },
+  { id: 'shark', name: 'Shark', emoji: '🦈' },
+  { id: 'koi', name: 'Koi', emoji: '🎏' },
+  { id: 'octopus', name: 'Octopus', emoji: '🐙' },
 ];
 
-export const animalById = (id: string): Animal | undefined => ANIMALS.find((a) => a.id === id);
+/** Animals that were swapped out, by their old id: nights saved before the swap still show. */
+export const RENAMED_ANIMALS: Readonly<Record<string, string>> = {
+  otter: 'dog',
+  owl: 'raccoon',
+  hawk: 'chicken',
+  badgermole: 'hamster',
+  elephant: 'gorilla',
+  turtle: 'frog',
+  penguin: 'polarbear',
+  lemur: 'monkey',
+  bison: 'cow',
+  crane: 'deer',
+};
+
+/** An animal id as it is today (an old id maps to the animal that replaced it). */
+export const currentAnimalId = (id: string): string => RENAMED_ANIMALS[id] ?? id;
+
+export const animalById = (id: string): Animal | undefined => {
+  const current = currentAnimalId(id);
+  return ANIMALS.find((a) => a.id === current);
+};
 
 export interface Avatar {
   readonly animal: string;
@@ -101,7 +126,7 @@ export function newAvatarLobby(profiles: readonly ProfileId[], random: Random, l
   for (const p of profiles) {
     const offered = draw(
       random,
-      ANIMALS.map((a) => a.id).filter((id) => !taken.has(id) && id !== last[p]),
+      ANIMALS.map((a) => a.id).filter((id) => !taken.has(id) && id !== currentAnimalId(last[p] ?? '')),
       OFFER_SIZE,
     );
     offered.forEach((id) => taken.add(id));

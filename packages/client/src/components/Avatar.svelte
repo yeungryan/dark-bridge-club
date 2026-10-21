@@ -1,5 +1,6 @@
 <script lang="ts">
-  import { animalById, ELEMENT_INFO, type Avatar } from '@dark/engine';
+  import { ELEMENT_INFO, type Avatar } from '@dark/engine';
+  import AnimalIcon from './AnimalIcon.svelte';
 
   // A player's avatar as a token: the animal in a circle ringed in `ring` (team colour during
   // play, personal colour in the lobby). The element lives inside the circle as a quiet
@@ -29,7 +30,7 @@
   title={avatar ? ELEMENT_INFO[avatar.element].name : undefined}
 >
   <span class="face">
-    {#if avatar}<span class="animal">{animalById(avatar.animal)?.emoji}</span>{:else}<span class="initial">{initial}</span>{/if}
+    {#if avatar}<span class="animal"><AnimalIcon animal={avatar.animal} /></span>{:else}<span class="initial">{initial}</span>{/if}
   </span>
 </span>
 
@@ -56,7 +57,8 @@
   }
   .animal {
     position: relative;
-    font-size: calc(var(--size) * 0.56);
+    display: grid;
+    font-size: calc(var(--size) * 0.62);
     line-height: 1;
     filter: drop-shadow(0 1px 1px rgba(0, 0, 0, 0.35));
   }

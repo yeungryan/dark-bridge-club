@@ -18,7 +18,6 @@ export function elementAtSeat(conn: Link, seat: Seat): Element | null {
   return avatarAtSeat(conn, seat)?.element ?? null;
 }
 
-export const emojiOf = (a: Avatar | null) => (a ? (animalById(a.animal)?.emoji ?? '') : '');
 export const glyphOf = (a: Avatar | null) => (a ? ELEMENT_INFO[a.element].glyph : '');
 
 /**

@@ -41,16 +41,20 @@
   .card.highlight {
     box-shadow: 0 0 0 3px var(--accent), 0 2px 6px rgba(0, 0, 0, 0.5);
   }
-  /* A trump in your hand (Ryan; option D): a purple stripe along the top and a faint tint. */
+  /* A trump (Ryan; option D): a purple bar along the top and a faint purple tint. */
   .card.trump {
     background: linear-gradient(180deg, color-mix(in srgb, var(--trump) 16%, var(--card)), var(--card) 60%);
   }
+  /* Inset from the edges, so in an overlapping hand each trump shows its own bar, broken at
+     every card edge, instead of one band running across the cards (Ryan). */
   .card.trump::before {
     content: '';
     position: absolute;
-    inset: 0 0 auto;
-    height: max(3px, calc(var(--w) * 0.06));
-    border-radius: calc(var(--w) * 0.1) calc(var(--w) * 0.1) 0 0;
+    top: max(2px, calc(var(--w) * 0.045));
+    left: max(4px, calc(var(--w) * 0.08));
+    right: max(4px, calc(var(--w) * 0.08));
+    height: max(3px, calc(var(--w) * 0.055));
+    border-radius: 99px;
     background: var(--trump);
   }
   .corner {

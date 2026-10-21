@@ -216,7 +216,6 @@
         <div class="lift" class:nudge={up && nudge > 0} class:idle={up && !l && !held}>
           <div
             class="glowable"
-            class:playable={myTurnToPlay && isLegal(card) && !up && !held}
             class:leaning={l !== null}
             class:suit-start={i > 0 && deal.hand[i - 1]!.suit !== card.suit}
             style="--rx: {l?.rx ?? 0}deg; --ry: {l?.ry ?? 0}deg; --sx: {50 + (l?.ry ?? 0) * 2.2}%; --sy: {50 - (l?.rx ?? 0) * 2.2}%"
@@ -333,7 +332,8 @@
       transform: perspective(600px) rotateZ(1.2deg) rotateY(6deg) translateY(-2px);
     }
   }
-  /* Your turn: the cards you can play give off a soft glow. */
+  /* (No glow on the cards you can play: the ones you can't are dimmed, and the glow read as part
+     of the trump marking, Ryan.) */
   .glowable {
     position: relative;
     border-radius: 6px;
@@ -355,9 +355,6 @@
     pointer-events: none;
     background: radial-gradient(circle at var(--sx) var(--sy), rgba(255, 255, 255, 0.55), rgba(255, 255, 255, 0.12) 30%, transparent 60%);
     mix-blend-mode: soft-light;
-  }
-  .glowable.playable {
-    box-shadow: 0 -2px 12px var(--accent-glow);
   }
   .ghost {
     position: fixed;

@@ -13,7 +13,7 @@
   import Reveal from './Reveal.svelte';
   import SeatBadge from './SeatBadge.svelte';
   import MenuSheet from './MenuSheet.svelte';
-  import { avatarOf, emojiOf } from '../lib/avatars';
+  import { avatarOf } from '../lib/avatars';
   import { director } from '../lib/juice/director.svelte';
   import { settings } from '../lib/juice/settings.svelte';
   import { TIMING } from '../lib/juice/timing';
@@ -22,6 +22,7 @@
   import DealFlight from './DealFlight.svelte';
   import { buzz } from '../lib/juice/haptics';
   import { sound } from '../lib/juice/sound';
+  import AnimalIcon from './AnimalIcon.svelte';
 
   // Spec S10: you at the bottom, partner on top, the next player (counter-clockwise) on your right.
   // The top-right corner is kept clear for Messenger's floating video.
@@ -111,7 +112,7 @@
           {#each view.pairs![pair] as id, j (id)}
             {@const p = profileOf(profiles, id)}
             {#if j === 1}<span class="amp">&</span>{/if}
-            <span class="pname {j === 0 ? 'from-left' : 'from-right'}">{emojiOf(avatarOf(conn, id))} {p.name}</span>
+            <span class="pname {j === 0 ? 'from-left' : 'from-right'}"><AnimalIcon animal={avatarOf(conn, id)?.animal} /> {p.name}</span>
           {/each}
         </div>
       {/each}

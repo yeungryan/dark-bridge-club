@@ -149,8 +149,9 @@ test('avatars: two animals, tap one and an element to lock in; the crest shows w
   const mine = page.locator('.reveal .card').filter({ hasText: 'Ryan' });
   await expect(mine.locator('.token.el-water')).toHaveCount(1);
   await expect(page.locator('.reveal')).not.toContainText('Water');
-  const faces = await page.locator('.reveal .card .face').allTextContents();
-  expect(new Set(faces.map((f) => f.trim())).size).toBe(4);
+  // Four different animals, each drawn as an animal picture.
+  const faces = await page.locator('.reveal .card .face [data-animal]').evaluateAll((els) => els.map((e) => e.getAttribute('data-animal')));
+  expect(new Set(faces).size).toBe(4);
   // At the table, all four seats (yours too) show the avatar with its element and cards left.
   await playUntil(page, () => page.locator('[data-badge-seat] .count').first().isVisible());
   await expect(page.locator('.seat .token[class*="el-"]')).toHaveCount(4);
@@ -200,7 +201,7 @@ test('after a game, replay it set by set with every hand face up', async ({ page
   // It opens on the bidding, with all four hands as dealt.
   await expect(replay.getByText('The bidding', { exact: true })).toBeVisible();
   await expect(replay.locator('.hand')).toHaveCount(4);
-  const sets = (await replay.locator('.dot').count()) - 1;
+  const sets = await replay.locator('.lanes .set').count();
   expect(sets).toBeGreaterThanOrEqual(1);
   // Set 1: four cards on the table, one marked as led and one as won.
   await replay.getByRole('button', { name: 'Next set' }).tap();
@@ -209,12 +210,11 @@ test('after a game, replay it set by set with every hand face up', async ({ page
   // One player led and one won (the same player gets a single "led · won" tag).
   await expect(replay.locator('.tag.led')).toHaveCount(1);
   await expect(replay.locator('.tag.won')).toHaveCount(1);
-  // Each set's mark is the animal of the player who won it (as on the scoreboard).
-  await expect(replay.locator('.dot.set')).toHaveCount(sets);
-  const winner = (await replay.locator('.hand').filter({ has: page.locator('.tag.won') }).locator('.who > span').first().textContent())?.trim();
-  await expect(replay.locator('.dot.set').first()).toHaveText(winner!);
+  // Each set's mark is the animal of the player who won it (as on the scoreboard), in their lane.
+  const winner = await replay.locator('.hand').filter({ has: page.locator('.tag.won') }).locator('.who [data-animal]').getAttribute('data-animal');
+  await expect(replay.locator('.lanes .set').first().locator('[data-animal]')).toHaveAttribute('data-animal', winner!);
   // Jump to the set that decided it, then close.
-  await replay.locator('.dot.decisive').tap();
+  await replay.locator('.lanes .set.decisive').tap();
   await expect(replay.getByText('This set decided it.')).toBeVisible();
   await replay.getByRole('button', { name: 'Close the replay' }).tap();
   await expect(replay).toBeHidden();

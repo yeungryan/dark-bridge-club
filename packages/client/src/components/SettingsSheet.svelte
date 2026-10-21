@@ -83,9 +83,23 @@
     the silent switch also mutes game sounds. These settings are only for this device.
   </p>
   <button class="ghost" onclick={onClose}>Close</button>
+  <!-- The animal art's licence (CC-BY 4.0) asks for a credit. -->
+  <p class="credit">
+    Animal art: <a href="https://github.com/jdecked/twemoji" target="_blank" rel="noopener">Twemoji</a>,
+    <a href="https://creativecommons.org/licenses/by/4.0/" target="_blank" rel="noopener">CC-BY 4.0</a>
+  </p>
 </div>
 
 <style>
+  .credit {
+    margin: 0;
+    text-align: center;
+    font-size: 11px;
+    color: var(--ink-dim);
+  }
+  .credit a {
+    color: inherit;
+  }
   .sheet {
     display: grid;
     gap: 10px;

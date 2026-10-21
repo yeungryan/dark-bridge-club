@@ -1,11 +1,11 @@
 <script lang="ts">
-  import { animalById, next, partner, type PairId, type Seat, type Side } from '@dark/engine';
+  import { next, partner, type PairId, type Seat, type Side } from '@dark/engine';
   import type { Connection } from '../lib/connection.svelte';
   import { avatarAtSeat, teamColor } from '../lib/avatars';
   import { nameAtSeat, profileOf } from '../lib/format';
   import { director } from '../lib/juice/director.svelte';
-  import Avatar from './Avatar.svelte';
   import CallText from './CallText.svelte';
+  import AnimalIcon from './AnimalIcon.svelte';
 
   // Spec S13, as a playoff score bug (Ryan): the winning bid is the hero on the left; on the
   // right, one row per pair with its initials, a silhouette of the animal that won each set
@@ -46,7 +46,8 @@
       <button class="ghost contract" onclick={onAuction} aria-label="Contract (tap for the auction)">
         <span class="bid"><CallText call={{ type: 'bid', level: contract.level, strain: contract.strain }} /></span>
         <span class="by">
-          <Avatar avatar={avatarAtSeat(conn, contract.declarer)} initial={nameAtSeat(view, profiles, contract.declarer)[0]} ring={teamColor(conn, contract.declarer)} size={18} />
+          <!-- The declarer's animal as a silhouette the height of the name (Ryan), like the set icons. -->
+          <AnimalIcon animal={avatarAtSeat(conn, contract.declarer)?.animal} silhouette={teamColor(conn, contract.declarer)} size="1.05em" />
           {nameAtSeat(view, profiles, contract.declarer)}
         </span>
         {#if director.contractPulse > 0}<span class="sold" aria-hidden="true">Sold!</span>{/if}
@@ -69,10 +70,10 @@
               {@const set = row.won[i]}
               {#if set && set.i === lastIndex}
                 <button class="pip on latest" style="--i: {i}" aria-label="Last set (tap to see it)" onclick={onPeek}
-                  ><i>{animalById(avatarAtSeat(conn, set.w)?.animal ?? '')?.emoji ?? '●'}</i></button
+                  ><AnimalIcon animal={avatarAtSeat(conn, set.w)?.animal} silhouette="var(--t)" /></button
                 >
               {:else if set}
-                <i class="pip on" style="--i: {i}">{animalById(avatarAtSeat(conn, set.w)?.animal ?? '')?.emoji ?? '●'}</i>
+                <i class="pip on" style="--i: {i}"><AnimalIcon animal={avatarAtSeat(conn, set.w)?.animal} silhouette="var(--t)" /></i>
               {:else}
                 <i class="pip" style="--i: {i}"></i>
               {/if}
@@ -137,9 +138,11 @@
   .by {
     display: inline-flex;
     align-items: center;
-    gap: 4px;
+    gap: 3px;
     font-family: var(--font-name);
-    font-size: 12px;
+    font-weight: 700;
+    font-size: 13px;
+    line-height: 1;
     color: var(--ink-dim);
   }
   @keyframes stamp {
@@ -232,12 +235,6 @@
     opacity: 0.6;
   }
   /* A set won: the winner's animal as a solid shape in the team colour. */
-  .pip.on,
-  .pip.on i {
-    color: transparent;
-    text-shadow: 0 0 0 var(--t);
-    font-style: normal;
-  }
   :global(.fx-full) .pip.on {
     animation: pip calc(320ms * var(--speed)) cubic-bezier(0.3, 1.6, 0.6, 1);
     animation-duration: calc(var(--spring-wobble-ms, 320ms) * var(--speed));

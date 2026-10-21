@@ -5,6 +5,7 @@
   import { ELEMENT_RING } from '../lib/avatars';
   import { buzz } from '../lib/juice/haptics';
   import { sound } from '../lib/juice/sound';
+  import AnimalIcon from './AnimalIcon.svelte';
 
   // Spec S24, simplified (Ryan): two animals, four elements, no words and no buttons to confirm.
   // Picking one of each locks you in; tapping another changes it until the night starts.
@@ -53,7 +54,7 @@
       {#each pick.offered as id (id)}
         {@const a = animalById(id)}
         <button class="animal" class:on={animal === id} aria-label={a?.name} aria-pressed={animal === id} onclick={() => choose({ animal: id })}>
-          {a?.emoji}
+          <AnimalIcon animal={id} size="1em" />
         </button>
       {/each}
     </div>
