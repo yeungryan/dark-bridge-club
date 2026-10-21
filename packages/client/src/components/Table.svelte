@@ -155,7 +155,6 @@
   {/if}
 
   <section class="bottom">
-    <Prompts {conn} />
     <!-- The contract and the race, where "X to play" used to be: the header stays clear for the theme.
          Its slot is the same height in bidding and play, and the bidding box and the auction
          float up from it over the empty felt, so the table never moves (Ryan). -->
@@ -177,6 +176,9 @@
       {:else}
         <Scoreboard {conn} onPeek={() => (peek = !peek)} onAuction={() => (showAuction = !showAuction)} />
       {/if}
+      <!-- Decisions that interrupt play ("Play the rest out?", concessions, ending the night) float
+           above the scoreboard too: in the flow they pushed the whole table up (Ryan's rule). -->
+      <div class="float prompts"><Prompts {conn} /></div>
       {#if myTurnToCall}
         <div class="float"><BiddingBox {conn} /></div>
       {:else if showAuction && deal && deal.phase !== 'auction'}
@@ -433,6 +435,18 @@
     right: 0;
     bottom: 0;
     z-index: 5;
+  }
+  .float.prompts {
+    bottom: calc(100% + 6px);
+    z-index: 6;
+    display: grid;
+    pointer-events: none;
+  }
+  .float.prompts > :global(*) {
+    pointer-events: auto;
+    margin: 0;
+    background: var(--sheet);
+    box-shadow: 0 6px 20px rgba(0, 0, 0, 0.45);
   }
   /* The auction, during play, opens above the scoreboard so the race stays visible. */
   .float.above {
