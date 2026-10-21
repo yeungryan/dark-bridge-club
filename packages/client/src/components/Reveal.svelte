@@ -13,6 +13,7 @@
   import CountUp from './CountUp.svelte';
   import CallText from './CallText.svelte';
   import { MOMENT_EMOJI, momentCaption } from '../lib/stories';
+  import Replay from './Replay.svelte';
   import Suit from './Suit.svelte';
 
   // Spec S14: the payoff for hidden hands. The result lands, the score ticks up, then the four
@@ -45,6 +46,9 @@
   // S19: this game's moments, shown once the hands are all face up.
   const moments = $derived((conn.room!.gameMoments ?? []).filter((m) => m.dealNumber === view.dealNumber));
   const allFlipped = $derived(flipped.length === 4);
+
+  // The replay (step back through the game set by set), on this phone only.
+  let replaying = $state(false);
 
   // A big contract or a dramatic clinch gets a richer reveal.
   const dramatic = $derived(contract.level >= 5 || (director.clinch?.drama ?? 0) >= 2);
@@ -119,7 +123,7 @@
         </div>
         {#if flipped.includes(seat)}
           <div class="face">
-            {#each ['S', 'H', 'D', 'C'] as const as suit (suit)}
+            {#each ['C', 'D', 'H', 'S'] as const as suit (suit)}
               <div class:red={isRed({ suit, rank: 2 })}><Suit {suit} /> {suitLine(seat, suit)}</div>
             {/each}
           </div>
@@ -140,6 +144,14 @@
   {#if !skipped}<p class="skip muted">Tap to skip</p>{/if}
 
   <button
+    class="ghost replay-open"
+    onclick={(e) => {
+      e.stopPropagation();
+      skip();
+      replaying = true;
+    }}>▶ Replay this game</button
+  >
+  <button
     class="primary"
     disabled={ready}
     onclick={(e) => {
@@ -158,7 +170,12 @@
   </div>
 </div>
 
+{#if replaying}<Replay {conn} onClose={() => (replaying = false)} />{/if}
+
 <style>
+  .replay-open {
+    min-height: 44px;
+  }
   .reveal {
     display: grid;
     gap: 10px;

@@ -35,8 +35,8 @@ export function hcp(hand: readonly Card[]): number {
   return hand.reduce((sum, c) => sum + Math.max(0, c.rank - 10), 0);
 }
 
-/** Display order: suits alternate colors (♠ ♥ ♣ ♦), high to low within each suit. */
-const DISPLAY_SUIT_ORDER: Record<Suit, number> = { S: 0, H: 1, C: 2, D: 3 };
+/** Display order (Ryan): the bidding box's suit order, ♣ ♦ ♥ ♠, high to low within each suit. */
+const DISPLAY_SUIT_ORDER: Record<Suit, number> = { C: 0, D: 1, H: 2, S: 3 };
 
 export function sortHand(hand: readonly Card[]): Card[] {
   return [...hand].sort(

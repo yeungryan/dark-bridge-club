@@ -7,7 +7,8 @@ import type { Call, Card, Contract, PerSeat, Seat } from './types';
 
 // Spec S06: what one player is allowed to see. The server sends only this, never SessionState.
 // - Other players' cards are never included until the deal is complete (the reveal, S14).
-// - Only the most recent completed trick is included (R8: card memory is a skill).
+// - Only the most recent completed trick is included (R8: card memory is a skill), until the
+//   deal is complete: then every trick is included for the replay, alongside the revealed hands.
 // - Seeds are never included (they would let a client recompute every hand).
 
 export interface DealView {
@@ -39,6 +40,8 @@ export interface DealView {
   readonly legalPlays: readonly Card[];
   /** All four original hands, only once the deal is complete. */
   readonly revealedHands: PerSeat<readonly Card[]> | null;
+  /** Every trick in order, only once the deal is complete (the replay). */
+  readonly playedTricks: readonly CompletedTrick[] | null;
 }
 
 export interface TableView {
@@ -108,5 +111,6 @@ function dealView(state: SessionState, mySeat: Seat | null): DealView {
     legalCalls: myTurn && deal.phase === 'auction' ? legalCalls(deal.auction) : [],
     legalPlays: myTurn && deal.phase === 'play' ? legalPlays(deal.hands[mySeat], deal.currentTrick!.cards) : [],
     revealedHands: deal.phase === 'complete' ? deal.originalHands : null,
+    playedTricks: deal.phase === 'complete' ? deal.tricks : null,
   };
 }
