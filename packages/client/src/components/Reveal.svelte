@@ -123,7 +123,7 @@
         </div>
         {#if flipped.includes(seat)}
           <div class="face">
-            {#each ['S', 'H', 'D', 'C'] as const as suit (suit)}
+            {#each ['C', 'D', 'H', 'S'] as const as suit (suit)}
               <div class:red={isRed({ suit, rank: 2 })}><Suit {suit} /> {suitLine(seat, suit)}</div>
             {/each}
           </div>

@@ -86,7 +86,8 @@
     <div class="actions">
       {#key selected ? JSON.stringify(selected) : ''}
         <button class="primary confirm" class:ready={selected !== null} disabled={!selected} onclick={() => selected && send(selected)}>
-          {#if selected}Bid <CallText call={selected} red="currentColor" />{:else}Bid{/if}
+          <span>Bid</span>
+          {#if selected}<span class="what"><CallText call={selected} red="currentColor" /></span>{/if}
         </button>
       {/key}
       <button class="pass" onclick={() => send({ type: 'pass' })}>Pass</button>
@@ -119,8 +120,9 @@
   }
   .body {
     display: grid;
-    grid-template-columns: minmax(0, 1fr) 92px;
-    gap: 8px;
+    /* The ladder, then Bid, then Pass: two tall buttons to the right of NT (Ryan). */
+    grid-template-columns: minmax(0, 1fr) 62px 54px;
+    gap: 6px;
   }
   /* Two levels showing; scrolling snaps a whole level to the top. Each level is 34px of cards
      plus 5px of space, and the box is exactly two levels tall, so every snap lines up. */
@@ -200,17 +202,26 @@
     color: var(--ink-dim);
   }
   .actions {
-    display: grid;
-    grid-template-rows: 1fr 1fr;
-    gap: 6px;
-    height: 78px;
+    display: contents;
+  }
+  .confirm,
+  .pass {
+    height: 72px;
+    margin-top: 3px;
+    min-height: 0;
+    padding: 0 4px;
   }
   .confirm {
-    min-height: 0;
-    padding: 0 6px;
+    display: grid;
+    place-content: center;
+    gap: 2px;
     font-weight: 750;
-    font-size: 1rem;
-    white-space: nowrap;
+    font-size: 0.95rem;
+    line-height: 1.1;
+  }
+  .confirm .what {
+    font-family: var(--font-card);
+    font-size: 1.1rem;
   }
   :global(.fx-full) .confirm.ready {
     animation: ready calc(var(--spring-pop-ms, 260ms) * var(--speed)) var(--spring-pop, cubic-bezier(0.3, 1.6, 0.6, 1));

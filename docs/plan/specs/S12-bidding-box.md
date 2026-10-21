@@ -31,3 +31,5 @@ Replaces the level and suit rows.
 - **Picking:** tap a card to pick it; tap it again to drop it. The top line then reads "2♠: you need 8 sets, they need 6". With nothing picked, it reads "To beat: 1♥ by Kim" or "No bids yet: you can open".
 - **Buttons:** Bid (gold once something is picked) and Pass sit in a column beside the ladder. Pass is one tap on a plain grey button, so the box doesn't push you toward passing.
 - **Height:** the box is a little shorter than the old one, so the table never shrinks and seats never move.
+- **Revised (Ryan):** Bid and Pass are two tall buttons in a row to the right of NT: Bid (with the picked bid under the word), then Pass.
+- **Suit order everywhere** (Ryan): hands, the reveal and the replay all use the bidding box's order, ♣ ♦ ♥ ♠, left to right or top to bottom, highest card first within each suit (`sortHand`).

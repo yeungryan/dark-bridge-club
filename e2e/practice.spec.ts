@@ -66,7 +66,7 @@ test('the bid ladder: tap a bid to see what it needs, then Bid; Pass is one tap'
   const label = ((await tile.textContent()) ?? '').trim();
   await tile.tap();
   await expect(page.locator('.box .context')).toContainText(/you need \d+ sets, they need \d+/);
-  await expect(page.locator('.confirm')).toContainText(/^Bid \d/);
+  await expect(page.locator('.confirm')).toContainText(/Bid\s*\d/);
   await page.locator('.confirm').tap();
   await expect(page.locator('.strip .call').filter({ hasText: 'Ryan' }).last()).toContainText(label);
   // Next time it's my call (this auction or the next game's), Pass goes straight in.

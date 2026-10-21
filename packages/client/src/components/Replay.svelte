@@ -24,7 +24,8 @@
   const step = $derived(steps[Math.min(at, steps.length - 1)]!);
 
   const SPOTS: Spot[] = ['top', 'left', 'right', 'bottom'];
-  const SUITS = ['S', 'H', 'D', 'C'] as const;
+  // Top to bottom in the bidding box's order (Ryan).
+  const SUITS = ['C', 'D', 'H', 'S'] as const;
 
   function go(to: number) {
     const clamped = Math.max(0, Math.min(steps.length - 1, to));
