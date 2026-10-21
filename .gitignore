@@ -5,3 +5,4 @@ dist/
 .e2e-state/
 test-results/
 playwright-report/
+.claude/worktrees/
