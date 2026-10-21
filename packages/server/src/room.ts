@@ -38,6 +38,11 @@ import {
   type SavedGame,
   type SavedGameDetail,
   type SavedNight,
+  applySchedule,
+  emptySchedule,
+  tidySchedule,
+  type Schedule,
+  type ScheduleAction,
 } from '@dark/engine';
 import type { Env } from './index';
 import { isProfile, PROFILE_IDS, PROFILES, USUAL_PARTNER } from './profiles';
@@ -209,6 +214,8 @@ export class TableRoom extends DurableObject<Env> {
           return await this.handleHistory(url);
         case '/api/history/game':
           return await this.handleHistoryGame(url);
+        case '/api/schedule':
+          return request.method === 'POST' ? await this.handleScheduleAction(request) : await this.handleSchedule(url);
         default:
           return json({ error: 'NOT_FOUND' }, 404);
       }
@@ -315,6 +322,30 @@ export class TableRoom extends DurableObject<Env> {
     );
     this.sql.exec('DELETE FROM devices WHERE profile_id = ?', body.profile);
     return json({ ok: true });
+  }
+
+  // ------------------------------------------------------------------ scheduler (S21)
+
+  /** The next-night schedule lives on its own, outside any night. */
+  private loadSchedule(): Schedule {
+    const row = this.sql.exec<{ v: string }>("SELECT v FROM kv WHERE k = 'schedule'").toArray()[0];
+    return tidySchedule(row ? (JSON.parse(row.v) as Schedule) : emptySchedule(), Date.now());
+  }
+
+  private async handleSchedule(url: URL): Promise<Response> {
+    if (!(await this.profileForToken(url.searchParams.get('token') ?? ''))) return json({ error: 'NOT_SIGNED_IN' }, 401);
+    return json({ schedule: this.loadSchedule(), players: PROFILE_IDS, serverTime: Date.now() });
+  }
+
+  private async handleScheduleAction(request: Request): Promise<Response> {
+    const body = (await request.json().catch(() => null)) as { token?: unknown; action?: unknown } | null;
+    const profile = await this.profileForToken(typeof body?.token === 'string' ? body.token : '');
+    if (!profile) return json({ error: 'NOT_SIGNED_IN' }, 401);
+    if (!body?.action || typeof body.action !== 'object') return json({ error: 'BAD_REQUEST' }, 400);
+    const out = applySchedule(this.loadSchedule(), profile, body.action as ScheduleAction, Date.now(), PROFILE_IDS);
+    if (!out.ok) return json({ error: out.error.code, message: out.error.message }, 400);
+    this.sql.exec('INSERT OR REPLACE INTO kv (k, v) VALUES (?, ?)', 'schedule', JSON.stringify(out.state));
+    return json({ schedule: out.state, players: PROFILE_IDS, serverTime: Date.now() });
   }
 
   // ------------------------------------------------------------------ history (S20)
