@@ -13,7 +13,7 @@
   import Reveal from './Reveal.svelte';
   import SeatBadge from './SeatBadge.svelte';
   import MenuSheet from './MenuSheet.svelte';
-  import { avatarOf, emojiOf } from '../lib/avatars';
+  import { avatarOf } from '../lib/avatars';
   import { director } from '../lib/juice/director.svelte';
   import { settings } from '../lib/juice/settings.svelte';
   import { TIMING } from '../lib/juice/timing';
@@ -22,6 +22,7 @@
   import DealFlight from './DealFlight.svelte';
   import { buzz } from '../lib/juice/haptics';
   import { sound } from '../lib/juice/sound';
+  import AnimalIcon from './AnimalIcon.svelte';
 
   // Spec S10: you at the bottom, partner on top, the next player (counter-clockwise) on your right.
   // The top-right corner is kept clear for Messenger's floating video.
@@ -33,7 +34,9 @@
   const me = $derived(view.mySeat!);
   // The dealer is shuffling: nothing is dealt until they tap Deal (Ryan).
   const shuffling = $derived(view.phase === 'awaitingDeal' || !deal);
-  const iDeal = $derived(shuffling && view.dealer === me);
+  // Only once the next dealer is known: between games `dealer` is still the last one (whose Deal
+  // button would otherwise flash up and do nothing).
+  const iDeal = $derived(view.phase === 'awaitingDeal' && view.dealer === me);
   const contract = $derived(deal?.contract ?? null);
   // Bid once your cards have landed.
   const myTurnToCall = $derived(deal?.phase === 'auction' && deal.turn === me && !conn.room!.paused && !director.dealing);
@@ -53,7 +56,8 @@
   const handHeight = $derived(Math.min(76, Math.max(46, Math.floor(handWidth / 6.2))) * 1.4 + 22);
   const pairOf = (seat: Seat) => `${nameAtSeat(view, profiles, seat)} & ${nameAtSeat(view, profiles, partner(seat))}`;
 
-  let menuOpen = $state(false);
+  // The menu, or (from the gear, top-right) straight into Settings.
+  let menuOpen = $state<'menu' | 'settings' | null>(null);
 
   // The pairs for the night are announced as the first deal starts; it doesn't block bidding.
   let showPairs = $state(false);
@@ -87,13 +91,20 @@
 
 <div class="table" class:decider data-turn={iDeal ? 'my-deal' : deal?.turn === me ? (deal.phase === 'auction' ? 'my-call' : deal.phase === 'play' ? 'my-play' : '') : ''}>
   <header>
-    <button class="ghost menu" aria-label="Menu" onclick={() => (menuOpen = !menuOpen)}>☰</button>
+    <button class="ghost menu" aria-label="Menu" onclick={() => (menuOpen = menuOpen ? null : 'menu')}>☰</button>
     <h1 class="game">Game {shuffling ? view.dealNumber + 1 : view.dealNumber}</h1>
-    <span aria-hidden="true"></span>
+    <button class="ghost gear" aria-label="Settings" onclick={() => (menuOpen = menuOpen ? null : 'settings')}>
+      <svg viewBox="0 0 24 24" width="21" height="21" aria-hidden="true"
+        ><path
+          fill="currentColor"
+          d="M19.4 13a7.6 7.6 0 0 0 0-2l2.1-1.6-2-3.5-2.5 1a7.4 7.4 0 0 0-1.7-1L15 3.3h-4l-.4 2.6a7.4 7.4 0 0 0-1.7 1l-2.5-1-2 3.5L6.6 11a7.6 7.6 0 0 0 0 2l-2.1 1.6 2 3.5 2.5-1a7.4 7.4 0 0 0 1.7 1l.4 2.6h4l.4-2.6a7.4 7.4 0 0 0 1.7-1l2.5 1 2-3.5zM12 15.5a3.5 3.5 0 1 1 0-7 3.5 3.5 0 0 1 0 7z"
+        /></svg
+      >
+    </button>
   </header>
 
   {#if menuOpen}
-    <MenuSheet {conn} {canConcede} onClose={() => (menuOpen = false)} />
+    <MenuSheet {conn} {canConcede} start={menuOpen} onClose={() => (menuOpen = null)} />
   {/if}
   {#if showPairs}
     <div class="pairs" aria-live="polite">
@@ -103,7 +114,7 @@
           {#each view.pairs![pair] as id, j (id)}
             {@const p = profileOf(profiles, id)}
             {#if j === 1}<span class="amp">&</span>{/if}
-            <span class="pname {j === 0 ? 'from-left' : 'from-right'}">{emojiOf(avatarOf(conn, id))} {p.name}</span>
+            <span class="pname {j === 0 ? 'from-left' : 'from-right'}"><AnimalIcon animal={avatarOf(conn, id)?.animal} /> {p.name}</span>
           {/each}
         </div>
       {/each}
@@ -144,7 +155,6 @@
   {/if}
 
   <section class="bottom">
-    <Prompts {conn} />
     <!-- The contract and the race, where "X to play" used to be: the header stays clear for the theme.
          Its slot is the same height in bidding and play, and the bidding box and the auction
          float up from it over the empty felt, so the table never moves (Ryan). -->
@@ -166,6 +176,9 @@
       {:else}
         <Scoreboard {conn} onPeek={() => (peek = !peek)} onAuction={() => (showAuction = !showAuction)} />
       {/if}
+      <!-- Decisions that interrupt play ("Play the rest out?", concessions, ending the night) float
+           above the scoreboard too: in the flow they pushed the whole table up (Ryan's rule). -->
+      <div class="float prompts"><Prompts {conn} /></div>
       {#if myTurnToCall}
         <div class="float"><BiddingBox {conn} /></div>
       {:else if showAuction && deal && deal.phase !== 'auction'}
@@ -174,7 +187,13 @@
     </div>
     <!-- Whose turn is shown on the seats themselves (S10); this line is for screen readers. -->
     {#if view.phase === 'inDeal' && turnText}<p class="sr-only" aria-live="polite">{turnText}</p>{/if}
-    {#if view.phase === 'inDeal' && deal}<Hand {conn} />{:else if shuffling}<div class="hand hand-space" bind:clientWidth={handWidth} style="height: {handHeight}px"></div>{/if}
+    <!-- The hand's space is kept while shuffling and through the clinch before the reveal, so the
+         table never jumps. -->
+    {#if view.phase === 'inDeal' && deal}<Hand {conn} />{:else if shuffling || director.revealHold}<div
+        class="hand hand-space"
+        bind:clientWidth={handWidth}
+        style="height: {handHeight}px"
+      ></div>{/if}
     {#if director.dealing && deal && view.mySeat !== null}
       {#key director.dealing.id}<DealFlight dealer={director.dealing.dealer} me={view.mySeat} />{/key}
     {/if}
@@ -192,8 +211,8 @@
     padding: 6px 16px max(8px, env(safe-area-inset-bottom));
     overflow: hidden;
   }
-  /* Just the menu button: the rest of the top belongs to the theme's scene (and, top-right,
-     to Messenger's floating video, S10). */
+  /* The menu top-left and Settings top-right (Ryan); the rest of the top belongs to the theme's
+     scene. (Messenger's floating video bubble can be dragged off the gear.) */
   header {
     display: grid;
     grid-template-columns: 48px 1fr 48px;
@@ -212,6 +231,12 @@
   .menu {
     font-size: 1.3rem;
     padding: 0 12px;
+  }
+  .gear {
+    display: grid;
+    place-items: center;
+    padding: 0 12px;
+    color: var(--ink);
   }
   .sr-only {
     position: absolute;
@@ -410,6 +435,18 @@
     right: 0;
     bottom: 0;
     z-index: 5;
+  }
+  .float.prompts {
+    bottom: calc(100% + 6px);
+    z-index: 6;
+    display: grid;
+    pointer-events: none;
+  }
+  .float.prompts > :global(*) {
+    pointer-events: auto;
+    margin: 0;
+    background: var(--sheet);
+    box-shadow: 0 6px 20px rgba(0, 0, 0, 0.45);
   }
   /* The auction, during play, opens above the scoreboard so the race stays visible. */
   .float.above {

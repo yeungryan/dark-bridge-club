@@ -6,15 +6,13 @@
   import { cssColor } from '../lib/themes';
   import { settings } from '../lib/juice/settings.svelte';
   import CountUp from './CountUp.svelte';
-  import Avatar from './Avatar.svelte';
-  import { avatarOf } from '../lib/avatars';
   import { awardText } from '../lib/stories';
   import { pop } from '../lib/juice/particles';
   import { sound } from '../lib/juice/sound';
 
   // Spec S15, end of night: the final tally counts up, then the winners' banner lands with
-  // confetti in their colors (or a "dead heat" banner). Then tonight's awards (S19) flip in,
-  // one at a time, with a pause between for the banter.
+  // confetti in their colors (or a "dead heat" banner). Then tonight's two top awards (S19;
+  // Ryan: just two, for impact) flip in side by side, with a pause between for the banter.
   let { conn }: { conn: Connection } = $props();
 
   const view = $derived(conn.view!);
@@ -23,9 +21,10 @@
   let banner = $state<HTMLElement>();
   // Matches the banner's CSS: it starts after 900ms and takes 500ms to land.
   const BANNER_LANDS = 1400;
-  const AWARD_GAP = 1100;
+  const AWARD_GAP = 1400;
 
-  const awards = $derived(conn.room!.awards ?? []);
+  // The server's list is already in priority order.
+  const awards = $derived((conn.room!.awards ?? []).slice(0, 2));
   // svelte-ignore state_referenced_locally
   let shown = $state(settings.animated ? 0 : awards.length);
   let cards = $state<HTMLElement[]>([]);
@@ -77,13 +76,10 @@
       {#each awards.slice(0, shown) as award, i (award.kind)}
         {@const text = awardText(award, profiles)}
         {@const p = profileOf(profiles, award.profile)}
-        <article class="award" bind:this={cards[i]} style="--c: {p.color}">
+        <article class="award" bind:this={cards[i]} style="--c: {p.color}; --tilt: {i ? 2 : -2}deg" aria-label={text.title}>
           <span class="emoji" aria-hidden="true">{text.emoji}</span>
-          <div>
-            <h4>{text.title}</h4>
-            <p class="who"><Avatar avatar={avatarOf(conn, award.profile)} initial={p.name[0]} ring={p.color} size={22} /> {p.name}</p>
-            <p class="caption">{text.caption}</p>
-          </div>
+          <h4>{text.headline}</h4>
+          <p class="who">{text.line}</p>
         </article>
       {/each}
     </section>
@@ -119,14 +115,16 @@
     font-size: 1.2rem;
     margin-bottom: 32px;
   }
+  /* Two tall cards side by side, like trading cards dealt onto the table. */
   .awards {
     display: grid;
-    gap: 10px;
-    margin: 8px 0 24px;
-    perspective: 700px;
-    text-align: left;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+    margin: 8px 0 28px;
+    perspective: 800px;
   }
   .awards h3 {
+    grid-column: 1 / -1;
     margin: 0;
     text-align: center;
     font-size: 12px;
@@ -137,20 +135,24 @@
   /* An award card flips over and settles on a spring. */
   .award {
     display: grid;
-    grid-template-columns: 52px 1fr;
-    align-items: center;
-    gap: 10px;
-    padding: 10px 12px;
-    border-radius: 14px;
-    background: var(--panel);
+    grid-template-rows: auto 1fr auto;
+    justify-items: center;
+    align-content: start;
+    gap: 8px;
+    min-height: 200px;
+    padding: 18px 10px 14px;
+    border-radius: 18px;
+    background: linear-gradient(180deg, color-mix(in srgb, var(--c) 22%, var(--panel)), var(--panel) 70%);
     box-shadow:
-      0 0 0 1px var(--line),
-      0 0 18px color-mix(in srgb, var(--c) 30%, transparent);
+      0 0 0 1.5px color-mix(in srgb, var(--c) 55%, var(--line)),
+      0 8px 24px rgba(0, 0, 0, 0.35),
+      0 0 28px color-mix(in srgb, var(--c) 35%, transparent);
+    transform: rotate(var(--tilt));
     animation: award-in calc(var(--spring-wobble-ms, 600ms) * var(--speed)) var(--spring-wobble, cubic-bezier(0.3, 1.5, 0.6, 1)) backwards;
   }
   @keyframes award-in {
     from {
-      transform: rotateY(85deg) scale(0.85);
+      transform: rotateY(85deg) scale(0.8) rotate(var(--tilt));
       opacity: 0;
     }
   }
@@ -159,30 +161,25 @@
     animation: fade-in calc(300ms * var(--speed)) backwards;
   }
   .emoji {
-    font-size: 40px;
+    font-size: 60px;
     line-height: 1;
-    text-align: center;
+    filter: drop-shadow(0 4px 8px rgba(0, 0, 0, 0.4));
   }
   .award h4 {
     margin: 0;
     font-family: var(--font-display);
-    font-size: 1.05rem;
+    font-size: 1.2rem;
+    line-height: 1.2;
     color: var(--accent);
+    text-wrap: balance;
   }
+  /* One plain line: who, and what they did. */
   .who {
-    display: flex;
-    align-items: center;
-    gap: 6px;
-    margin: 4px 0 2px;
-    font-family: var(--font-name);
-    font-weight: 700;
-    color: var(--c);
-  }
-  .caption {
     margin: 0;
-    font-size: 13.5px;
-    font-style: italic;
+    font-size: 13px;
+    line-height: 1.3;
     color: var(--ink-dim);
+    text-wrap: balance;
   }
   button {
     width: 100%;

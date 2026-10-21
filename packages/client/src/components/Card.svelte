@@ -8,12 +8,13 @@
     width = 56,
     dim = false,
     highlight = false,
-  }: { card: Card; width?: number; dim?: boolean; highlight?: boolean } = $props();
+    trump = false,
+  }: { card: Card; width?: number; dim?: boolean; highlight?: boolean; trump?: boolean } = $props();
 
   const text = $derived(cardText(card));
 </script>
 
-<div class="card" class:red={isRed(card)} class:dim class:highlight style="--w: {width}px" aria-label="{text.rank} of {text.suit}">
+<div class="card" class:red={isRed(card)} class:dim class:highlight class:trump style="--w: {width}px" aria-label="{text.rank} of {text.suit}">
   <!-- The corner: rank over a suit drawn at the rank's height. -->
   <span class="corner"><span class="rank">{text.rank}</span><Suit suit={card.suit} label={false} /></span>
   <span class="pip"><Suit suit={card.suit} label={false} /></span>
@@ -39,6 +40,22 @@
   }
   .card.highlight {
     box-shadow: 0 0 0 3px var(--accent), 0 2px 6px rgba(0, 0, 0, 0.5);
+  }
+  /* A trump (Ryan; option D): a purple bar along the top and a faint purple tint. */
+  .card.trump {
+    background: linear-gradient(180deg, color-mix(in srgb, var(--trump) 16%, var(--card)), var(--card) 60%);
+  }
+  /* Inset from the edges, so in an overlapping hand each trump shows its own bar, broken at
+     every card edge, instead of one band running across the cards (Ryan). */
+  .card.trump::before {
+    content: '';
+    position: absolute;
+    top: max(2px, calc(var(--w) * 0.045));
+    left: max(4px, calc(var(--w) * 0.08));
+    right: max(4px, calc(var(--w) * 0.08));
+    height: max(3px, calc(var(--w) * 0.055));
+    border-radius: 99px;
+    background: var(--trump);
   }
   .corner {
     position: absolute;

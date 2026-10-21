@@ -18,7 +18,7 @@ Make each night feel like an **event** (promise B), spending the big ceremonies 
 
 1. Someone proposes "End night" → all 4 confirm (S05).
 2. **Final tally** count-up → winners' banner (or a "dead heat" banner for a tie).
-3. **Awards** (S19): 3–5 award cards flip in, one at a time.
+3. **Awards** (S19): the top two award cards flip in side by side, one at a time.
 4. **Updated rivalry** (S20): the head-to-head totals move with this night's result.
 5. **"Next time?"** button → straight to the scheduler (S21). *This is where the ritual keeps itself going.*
 

@@ -27,7 +27,7 @@ Fast, misclick-proof bidding that turns the auction into a small story.
 ## The bid ladder (Ryan, M3)
 Replaces the level and suit rows.
 - **The bids:** every legal bid is its own little card, cheapest first, one level per row (♣ ♦ ♥ ♠ NT). Bids below the current one are greyed out on the lowest row; lower rows aren't shown.
-- **Scrolling:** two levels show at a time. Scrolling snaps a whole level to the top, with a soft tick. A thin fade at an edge means more levels lie beyond it.
+- **Scrolling:** two levels show at a time, with the top of a third peeking out below, faded (Ryan), so the ladder reads as scrollable. Scrolling snaps a whole level to the top, with a soft tick. A thin fade at the top edge means levels lie above.
 - **Picking:** tap a card to pick it; tap it again to drop it. The top line then reads "2♠: you need 8 sets, they need 6". With nothing picked, it reads "To beat: 1♥ by Kim" or "No bids yet: you can open".
 - **Buttons:** Bid (gold once something is picked) and Pass sit in a column beside the ladder. Pass is one tap on a plain grey button, so the box doesn't push you toward passing.
 - **Height:** the box is a little shorter than the old one, so the table never shrinks and seats never move.

@@ -21,10 +21,8 @@ export function momentCaption(m: Moment, profiles: readonly ProfileInfo[]): stri
   return MOMENT_CAPTIONS[m.kind](m, namer(profiles));
 }
 
-export function awardText(a: Award, profiles: readonly ProfileInfo[]): { title: string; emoji: string; caption: string } {
+/** An award card (Ryan: trim the fat): the joke (or the award's name) as the headline, then one plain line. */
+export function awardText(a: Award, profiles: readonly ProfileInfo[]): { headline: string; emoji: string; title: string; line: string } {
   const def = AWARDS[a.kind];
-  const caption = def.caption(a, namer(profiles));
-  // The card already shows who won it (avatar and name), so drop a leading "Name: ".
-  const lead = `${profileOf(profiles, a.profile).name}: `;
-  return { title: def.title, emoji: def.emoji, caption: caption.startsWith(lead) ? caption.slice(lead.length) : caption };
+  return { headline: def.headline ?? def.title, emoji: def.emoji, title: def.title, line: `${profileOf(profiles, a.profile).name} · ${def.detail(a)}` };
 }

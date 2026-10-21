@@ -42,55 +42,76 @@ export const MOMENT_CAPTIONS: Record<MomentKind, (m: Moment, name: Name) => stri
   streak: (m, name) => `On a roll: ${names(m.players, name)} won ${m.payload.length} in a row.`,
 };
 
-export const AWARDS: Record<AwardKind, { title: string; emoji: string; caption: (a: Award, name: Name) => string }> = {
+/**
+ * Each award's wording. `caption` is the full sentence (with the player's name); on the award
+ * card (Ryan: trim the fat) the house awards lead with their joke `headline`, and every card
+ * then shows one plain line: the player · `detail`.
+ */
+export const AWARDS: Record<
+  AwardKind,
+  { title: string; emoji: string; headline?: string; detail: (a: Award) => string; caption: (a: Award, name: Name) => string }
+> = {
   mvp: {
     title: 'MVP',
     emoji: '🏆',
+    detail: (a) => `${a.payload.clinches} clinching ${plural(a.payload.clinches, 'card', 'cards')}`,
     caption: (a, name) => `${name(a.profile)} played ${a.payload.clinches} clinching cards.`,
   },
   wall: {
     title: 'The Wall',
     emoji: '🧱',
+    detail: (a) => `${a.payload.sets} ${plural(a.payload.sets, 'contract', 'contracts')} set`,
     caption: (a, name) => `${name(a.profile)} set ${a.payload.sets} contracts.`,
   },
   daredevil: {
     title: 'Daredevil',
     emoji: '🎢',
+    detail: (a) => `level ${Number(a.payload.averageLevel).toFixed(1).replace(/\.0$/, '')} on average`,
     caption: (a, name) =>
       `${name(a.profile)} declared at level ${Number(a.payload.averageLevel).toFixed(1).replace(/\.0$/, '')} on average.`,
   },
   heist: {
     title: 'Heist of the Night',
     emoji: '🦹',
+    detail: (a) => `${contractOf(a.payload)} made with ${a.payload.hcpGap} fewer points`,
     caption: (a, name) =>
       `${name(a.profile)} made ${contractOf(a.payload)} with ${a.payload.hcpGap} fewer points than the defenders.`,
   },
   heartbreakHotel: {
     title: 'Heartbreak Hotel',
     emoji: '💔',
+    detail: (a) => `${a.payload.heartbreaks} ${plural(a.payload.heartbreaks, 'contract', 'contracts')} lost by one set`,
     caption: (a, name) =>
       `${name(a.profile)}: ${a.payload.heartbreaks} ${plural(a.payload.heartbreaks, 'contract', 'contracts')} lost by a single trick.`,
   },
   epicAttic: {
     title: 'Epic Attic',
     emoji: '🏚️',
+    headline: 'Epic attic levels na yan!',
+    detail: (a) => `${contractOf(a.payload)}, ${word(a.payload.tricksShort)} short. Booked for ten, delivered an attic.`,
     caption: (a, name) =>
       `${name(a.profile)}: ${contractOf(a.payload)}, ${word(a.payload.tricksShort)} short. Booked for ten, delivered an attic. Epic attic levels na yan!`,
   },
   blogAboutIt: {
     title: "Why Don't You Blog About It",
     emoji: '📝',
+    headline: "Why don't you blog about that?",
+    detail: (a) => `settled game ${a.payload.dealNumber}`,
     caption: (a, name) => `${name(a.profile)} settled game ${a.payload.dealNumber}. Why don't you blog about that?`,
   },
   bannerMoment: {
     title: 'Banner Moment',
     emoji: '🪧',
+    headline: 'Banner moment na ba yan?',
+    detail: (a) => `${contractOf(a.payload)}, ${Number(a.payload.spare) === 0 ? 'made exactly' : 'one to spare'}`,
     caption: (a, name) =>
       `${name(a.profile)}: ${contractOf(a.payload)}, ${Number(a.payload.spare) === 0 ? 'made exactly' : 'one to spare'}. Banner moment na ba yan?`,
   },
   tenDollars: {
     title: "That's 10 Dollars",
     emoji: '💵',
+    headline: 'Oh, 10 dollars na yan!',
+    detail: (a) => `${a.payload.minutes} ${plural(a.payload.minutes, 'minute', 'minutes')} of thinking`,
     caption: (a, name) =>
       `${name(a.profile)}: ${a.payload.minutes} ${plural(a.payload.minutes, 'minute', 'minutes')} of thinking. Oh, 10 dollars na yan!`,
   },

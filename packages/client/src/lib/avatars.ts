@@ -1,4 +1,4 @@
-import { animalById, ELEMENT_INFO, type Avatar, type ProfileId, type Seat } from '@dark/engine';
+import { ELEMENT_INFO, type Avatar, type ProfileId, type Seat } from '@dark/engine';
 import type { Connection } from './connection.svelte';
 import type { Element } from './juice/particles';
 
@@ -18,7 +18,6 @@ export function elementAtSeat(conn: Link, seat: Seat): Element | null {
   return avatarAtSeat(conn, seat)?.element ?? null;
 }
 
-export const emojiOf = (a: Avatar | null) => (a ? (animalById(a.animal)?.emoji ?? '') : '');
 export const glyphOf = (a: Avatar | null) => (a ? ELEMENT_INFO[a.element].glyph : '');
 
 /**
@@ -27,7 +26,7 @@ export const glyphOf = (a: Avatar | null) => (a ? ELEMENT_INFO[a.element].glyph 
  */
 export function teamColor(conn: Link, seat: Seat): string {
   const me = conn.view?.mySeat;
-  return me !== null && me !== undefined && (seat - me) % 2 === 0 ? 'var(--accent)' : 'var(--silver)';
+  return me !== null && me !== undefined && (seat - me) % 2 === 0 ? 'var(--gold)' : 'var(--silver)';
 }
 
 /** Element ring colours for badges and cards. */

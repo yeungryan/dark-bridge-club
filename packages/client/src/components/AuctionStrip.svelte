@@ -1,9 +1,10 @@
 <script lang="ts">
   import type { Connection } from '../lib/connection.svelte';
-  import { avatarAtSeat, emojiOf, teamColor } from '../lib/avatars';
+  import { avatarAtSeat, teamColor } from '../lib/avatars';
   import { profileOf } from '../lib/format';
   import CallText from './CallText.svelte';
   import { director } from '../lib/juice/director.svelte';
+  import AnimalIcon from './AnimalIcon.svelte';
 
   // Spec S12: each call in turn order, underlined in its team's colour. Bids stamp in harder as the
   // level rises; passes slide in quietly. After a bid, each pass counts down on it:
@@ -22,7 +23,7 @@
     {@const p = profileOf(profiles, view.seating?.[entry.seat])}
     {@const level = entry.call.type === 'bid' ? entry.call.level : 0}
     <span class="call" class:pass={level === 0} class:top={i === lastBid} style="--c: {teamColor(conn, entry.seat)}; --weight: {level}">
-      <small>{emojiOf(avatarAtSeat(conn, entry.seat))} {p.name}</small>
+      <small><AnimalIcon animal={avatarAtSeat(conn, entry.seat)?.animal} /> {p.name}</small>
       <strong><CallText call={entry.call} /></strong>
       {#if i === lastBid && going > 0}
         {#key going}

@@ -4,7 +4,7 @@
   import { onMount } from 'svelte';
   import { cardText, isRed, pairNames, profileOf } from '../lib/format';
   import { director } from '../lib/juice/director.svelte';
-  import { avatarAtSeat, emojiOf, teamColor } from '../lib/avatars';
+  import { avatarAtSeat, teamColor } from '../lib/avatars';
   import { ring, sparks } from '../lib/juice/particles';
   import { cssColor } from '../lib/themes';
   import { settings } from '../lib/juice/settings.svelte';
@@ -15,6 +15,7 @@
   import { MOMENT_EMOJI, momentCaption } from '../lib/stories';
   import Replay from './Replay.svelte';
   import Suit from './Suit.svelte';
+  import AnimalIcon from './AnimalIcon.svelte';
 
   // Spec S14: the payoff for hidden hands. The result lands, the score ticks up, then the four
   // hands flip one by one (from declarer's right, in play order) with their HCP counting up.
@@ -117,7 +118,7 @@
       {@const p = profileOf(profiles, view.seating![seat])}
       <div class="hand" class:flipped={flipped.includes(seat)} style="--c: {teamColor(conn, seat)}">
         <div class="who">
-          {emojiOf(avatarAtSeat(conn, seat))} {p.name}{seat === view.mySeat ? ' (you)' : ''}
+          <AnimalIcon animal={avatarAtSeat(conn, seat)?.animal} /> {p.name}{seat === view.mySeat ? ' (you)' : ''}
           <span class="muted">·
             {#if flipped.includes(seat)}<CountUp value={hcp(hands[seat])} />{:else}?{/if} HCP</span>
         </div>

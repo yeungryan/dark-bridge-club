@@ -1,4 +1,4 @@
-import { suitSymbol, trumpSuit, type Seat, type Side, type Suit } from '@dark/engine';
+import { suitSymbol, trumpSuit, type Card, type Seat, type Side, type Suit } from '@dark/engine';
 import { elementAtSeat } from '../avatars';
 import { cssColor } from '../themes';
 import type { Connection } from '../connection.svelte';
@@ -94,12 +94,18 @@ class Director {
         this.reset();
         if (dealt.type === 'dealStarted' && settings.animated) {
           this.dealing = { id: ++this.fxId, dealer: dealt.dealer };
-          // Never leave the hand hidden if the flight can't run (the page was hidden, etc.).
+          // Never leave the hand hidden if the flight never starts (the page was hidden, etc.).
+          // Once it starts it ends itself (flightStarted), so a slow phone never cuts it short.
           clearTimeout(this.dealSafety);
-          this.dealSafety = setTimeout(() => this.finishDeal(), settings.ms(3500));
+          this.dealSafety = setTimeout(() => this.finishDeal(), settings.ms(3500) + 1500);
         }
       }
     });
+  }
+
+  /** The deal's flight is running: it will call finishDeal when its last card lands. */
+  flightStarted(): void {
+    clearTimeout(this.dealSafety);
   }
 
   /** The deal has landed. */
@@ -173,7 +179,9 @@ class Director {
           sound.card(m.mine);
           if (m.mine) buzz('card');
           const at = this.centerOf(`.area [data-seat="${m.seat}"]`);
-          if (m.trumpIn) {
+          if (this.isTrumpAce(conn, m.card)) {
+            this.trumpAce(conn, m.seat, at, level);
+          } else if (m.trumpIn) {
             // A shockwave and shards of the trump suit, on a freeze-frame.
             sound.trumpIn();
             buzz('trumpIn');
@@ -353,6 +361,47 @@ class Director {
     }, pause);
   }
 
+  private isTrumpAce(conn: Link, card: Card): boolean {
+    const contract = conn.view?.deal?.contract;
+    return card.rank === 14 && contract !== null && contract !== undefined && card.suit === trumpSuit(contract.strain);
+  }
+
+  /**
+   * The ace of trumps hits the table (Ryan): an area-of-effect blast. A hit-stop on a purple
+   * wash, three shockwaves rolling out across the table, a shower of the trump suit, and the
+   * other cards on the table knocked back by the wave.
+   */
+  private trumpAce(conn: Link, seat: Seat, at: { x: number; y: number } | null, level: Level): void {
+    sound.trumpIn();
+    buzz('trumpIn');
+    this.flashSuit(conn, true);
+    this.impact(3, TRUMP_COLOR, at);
+    this.shake(RESPONSES[level].shakePx * 2 + 4);
+    if (!at) return;
+    const light = '#f2e6ff';
+    lightBurst(at.x, at.y, [TRUMP_COLOR, light, '#ffffff'], 3);
+    [140, 220, 320].forEach((radius, i) => ring(at.x, at.y, i === 1 ? light : TRUMP_COLOR, { radius, width: 6 - i * 1.5, delay: i * 5, frames: 26 + i * 6 }));
+    glyphs(at.x, at.y, 16, this.trumpGlyph(conn), [TRUMP_COLOR, light], 'shower');
+    if (!settings.motion) return;
+    // The wave reaches each of the other cards on the table and shoves it outward.
+    for (const el of document.querySelectorAll<HTMLElement>('.area [data-seat]')) {
+      if (el.dataset.seat === String(seat)) continue;
+      const r = el.getBoundingClientRect();
+      const dx = r.left + r.width / 2 - at.x;
+      const dy = r.top + r.height / 2 - at.y;
+      const d = Math.hypot(dx, dy) || 1;
+      const push = 14;
+      el.animate(
+        [
+          { translate: '0 0', rotate: '0deg' },
+          { translate: `${(dx / d) * push}px ${(dy / d) * push}px`, rotate: `${dx > 0 ? 6 : -6}deg`, offset: 0.25 },
+          { translate: '0 0', rotate: '0deg' },
+        ],
+        { duration: settings.ms(520), delay: settings.ms(60 + d * 0.4), easing: 'cubic-bezier(0.2, 0.9, 0.3, 1.2)' },
+      );
+    }
+  }
+
   private trumpGlyph(conn: Link): string {
     const contract = conn.view?.deal?.contract;
     const suit = contract ? trumpSuit(contract.strain) : null;
@@ -365,11 +414,11 @@ class Director {
     if (suit && settings.animated) this.flash = { suit, big, id: ++this.fxId };
   }
 
-  /** Effects take the team colour, like the avatar rings: your pair's accent, the other pair's silver. */
+  /** Effects take the team colour, like the avatar rings: your pair's gold, the other pair's silver. */
   private colorOf(conn: Link, seat: Seat): string {
     const me = conn.view?.mySeat;
     const mine = me !== null && me !== undefined && (seat - me) % 2 === 0;
-    return mine ? gold() : cssColor('--silver', '#c9ced6');
+    return mine ? cssColor('--gold', '#e8c25a') : cssColor('--silver', '#c9ced6');
   }
 
   private centerOf(selector: string): { x: number; y: number } | null {

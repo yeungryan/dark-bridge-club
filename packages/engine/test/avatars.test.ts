@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { ANIMALS, applyAvatarAction, avatarName, lockedIn, newAvatarLobby, type AvatarLobby, type Random } from '../src/avatars';
+import { ANIMALS, animalById, applyAvatarAction, RENAMED_ANIMALS, avatarName, lockedIn, newAvatarLobby, type AvatarLobby, type Random } from '../src/avatars';
 
 const PLAYERS = ['darren', 'adrian', 'ryan', 'kim'];
 
@@ -20,8 +20,22 @@ function ok(out: ReturnType<typeof applyAvatarAction>): AvatarLobby {
 describe('S24 avatar picks', () => {
   it('the roster has 24 distinct animals, including Ryan’s edits', () => {
     expect(new Set(ANIMALS.map((a) => a.id)).size).toBe(24);
-    for (const id of ['dragon', 'badgermole', 'koi']) expect(ANIMALS.some((a) => a.id === id)).toBe(true);
-    for (const id of ['red-panda', 'badger', 'raccoon']) expect(ANIMALS.some((a) => a.id === id)).toBe(false);
+    for (const id of ['dragon', 'koi', 'dog', 'raccoon', 'polarbear', 'deer']) expect(ANIMALS.some((a) => a.id === id)).toBe(true);
+    for (const id of ['red-panda', 'badger', 'otter', 'badgermole', 'penguin']) expect(ANIMALS.some((a) => a.id === id)).toBe(false);
+  });
+
+  it('an animal saved under an old id shows as the one that replaced it', () => {
+    expect(animalById('otter')?.name).toBe('Dog');
+    expect(animalById('crane')?.name).toBe('Deer');
+    expect(avatarName({ animal: 'badgermole', element: 'earth' })).toBe('Earth Hamster');
+    for (const id of Object.values(RENAMED_ANIMALS)) expect(animalById(id)).toBeDefined();
+  });
+
+  it('last night’s animal under its old id is still not offered again', () => {
+    for (let n = 1; n <= 200; n++) {
+      const lobby = newAvatarLobby(PLAYERS, seeded(n), { [PLAYERS[0]!]: 'otter' });
+      expect(lobby.picks[PLAYERS[0]!]!.offered).not.toContain('dog');
+    }
   });
 
   it('across 1,000 simulated nights, nobody shares an animal, offers never overlap, and nobody gets last night’s animal', () => {
@@ -62,6 +76,6 @@ describe('S24 avatar picks', () => {
   });
 
   it('names read "Element Animal"', () => {
-    expect(avatarName({ animal: 'badgermole', element: 'earth' })).toBe('Earth Badgermole');
+    expect(avatarName({ animal: 'polarbear', element: 'water' })).toBe('Water Polar bear');
   });
 });

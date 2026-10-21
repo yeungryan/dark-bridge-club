@@ -11,6 +11,9 @@ test.describe.configure({ mode: 'parallel' });
 const PRACTICE = '/practice.html?turbo=1';
 
 const sounds = (page: Page) => page.evaluate(() => (window as unknown as { __darkSounds: string[] }).__darkSounds.slice());
+/** How many times a sound has played since the page opened (never trimmed, unlike `sounds`). */
+const soundCount = (page: Page, name: string) =>
+  page.evaluate((n) => (window as unknown as { __darkSoundCount: Record<string, number> }).__darkSoundCount[n] ?? 0, name);
 
 async function tap(locator: Locator): Promise<boolean> {
   return locator.tap({ timeout: 3000 }).then(
@@ -71,21 +74,30 @@ test('no sound before the first tap; after it, the game is audible', async ({ pa
 test('the bid ladder: tap a bid to see what it needs, then Bid; Pass is one tap', async ({ page }) => {
   await page.goto('/practice.html');
   await playUntil(page, () => page.locator('.box .ladder').isVisible());
-  const tile = page.locator('.ladder .tile:not([disabled])').first();
+  // Nothing picked yet: the bid to beat's suit is raised, as many as the top line counts.
+  const context = (await page.locator('.box .context').textContent()) ?? '';
+  const held = /you hold (\d+|no)(?! aces?)\b/.exec(context);
+  if (held) await expect(page.locator('.hand .slot.preview')).toHaveCount(held[1] === 'no' ? 0 : Number(held[1]));
+  else if (context.startsWith('No bids yet')) await expect(page.locator('.hand .slot.preview')).toHaveCount(0);
+  // A suit bid (not NT): picking it raises exactly my cards of that suit.
+  const tile = page.locator('.ladder .tile:not([disabled]):not([aria-label$="no trumps"])').first();
   const label = ((await tile.textContent()) ?? '').trim();
+  const strain = ((await tile.getAttribute('aria-label')) ?? '').split(' ')[1] as 'C' | 'D' | 'H' | 'S';
+  const symbol = { C: '♣', D: '♦', H: '♥', S: '♠' }[strain];
   await tile.tap();
   await expect(page.locator('.box .context')).toContainText(/you need \d+ sets, they need \d+/);
+  await expect(page.locator('.hand .slot.preview')).toHaveCount(await page.locator(`.hand .card[aria-label$="of ${symbol}"]`).count());
   await expect(page.locator('.confirm')).toContainText(/Bid\s*\d/);
   await page.locator('.confirm').tap();
   await expect(page.locator('.strip .call').filter({ hasText: 'Ryan' }).last()).toContainText(label);
   // Next time it's my call (this auction or the next game's), Pass goes straight in.
   await playUntil(page, () => page.locator('.box .ladder').isVisible(), { noPass: true });
-  const before = (await sounds(page)).filter((s) => s === 'pass').length;
+  const before = await soundCount(page, 'pass');
   await page.getByRole('button', { name: 'Pass', exact: true }).tap();
   // One tap and it's in: the box closes (no longer my call) and the pass is heard. (At test
   // speed the bots may finish the auction at once, so the strip itself may already be gone.)
   await expect(page.locator('.box .ladder')).toBeHidden();
-  await expect.poll(async () => (await sounds(page)).filter((s) => s === 'pass').length).toBeGreaterThan(before);
+  await expect.poll(async () => soundCount(page, 'pass')).toBeGreaterThan(before);
 });
 
 test('a whole deal by dragging cards: every beat of the feel ladder fires', async ({ page }) => {
@@ -140,8 +152,9 @@ test('avatars: two animals, tap one and an element to lock in; the crest shows w
   const mine = page.locator('.reveal .card').filter({ hasText: 'Ryan' });
   await expect(mine.locator('.token.el-water')).toHaveCount(1);
   await expect(page.locator('.reveal')).not.toContainText('Water');
-  const faces = await page.locator('.reveal .card .face').allTextContents();
-  expect(new Set(faces.map((f) => f.trim())).size).toBe(4);
+  // Four different animals, each drawn as an animal picture.
+  const faces = await page.locator('.reveal .card .face [data-animal]').evaluateAll((els) => els.map((e) => e.getAttribute('data-animal')));
+  expect(new Set(faces).size).toBe(4);
   // At the table, all four seats (yours too) show the avatar with its element and cards left.
   await playUntil(page, () => page.locator('[data-badge-seat] .count').first().isVisible());
   await expect(page.locator('.seat .token[class*="el-"]')).toHaveCount(4);
@@ -167,12 +180,14 @@ test('seats stay put from bidding to play; the newest set on the scoreboard open
   };
   await playUntil(page, () => page.locator('.box .ladder').isVisible());
   const bidding = await centres();
-  // Play on until a set has been won.
-  await playUntil(page, () => page.locator('.pip.latest').isVisible());
+  // Play on until a set has been won, measuring while the game is still being played (a slow
+  // machine can reach the end of the game first; then it plays on into the next one).
+  await playUntil(page, async () => (await page.locator('.pip.latest').isVisible()) && (await page.locator('.hand .slot').count()) > 0);
   const playing = await centres();
   playing.forEach((p, i) => {
     expect(Math.abs(p.x - bidding[i].x), `${seats[i]} x`).toBeLessThanOrEqual(1);
-    expect(Math.abs(p.y - bidding[i].y), `${seats[i]} y`).toBeLessThanOrEqual(1);
+    // (On failure, every seat's centre at both moments, to tell a real shift from a race.)
+    expect(Math.abs(p.y - bidding[i].y), `${seats[i]} y ${JSON.stringify({ bidding, playing })}`).toBeLessThanOrEqual(1);
   });
   // No separate "Last set" button any more: the latest silhouette is the way in.
   await expect(page.getByRole('button', { name: /^Last set$/ })).toHaveCount(0);
@@ -191,7 +206,7 @@ test('after a game, replay it set by set with every hand face up', async ({ page
   // It opens on the bidding, with all four hands as dealt.
   await expect(replay.getByText('The bidding', { exact: true })).toBeVisible();
   await expect(replay.locator('.hand')).toHaveCount(4);
-  const sets = (await replay.locator('.dot').count()) - 1;
+  const sets = await replay.locator('.lanes .set').count();
   expect(sets).toBeGreaterThanOrEqual(1);
   // Set 1: four cards on the table, one marked as led and one as won.
   await replay.getByRole('button', { name: 'Next set' }).tap();
@@ -200,8 +215,11 @@ test('after a game, replay it set by set with every hand face up', async ({ page
   // One player led and one won (the same player gets a single "led · won" tag).
   await expect(replay.locator('.tag.led')).toHaveCount(1);
   await expect(replay.locator('.tag.won')).toHaveCount(1);
+  // Each set's mark is the animal of the player who won it (as on the scoreboard), in their lane.
+  const winner = await replay.locator('.hand').filter({ has: page.locator('.tag.won') }).locator('.who [data-animal]').getAttribute('data-animal');
+  await expect(replay.locator('.lanes .set').first().locator('[data-animal]')).toHaveAttribute('data-animal', winner!);
   // Jump to the set that decided it, then close.
-  await replay.locator('.dot.decisive').tap();
+  await replay.locator('.lanes .set.decisive').tap();
   await expect(replay.getByText('This set decided it.')).toBeVisible();
   await replay.getByRole('button', { name: 'Close the replay' }).tap();
   await expect(replay).toBeHidden();
@@ -212,22 +230,24 @@ test('each game waits for its dealer: shuffle, tap Deal, and 52 cards fly out', 
   await page.goto(PRACTICE);
   const dealButton = page.getByRole('button', { name: 'Deal', exact: true });
   const shuffling = page.getByText(/is shuffling…/);
-  // Play along until a game is waiting to be dealt (by me, or by a bot).
-  await playUntil(page, async () => (await dealButton.isVisible()) || (await shuffling.isVisible()), { noDeal: true });
-  await expect(page.locator('.deck')).toBeVisible();
-  if (await shuffling.isVisible()) {
+  // Play along until a game is waiting to be dealt (by me, or by a bot). Note which: at test
+  // speed a bot deals within a fraction of a second, so it can't be checked again afterwards.
+  let botDeals = false;
+  await playUntil(page, async () => (await dealButton.isVisible()) || (botDeals = await shuffling.isVisible()), { noDeal: true });
+  if (botDeals) {
     // A bot is dealing: no Deal button for me, and the cards arrive when it deals.
     await expect(dealButton).toHaveCount(0);
     await expect(page.locator('.hand .slot')).toHaveCount(13, { timeout: 15_000 });
     return;
   }
-  // I'm the dealer: nothing happens until I tap Deal (no automatic deal).
+  // I'm the dealer: the deck shuffles, and nothing happens until I tap Deal (no automatic deal).
+  await expect(page.locator('.deck')).toBeVisible();
   await page.waitForTimeout(2500);
   await expect(dealButton).toBeVisible();
   await expect(page.locator('.hand .slot')).toHaveCount(0);
-  const before = (await sounds(page)).filter((s) => s === 'dealCard').length;
+  const before = await soundCount(page, 'dealCard');
   await dealButton.tap();
   await expect(page.locator('.hand .slot')).toHaveCount(13);
-  await expect.poll(async () => (await sounds(page)).filter((s) => s === 'dealCard').length - before).toBe(52);
+  await expect.poll(async () => (await soundCount(page, 'dealCard')) - before).toBe(52);
   await expect.poll(async () => (await sounds(page)).includes('fan')).toBe(true);
 });

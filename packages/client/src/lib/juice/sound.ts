@@ -95,9 +95,14 @@ if (typeof document !== 'undefined') {
   }
 }
 
-/** Sounds that actually reached the speaker, for tests (see e2e/sound.spec.ts). */
+/** Sounds that actually reached the speaker, for tests (see e2e/sound.spec.ts): the latest ones in
+ *  order, and a running count of each that is never trimmed (a deal alone plays 52). */
 const played: string[] = [];
-if (typeof window !== 'undefined') (window as unknown as { __darkSounds: string[] }).__darkSounds = played;
+const playedCount: Record<string, number> = {};
+if (typeof window !== 'undefined') {
+  (window as unknown as { __darkSounds: string[] }).__darkSounds = played;
+  (window as unknown as { __darkSoundCount: Record<string, number> }).__darkSoundCount = playedCount;
+}
 
 // ---------------------------------------------------------------------------------------------
 // The room: a procedurally generated impulse response.
@@ -450,6 +455,7 @@ function play(name: string, make: (e: Engine) => void): void {
   if (!e) return;
   if (!offline) {
     played.push(name);
+    playedCount[name] = (playedCount[name] ?? 0) + 1;
     if (played.length > 200) played.splice(0, 100);
   }
   make(e);

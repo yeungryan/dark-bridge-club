@@ -51,6 +51,11 @@ Tiger · Wolf · Bear · Fox · Otter · Owl · Eagle · Hawk · Badgermole · R
 
 - *IP note:* "Badgermole" is a creature from the show. The guardrail above was written for a public product. This is a private game for four friends, so the name stays at Ryan's call.
 - *v1 art:* native emoji. Hawk, Lemur, Crane, Koi and Badgermole have no exact emoji, so they use the nearest one, and the animal's name always shows next to it. Custom portraits can come later.
+
+**Faces only, in Twemoji (Ryan, PR #16).** Every animal is now a face, drawn with bundled Twemoji art (CC-BY 4.0; credit in `packages/client/src/assets/animals/README.md`), so all four phones show the same pictures. Ten animals changed: Otter → Dog, Owl → Raccoon, Hawk → Chicken, Badgermole → Hamster, Elephant → Gorilla, Turtle → Frog, Penguin → Polar bear, Lemur → Monkey, Bison → Cow, Crane → Deer. Dragon uses the dragon face (🐲) and Koi the tropical fish (🐠). The four elements are Twemoji too: 🔥 fire, 💧 water, 💨 air (dashing away), ⛰️ earth (mountain). The final 24:
+Tiger · Wolf · Bear · Fox · Lion · Panda · Koala · Boar · Dog · Raccoon · Chicken · Hamster · Gorilla · Frog · Polar bear · Monkey · Cow · Deer · Eagle · Rhino · Dragon · Shark · Koi · Octopus
+- Old ids saved in past nights map to their replacements (`RENAMED_ANIMALS`), and last night's animal is still not offered again under its new id.
+- Set icons (scoreboard, replay, the declarer under the contract) are the same art as a solid silhouette in the team colour.
 - *Lobby:* picking happens **in the lobby while waiting for everyone**, instead of as a separate step after the night starts, so it doesn't add 20 s to the start. The night starts once all four are here **and** locked in. A player who hasn't picked 30 s after the other three are ready gets "Surprise me".
 
 ## Clean-up before launch (Ryan, 2026-10-20)

@@ -59,6 +59,7 @@ Each moment now has its own shape, not just more or fewer of the same squares (`
 | Trump-in | A shockwave ring and thrown trump-suit shards |
 | Trick won by a trump | The trump suit drifts up off the card |
 | First trump trick | A big ring and a shower of the trump suit |
+| The ace of trumps played (Ryan) | An area-of-effect blast: the biggest hit-stop on a purple wash, three shockwaves rolling across the table, a shower of the trump suit, and the other cards on the table knocked back by the wave |
 | Sold! | An ink-stamp dust puff |
 | Clinch | The element signature of the player who played the deciding card (S24) |
 | Big contract at the reveal | A gold ring and sparks |

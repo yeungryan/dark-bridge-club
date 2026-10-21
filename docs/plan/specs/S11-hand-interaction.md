@@ -30,3 +30,10 @@ Playing a card should feel physical and be impossible to misclick (T3).
 - **Settings → Play cards: Tap twice** restores tap-to-raise, tap-again-to-play for anyone who prefers it. Keyboard Enter always plays the lifted card.
 - Other players' cards fly in from their name badge, not from a fixed offset.
 - Why: the second tap landed on a small, overlapped card, and the card vanished from the hand instead of travelling to the table. That broke the link between the gesture and the card on the table.
+
+## Polish (Ryan, M3)
+- **Where suits start:** in the ♣ ♦ ♥ ♠ order, each suit's first card gets a subtle deeper shadow and a thin outline, so ♦ and ♥ (and ♣ and ♠) never run together.
+- **Bid preview:** while bidding, the bid you've picked but not confirmed raises the matching cards in your hand (your screen only): its suit, or your honours (A, K, Q, J) for NT. With nothing picked, the cards of the bid to beat are raised instead, and the bidding box's top line counts what you hold of it ("you hold 2 ♣", "you hold no ♥", or "you hold 2 aces" over NT).
+- **Trumps marked (Ryan, option D):** once the contract is set, every trump in your hand and on the table carries a short purple bar along its top (inset from the card's edges, so in an overlapping hand each trump shows its own bar) and a faint purple tint, for the rest of the game. Nothing for NT.
+- **No glow on playable cards (Ryan):** the cards you can't play are dimmed on your turn; the ones you can are left plain.
+- **Team colours:** your pair is gold and the other pair silver in every theme (`--gold` and `--silver`): avatar rings, the scoreboard's set icons and the set-win effects.

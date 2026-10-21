@@ -33,7 +33,7 @@ This is the heart of the game's tension. It's the bridge version of Balatro's cl
 - **Last-trick peek:** the four cards flip up one by one in play order, then the winner lights up; tap to turn them back down. The button always takes its space, so the trick area doesn't jump after trick 1.
 
 ## Round 5: the score bug (Ryan)
-- The contract and the race are one panel, laid out like a playoff score bug. On the left is the winning bid, large, with the declarer's avatar and name under it (tap it for the auction). On the right is one row per pair: initials ("D·K"), then a silhouette of the animal that won each set in the team colour (empty outlines for sets still needed), then sets/target, then the pair's games won tonight in a series column.
+- The contract and the race are one panel, laid out like a playoff score bug. On the left is the winning bid, large, with the declarer's name under it led by their animal as a team-coloured silhouette the height of the name (Ryan; tap it for the auction). On the right is one row per pair: initials ("D·K"), then a silhouette of the animal that won each set in the team colour (empty outlines for sets still needed), then sets/target, then the pair's games won tonight in a series column.
 - The newest set is the bigger, ringed, breathing silhouette. Tapping it opens the last set, which replaces the old "Last set" button.
 - `DealView.trickWinners` (public information) supplies who won each set.
 - The header reads **"Game N"**, centred.

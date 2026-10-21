@@ -47,7 +47,7 @@ Each award goes to **whoever earns it** on the night, so the joke's namesake can
 - **Engine** (`moments.ts`, `captions.ts`): every detector and award is calculated from saved history (`DealHistory` / `NightHistory`) by replaying the saved sets against the contract, so old nights can be re-run with the same result.
 - **Thinking time** (`thinkclock.ts`): the clock runs for whoever is due to call or play. It stops while the table is paused, and one turn counts as 3 minutes at most. Totals are saved per game (`deals.think_json`).
 - **Saved data:** each night's seating (`sessions.seating_json`) and the `moments` and `awards` tables.
-- **On screen:** the reveal shows the game's moments as caption chips once all four hands are face up. At the end of the night, up to five award cards flip in one at a time after the winners' banner.
+- **On screen:** the reveal shows the game's moments as caption chips once all four hands are face up. At the end of the night, the top two award cards (Ryan: two, for impact) flip in side by side, one at a time, after the winners' banner.
 - **Award selection:**
   - Each award is scored against a "clearly earned" level.
   - House awards get a bonus.
@@ -55,3 +55,4 @@ Each award goes to **whoever earns it** on the night, so the joke's namesake can
   - A player gets at most two awards, unless that's needed to reach three.
   - A kind given last night is skipped unless it's clearly earned again.
 - **Epic Attic** counts how far short the declarers would still be even if they had won every set that wasn't played (games stop at the clinch). A defeat qualifies when it's 2+ short or at level 4 or higher. A one-short loss on the last set is a Heartbreak, not an attic.
+- **Award cards trimmed (Ryan):** no avatars. The house awards lead with their joke line as the headline, and the others with their name. One plain line follows: the player · the fact (e.g. "Darren · 2♠, made exactly").

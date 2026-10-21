@@ -5,6 +5,8 @@
   import CallText from './CallText.svelte';
   import { buzz } from '../lib/juice/haptics';
   import { sound } from '../lib/juice/sound';
+  import { bidPreview } from '../lib/bidPreview.svelte';
+  import { onDestroy } from 'svelte';
 
   // Spec S12, the bid ladder (Ryan): every legal bid is its own little card, cheapest first,
   // two levels showing at a time; scroll for jumps and it snaps to a whole level. Tap a card to
@@ -24,6 +26,26 @@
   // What you're bidding over, in words.
   const topBid = $derived([...deal.calls].reverse().find((c) => c.call.type === 'bid') ?? null);
   const topBy = $derived(topBid ? (topBid.seat === view.mySeat ? 'you' : nameAtSeat(view, conn.room!.profiles, topBid.seat)) : '');
+
+  // Your hand raises the cards the picked bid is about; with nothing picked, the cards of the
+  // bid to beat (Ryan). Cleared when the box closes.
+  $effect(() => {
+    bidPreview.strain = selected?.type === 'bid' ? selected.strain : topBid?.call.type === 'bid' ? topBid.call.strain : null;
+  });
+  onDestroy(() => (bidPreview.strain = null));
+
+  // With nothing picked, the top line counts what you hold of the bid to beat.
+  const myHand = $derived(deal.hand);
+  const holding = $derived.by(() => {
+    if (!topBid || topBid.call.type !== 'bid') return '';
+    const strain = topBid.call.strain;
+    if (strain === 'NT') {
+      const aces = myHand.filter((c) => c.rank === 14).length;
+      return aces === 0 ? 'you hold no aces' : `you hold ${aces} ${aces === 1 ? 'ace' : 'aces'}`;
+    }
+    const n = myHand.filter((c) => c.suit === strain).length;
+    return n === 0 ? 'you hold no' : `you hold ${n}`;
+  });
 
   const selected = $derived<Call | null>(picked && isLegal(picked.level, picked.strain) ? { type: 'bid', ...picked } : null);
 
@@ -59,7 +81,8 @@
     {#if selected?.type === 'bid'}
       <strong><CallText call={selected} /></strong>: you need <strong>{declarerTarget(selected.level)} sets</strong>, they need
       <strong>{defenderTarget(selected.level)}</strong>
-    {:else if topBid}To beat: <strong><CallText call={topBid.call} /></strong> by {topBy}
+    {:else if topBid}To beat: <strong><CallText call={topBid.call} /></strong> by {topBy}{#if holding}
+        &nbsp;· {holding}{#if topBid.call.type === 'bid' && topBid.call.strain !== 'NT'}&nbsp;<CallText strain={topBid.call.strain} />{/if}{/if}
     {:else}No bids yet: you can open{/if}
   </p>
   <div class="body">
@@ -124,27 +147,34 @@
     grid-template-columns: minmax(0, 1fr) 62px 54px;
     gap: 6px;
   }
-  /* Two levels showing; scrolling snaps a whole level to the top. Each level is 34px of cards
-     plus 5px of space, and the box is exactly two levels tall, so every snap lines up. */
+  /* Two levels showing, plus a faded peek of the third (Ryan) so it reads as scrollable; scrolling
+     snaps a whole level to the top. Each level is 34px of cards plus 5px of space. */
   .ladder {
-    height: 78px;
+    height: 96px;
+    align-self: start;
     overflow-y: auto;
     overscroll-behavior: contain;
     scroll-snap-type: y mandatory;
     scrollbar-width: none;
   }
+  /* Room after the last level, so the last two can still snap to the top. */
+  .ladder::after {
+    content: '';
+    display: block;
+    height: 18px;
+  }
   .ladder::-webkit-scrollbar {
     display: none;
   }
-  /* A soft fade at an edge that has more levels beyond it. */
+  /* The peeking third level fades out; a level scrolled off the top fades at that edge. */
   .ladder.more-below {
-    mask-image: linear-gradient(180deg, #000 calc(100% - 8px), transparent);
+    mask-image: linear-gradient(180deg, #000 78px, rgba(0, 0, 0, 0.45) 84px, transparent);
   }
   .ladder.more-above {
     mask-image: linear-gradient(0deg, #000 calc(100% - 8px), transparent);
   }
   .ladder.more-above.more-below {
-    mask-image: linear-gradient(180deg, transparent, #000 8px, #000 calc(100% - 8px), transparent);
+    mask-image: linear-gradient(180deg, transparent, #000 8px, #000 78px, rgba(0, 0, 0, 0.45) 84px, transparent);
   }
   .level {
     display: grid;
