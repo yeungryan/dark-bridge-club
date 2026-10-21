@@ -32,6 +32,7 @@ import {
 } from '@dark/engine';
 import { botCall, botCard } from '@dark/engine/bots';
 import { Connection } from './connection.svelte';
+import { TURBO } from './juice/timing';
 
 // The practice table: you against three bots, entirely in this browser. It runs the same
 // rules engine the server runs and plays the same table screens, but nothing is sent
@@ -47,10 +48,10 @@ export const PRACTICE_PROFILES: readonly ProfileInfo[] = [
 const IDS = PRACTICE_PROFILES.map((p) => p.id) as [ProfileId, ProfileId, ProfileId, ProfileId];
 const USUAL_PARTNER: Record<ProfileId, ProfileId> = { darren: 'kim', kim: 'darren', adrian: 'ryan', ryan: 'adrian' };
 
-const CLINCH_MS = 5000;
+const CLINCH_MS = TURBO ? 600 : 5000;
 const CONCESSION_MS = 15_000;
 /** How long bots "think"; a little random so the table doesn't feel mechanical. */
-const think = (base: number) => base + Math.random() * base * 0.6;
+const think = (base: number) => (TURBO ? 30 : base + Math.random() * base * 0.6);
 
 export class PracticeTable extends Connection {
   private session!: SessionState;
