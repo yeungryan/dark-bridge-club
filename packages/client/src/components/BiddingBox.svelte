@@ -82,7 +82,7 @@
       <strong><CallText call={selected} /></strong>: you need <strong>{declarerTarget(selected.level)} sets</strong>, they need
       <strong>{defenderTarget(selected.level)}</strong>
     {:else if topBid}To beat: <strong><CallText call={topBid.call} /></strong> by {topBy}{#if holding}
-        · {holding}{#if topBid.call.type === 'bid' && topBid.call.strain !== 'NT'}&nbsp;<CallText strain={topBid.call.strain} />{/if}{/if}
+        &nbsp;· {holding}{#if topBid.call.type === 'bid' && topBid.call.strain !== 'NT'}&nbsp;<CallText strain={topBid.call.strain} />{/if}{/if}
     {:else}No bids yet: you can open{/if}
   </p>
   <div class="body">
