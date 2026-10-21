@@ -9,6 +9,7 @@
   import Suit from './Suit.svelte';
   import AnimalIcon from './AnimalIcon.svelte';
   import TableScene from './TableScene.svelte';
+  import SeatCalls from './SeatCalls.svelte';
 
   // The replay (Ryan): after a game, step back through it set by set with every hand face up:
   // who led each set, who won it, and what everyone still held. Each player steps through on
@@ -20,7 +21,9 @@
   const contract = $derived(game.contract);
   const targets = $derived(targetsOf(contract));
   const steps = $derived(replaySteps(game.dealt, game.tricks, contract));
-  let at = $state(0);
+  // Opens on the set that decided the game (Ryan), or the last one played.
+  // svelte-ignore state_referenced_locally
+  let at = $state(Math.max(0, steps.findIndex((s) => s.decisive)) || steps.length - 1);
   const step = $derived(steps[Math.min(at, steps.length - 1)]!);
 
   const SPOTS: Spot[] = ['top', 'left', 'right', 'bottom'];
@@ -139,11 +142,8 @@
           </div>
         {/each}
       {:else}
-        <ol class="calls" aria-label="The bidding">
-          {#each game.calls as c, i (i)}
-            <li><span>{game.name(c.seat)}</span> <CallText call={c.call} /></li>
-          {/each}
-        </ol>
+        <!-- The bidding as it lay on the table: each call in front of its player. -->
+        <SeatCalls calls={game.calls} {me} color={game.color} />
       {/if}
     </div>
   </div>
@@ -151,49 +151,45 @@
   {#if step.decisive}<p class="note decisive">⭐ This set decided it.</p>{/if}
   {#if step.stoppedHere}<p class="note">The game stopped here; the rest were never played.</p>{/if}
 
-  <!-- ◀ and ▶ span the strip and the score line; drag along the strip to scrub (Ryan). -->
+  <!-- Tap a set or drag along the strip to scrub (Ryan: no arrows, so the strip gets the width). -->
   <nav class="controls" aria-label="Replay controls">
-    <button class="step" onclick={() => go(at - 1)} disabled={at === 0} aria-label="Previous set">◀</button>
-    <div class="mid">
-      <!-- svelte-ignore a11y_no_static_element_interactions -->
-      <div
-        class="lanes"
-        bind:this={lanesEl}
-        style="--n: {steps.length - 1}"
-        onpointerdown={scrubStart}
-        onpointermove={scrubMove}
-        onpointerup={scrubEnd}
-        onpointercancel={scrubEnd}
-      >
-        <button class="bids" class:on={at === 0} aria-label="The bidding" aria-current={at === 0 ? 'step' : undefined} onclick={() => go(0)}>Bids</button>
-        {#each lanes as lane, l (lane.side)}
-          <span class="lane-name" style="--t: {game.color(lane.seats[0]!)}; grid-row: {l + 2}">{initials(lane.seats)}</span>
-        {/each}
-        {#each steps.slice(1) as s, i (i)}
-          {@const w = s.trick!.winner}
-          <button
-            class="set"
-            class:on={i + 1 === at}
-            class:decisive={s.decisive}
-            data-step={i + 1}
-            style="grid-column: {i + 3}; --t: {game.color(w)}"
-            aria-label="Set {i + 1}, won by {game.name(w)}{s.decisive ? ' (decided it)' : ''}"
-            aria-current={i + 1 === at ? 'step' : undefined}
-            onclick={() => go(i + 1)}
-          >
-            <span class="num">{s.decisive ? '★' : i + 1}</span>
-            <span class="slot" style="grid-row: {laneOf(w) + 2}"><AnimalIcon animal={game.animal(w)} silhouette="var(--t)" /></span>
-          </button>
-        {/each}
-      </div>
-      <p class="status">
-        <strong>{label}</strong>
-        {#if step.set > 0}
-          <br />Declarers {step.tally.declarers}/{targets.declarers} · Defenders {step.tally.defenders}/{targets.defenders}
-        {/if}
-      </p>
+    <!-- svelte-ignore a11y_no_static_element_interactions -->
+    <div
+      class="lanes"
+      bind:this={lanesEl}
+      style="--n: {steps.length - 1}"
+      onpointerdown={scrubStart}
+      onpointermove={scrubMove}
+      onpointerup={scrubEnd}
+      onpointercancel={scrubEnd}
+    >
+      <button class="bids" class:on={at === 0} aria-label="The bidding" aria-current={at === 0 ? 'step' : undefined} onclick={() => go(0)}>Bids</button>
+      {#each lanes as lane, l (lane.side)}
+        <span class="lane-name" style="--t: {game.color(lane.seats[0]!)}; grid-row: {l + 3}">{initials(lane.seats)}</span>
+      {/each}
+      {#each steps.slice(1) as s, i (i)}
+        {@const w = s.trick!.winner}
+        <button
+          class="set"
+          class:on={i + 1 === at}
+          class:decisive={s.decisive}
+          data-step={i + 1}
+          style="grid-column: {i + 3}; --t: {game.color(w)}"
+          aria-label="Set {i + 1}, won by {game.name(w)}{s.decisive ? ' (decided it)' : ''}"
+          aria-current={i + 1 === at ? 'step' : undefined}
+          onclick={() => go(i + 1)}
+        >
+          <span class="num">{s.decisive ? '★' : i + 1}</span>
+          <span class="slot" style="grid-row: {laneOf(w) + 3}"><AnimalIcon animal={game.animal(w)} silhouette="var(--t)" /></span>
+        </button>
+      {/each}
     </div>
-    <button class="step" onclick={() => go(at + 1)} disabled={at === steps.length - 1} aria-label="Next set">▶</button>
+    <p class="status">
+      <strong>{label}</strong>
+      {#if step.set > 0}
+        <br />Declarers {step.tally.declarers}/{targets.declarers} · Defenders {step.tally.defenders}/{targets.defenders}
+      {/if}
+    </p>
   </nav>
 </div>
 
@@ -363,22 +359,6 @@
   :global(.fx-off) .spot {
     animation: none;
   }
-  .calls {
-    position: absolute;
-    inset: 14px;
-    margin: 0;
-    padding: 0;
-    list-style: none;
-    display: grid;
-    align-content: center;
-    gap: 1px;
-    overflow-y: auto;
-    font-size: 12px;
-    text-align: center;
-  }
-  .calls span {
-    color: var(--ink-dim);
-  }
   .status {
     margin: 0;
     text-align: center;
@@ -401,35 +381,26 @@
   }
   .controls {
     display: grid;
-    grid-template-columns: 40px minmax(0, 1fr) 40px;
-    gap: 6px;
-    align-items: stretch;
-  }
-  .mid {
-    display: grid;
     gap: 6px;
     min-width: 0;
-  }
-  /* Tall enough to span the strip and the score line. */
-  .step {
-    min-height: 0;
-    height: 100%;
-    padding: 0;
-    font-size: 1.1rem;
   }
   /* The strip: a "Bids" column, the two team lanes' initials, then one column per set. */
   .lanes {
     display: grid;
-    grid-template-columns: 26px 24px repeat(var(--n), minmax(0, 22px));
+    grid-template-columns: 28px 26px repeat(var(--n), minmax(0, 28px));
     touch-action: none;
-    grid-template-rows: 14px 28px 28px;
+    /* A thin row above and below, so the lit column has room around its number and animal. */
+    grid-template-rows: 6px 18px 34px 34px 6px;
     justify-content: center;
-    column-gap: 1px;
+    column-gap: 2px;
     align-items: center;
+    padding: 4px;
+    border-radius: 12px;
+    background: color-mix(in srgb, var(--panel) 70%, transparent);
   }
   .bids {
     grid-column: 2;
-    grid-row: 1 / 4;
+    grid-row: 1 / 6;
     align-self: stretch;
     min-height: 0;
     padding: 0;
@@ -459,10 +430,10 @@
   }
   /* A set: a whole column you can tap. Its number on top, its winner in their team's lane. */
   .set {
-    grid-row: 1 / 4;
+    grid-row: 1 / 6;
     align-self: stretch;
     display: grid;
-    grid-template-rows: 14px 28px 28px;
+    grid-template-rows: 6px 18px 34px 34px 6px;
     justify-items: center;
     align-items: center;
     min-height: 0;
@@ -473,7 +444,7 @@
     transition: background calc(150ms * var(--speed));
   }
   .num {
-    grid-row: 1;
+    grid-row: 2;
     font-size: 9.5px;
     line-height: 1;
     color: var(--ink-dim);
@@ -484,7 +455,7 @@
   }
   .slot {
     display: grid;
-    font-size: 18px;
+    font-size: 22px;
   }
   /* Where you are: the column lights up. */
   .set.on {

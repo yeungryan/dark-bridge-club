@@ -12,9 +12,10 @@
   import Scoreboard from './Scoreboard.svelte';
   import Reveal from './Reveal.svelte';
   import SeatBadge from './SeatBadge.svelte';
+  import SeatCalls from './SeatCalls.svelte';
   import MenuSheet from './MenuSheet.svelte';
   import History from './History.svelte';
-  import { avatarOf } from '../lib/avatars';
+  import { avatarOf, teamColor } from '../lib/avatars';
   import { director } from '../lib/juice/director.svelte';
   import { settings } from '../lib/juice/settings.svelte';
   import { TIMING } from '../lib/juice/timing';
@@ -139,8 +140,9 @@
             <!-- The deck stays put until the last card has flown. -->
             <Deck riffleSound={iDeal && shuffling} />
           {:else if deal.phase === 'auction'}
-            <div class="auction"><AuctionStrip {conn} /></div>
-            <!-- After a bid, each pass counts it down (Ryan: on the table, where nothing covers it). -->
+            <!-- Each call lands in front of its player, like a played card (Ryan). -->
+            <SeatCalls calls={deal.calls} {me} color={(seat) => teamColor(conn, seat)} fly />
+            <!-- After a bid, each pass counts it down, in the middle of the table. -->
             {#if director.going > 0}
               {#key director.going}
                 <div class="going" role="status">🔨 {director.going === 1 ? 'Going once…' : 'Going twice…'}</div>
@@ -366,13 +368,13 @@
     min-width: 0;
     aspect-ratio: 1 / 1;
   }
-  /* "Going once / twice": a solid pill straddling the table's bottom rim, clear of the calls. */
+  /* "Going once / twice": a solid pill in the middle of the table, clear of the calls. */
   .going {
     position: absolute;
-    bottom: 0;
+    top: 50%;
     left: 50%;
     z-index: 2;
-    translate: -50% 45%;
+    translate: -50% -50%;
     padding: 5px 14px;
     border-radius: 999px;
     background: var(--accent);
@@ -395,12 +397,6 @@
   }
   :global(.fx-reduced) .going {
     animation: fade-in calc(250ms * var(--speed)) backwards;
-  }
-  .auction {
-    position: relative;
-    padding: 10px;
-    max-height: 100%;
-    overflow-y: auto;
   }
   .surface {
     position: absolute;

@@ -1,8 +1,8 @@
 <script lang="ts">
-  import { headToHead, partnershipRecords, winRate, type PendingChange, type ProfileInfo, type SavedNight, type ThemeId } from '@dark/engine';
+  import { headToHead, partnershipRecords, winRate, type PendingChange, type ProfileInfo, type SavedNight, type ScoreOverride, type ThemeId } from '@dark/engine';
   import { onMount } from 'svelte';
   import { profileOf } from '../lib/format';
-  import { loadGame, loadHistory, nightLine, pairName, sendChange, shortDate, type HistoryData } from '../lib/history';
+  import { loadGame, loadHistory, nightLine, pairName, shortDate, type HistoryData } from '../lib/history';
   import { sound } from '../lib/juice/sound';
   import { savedReplay, type ReplayGame } from '../lib/replayGame';
   import { themeOf } from '../lib/themes';
@@ -10,27 +10,22 @@
   import Replay from './Replay.svelte';
   import TableScene from './TableScene.svelte';
   import PendingChanges from './PendingChanges.svelte';
-  import OfflineNightForm from './OfflineNightForm.svelte';
+  import ScoreEditor from './ScoreEditor.svelte';
 
   // Spec S20 (first part): the rivalry board (the three ways the four of you can pair up, and
   // every partnership's record) and the night log, where any saved game opens in the replay.
   let { profiles, me, theme, onClose }: { profiles: readonly ProfileInfo[]; me: string; theme: ThemeId; onClose: () => void } = $props();
 
   let nights = $state<SavedNight[] | null>(null);
+  let overrides = $state<ScoreOverride[]>([]);
   let pending = $state<PendingChange[]>([]);
-  let adding = $state(false);
+  // The matchup whose score is being changed (Ryan: set by hand, with everyone's OK).
+  let editing = $state<number | null>(null);
   const update = (d: HistoryData) => {
     nights = d.nights;
+    overrides = d.overrides;
     pending = d.pending;
   };
-  // Ask to take an offline night back out (also needs everyone's OK).
-  async function askRemove(night: SavedNight) {
-    try {
-      update(await sendChange({ type: 'propose', change: { kind: 'remove', nightId: night.id } }));
-    } catch {
-      failed = true;
-    }
-  }
   let failed = $state(false);
   let tab = $state<'rivals' | 'nights'>('rivals');
   let open = $state<string | null>(null);
@@ -44,11 +39,11 @@
   });
 
   const ids = $derived(profiles.map((p) => p.id));
-  const board = $derived(nights ? headToHead(ids, nights) : []);
+  const board = $derived(nights ? headToHead(ids, nights, overrides) : []);
   const name = (id: string) => profileOf(profiles, id).name;
 
   // Every partnership (six of them): nights and games together.
-  const partnerships = $derived(nights ? partnershipRecords(ids, nights) : []);
+  const partnerships = $derived(nights ? partnershipRecords(ids, nights, overrides) : []);
 
   const rate = (won: number, played: number) => {
     const r = winRate(won, played);
@@ -93,13 +88,13 @@
     {:else if !nights}
       <p class="muted">Loading…</p>
     {:else}
-      <PendingChanges {profiles} {me} {pending} {nights} onUpdate={update} />
+      <PendingChanges {profiles} {me} {pending} {board} onUpdate={update} />
       {#if tab === 'rivals'}
       <section aria-label="Head to head">
         <h3>Head to head</h3>
         {#each board as m, i (i)}
           {@const [a, b] = m.sides}
-          <article class="match" class:fresh={m.nights === 0 && m.games === 0}>
+          <article class="match" class:fresh={m.nights === 0 && m.games === 0 && editing !== i}>
             <div class="side">
               <span class="who">{pairName(profiles, a.players)}</span>
               <strong class="big">{a.nightsWon}</strong>
@@ -116,7 +111,15 @@
                 {m.nights} {m.nights === 1 ? 'night' : 'nights'} · games {a.gamesWon}–{b.gamesWon}{#if m.lastPlayed}
                   · last {shortDate(m.lastPlayed)}{/if}
               {/if}
+              {#if m.setAt}<br /><span class="set">Score agreed by all four on {shortDate(m.setAt)}</span>{/if}
             </p>
+            {#if editing === i}
+              <ScoreEditor {profiles} match={m} onUpdate={update} onCancel={() => (editing = null)} />
+            {:else}
+              <button class="ghost edit" aria-label="Change the score: {pairName(profiles, a.players)} vs {pairName(profiles, b.players)}" onclick={() => (editing = i)}
+                >✏️ Change score</button
+              >
+            {/if}
           </article>
         {/each}
       </section>
@@ -139,28 +142,16 @@
       </section>
     {:else}
       <section aria-label="Night log">
-        {#if adding}
-          <OfflineNightForm {profiles} onUpdate={update} onCancel={() => (adding = false)} />
-        {:else}
-          <button class="add" onclick={() => (adding = true)}>＋ Add an offline night</button>
-        {/if}
         {#if nights.length === 0}<p class="muted">No nights yet.</p>{/if}
         {#each nights as night (night.id)}
           {@const t = themeOf((night.theme ?? 'clubhouse') as ThemeId)}
           <article class="night" class:open={open === night.id}>
             <button class="night-head" aria-expanded={open === night.id} onclick={() => (open = open === night.id ? null : night.id)}>
-              <span class="when">{shortDate(night.startedAt)} · {#if night.offline}<b class="tag">Offline</b>{:else}{t.flag} {t.name}{/if}</span>
+              <span class="when">{shortDate(night.startedAt)} · {t.flag} {t.name}</span>
               <strong>{nightLine(night, profiles)}</strong>
               <span class="pairs">{pairName(profiles, night.pairs.A)} vs {pairName(profiles, night.pairs.B)}</span>
             </button>
-            {#if open === night.id && night.offline}
-              <div class="offline-body">
-                <p>Played away from the app: games {night.offline.wins.A}–{night.offline.wins.B}.</p>
-                {#if !pending.some((p) => p.change.kind === 'remove' && p.change.nightId === night.id)}
-                  <button class="ghost" onclick={() => askRemove(night)}>Ask to take it out</button>
-                {/if}
-              </div>
-            {:else if open === night.id}
+            {#if open === night.id}
               <ol class="games">
                 {#each night.games as g (g.dealNumber)}
                   <li>
@@ -392,32 +383,17 @@
   .what {
     font-family: var(--font-card);
   }
-  .add {
-    min-height: 46px;
+  .set {
+    font-size: 11.5px;
+    color: var(--accent);
   }
-  .tag {
-    padding: 0 6px;
-    border-radius: 6px;
-    background: color-mix(in srgb, var(--accent) 25%, transparent);
-    color: var(--ink);
-    font-size: 11px;
-    letter-spacing: 0.06em;
-    text-transform: uppercase;
-  }
-  .offline-body {
-    display: grid;
-    gap: 8px;
-    padding: 0 12px 12px;
-    font-size: 14px;
-  }
-  .offline-body p {
-    margin: 0;
+  .edit {
+    grid-column: 1 / -1;
+    justify-self: center;
+    min-height: 32px;
+    padding: 0 10px;
+    font-size: 12.5px;
     color: var(--ink-dim);
-  }
-  .offline-body button {
-    justify-self: start;
-    min-height: 36px;
-    font-size: 13.5px;
   }
   .watch {
     min-height: 36px;

@@ -1,33 +1,31 @@
 <script lang="ts">
-  import type { PendingChange, ProfileInfo, SavedNight } from '@dark/engine';
+  import { pairKey, type MatchupRecord, type PendingChange, type ProfileInfo } from '@dark/engine';
   import { profileOf } from '../lib/format';
-  import { pairName, sendChange, shortDate, type HistoryData } from '../lib/history';
+  import { pairName, sendChange, type HistoryData } from '../lib/history';
   import { sound } from '../lib/juice/sound';
 
-  // Changes to the all-time history waiting for everyone's OK (Ryan): add an offline night, or
-  // take one back out. It applies once all four approve; anyone can turn it down.
+  // New all-time scores waiting for everyone's OK (Ryan). One applies once all four approve;
+  // anyone can turn it down.
   let {
     profiles,
     me,
     pending,
-    nights,
+    board,
     onUpdate,
-  }: { profiles: readonly ProfileInfo[]; me: string; pending: readonly PendingChange[]; nights: readonly SavedNight[]; onUpdate: (d: HistoryData) => void } = $props();
+  }: { profiles: readonly ProfileInfo[]; me: string; pending: readonly PendingChange[]; board: readonly MatchupRecord[]; onUpdate: (d: HistoryData) => void } = $props();
 
   let busy = $state(false);
   let error = $state<string | null>(null);
   const name = (id: string) => (id === me ? 'you' : profileOf(profiles, id).name);
 
-  function describe(p: PendingChange): string {
-    if (p.change.kind === 'add') {
-      const n = p.change.night;
-      return `Add an offline night: ${shortDate(n.playedAt)} · ${pairName(profiles, n.pairs.A)} ${n.wins.A}–${n.wins.B} ${pairName(profiles, n.pairs.B)}`;
-    }
-    const id = p.change.nightId;
-    const n = nights.find((x) => x.id === id);
-    return n?.offline
-      ? `Take out the offline night of ${shortDate(n.startedAt)} (${n.offline.wins.A}–${n.offline.wins.B})`
-      : 'Take out an offline night';
+  /** "Darren & Kim 5–3 Adrian & Ryan · games 21–17 (now 3–2 · 14–11)". */
+  function describe(p: PendingChange): { line: string; was: string } {
+    const [a, b] = p.change.sides;
+    const line = `${pairName(profiles, a.players)} ${a.nightsWon}–${b.nightsWon} ${pairName(profiles, b.players)} · games ${a.gamesWon}–${b.gamesWon}`;
+    const now = board.find((m) => m.sides.some((s) => pairKey(s.players) === pairKey(a.players)));
+    const side = (k: readonly string[]) => now?.sides.find((s) => pairKey(s.players) === pairKey(k));
+    const was = now ? `now ${side(a.players)!.nightsWon}–${side(b.players)!.nightsWon} · games ${side(a.players)!.gamesWon}–${side(b.players)!.gamesWon}` : '';
+    return { line, was };
   }
 
   async function act(type: 'approve' | 'reject', id: string) {
@@ -46,11 +44,13 @@
 
 {#if pending.length}
   <section class="pending" aria-label="Changes waiting for approval">
-    <h3>Waiting for everyone's OK</h3>
+    <h3>New scores waiting for everyone's OK</h3>
     {#each pending as p (p.id)}
       {@const waiting = profiles.map((x) => x.id).filter((id) => !p.approvals.includes(id))}
+      {@const d = describe(p)}
       <article class="change panel">
-        <p class="what">{describe(p)}</p>
+        <p class="what">{d.line}</p>
+        {#if d.was}<p class="was">{d.was}</p>{/if}
         <p class="who">
           {p.proposedBy === me ? 'You proposed' : `${name(p.proposedBy)} proposed`} · {p.approvals.length} of {profiles.length} OK{#if waiting.length}
             · waiting on {waiting.map(name).join(', ')}{/if}
@@ -94,6 +94,10 @@
   }
   .what {
     font-weight: 650;
+  }
+  .was {
+    font-size: 13px;
+    color: var(--ink-dim);
   }
   .who {
     font-size: 13px;

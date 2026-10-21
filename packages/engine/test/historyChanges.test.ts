@@ -1,23 +1,37 @@
 import { describe, expect, it } from 'vitest';
-import { applyChangeAction, emptyChangeQueue, MAX_PENDING_CHANGES, type ChangeAction, type ChangeOutcome, type ChangeQueue, type OfflineNight } from '../src/historyChanges';
+import {
+  applyChangeAction,
+  emptyChangeQueue,
+  matchupKey,
+  MAX_PENDING_CHANGES,
+  withOverride,
+  type ChangeAction,
+  type ChangeOutcome,
+  type ChangeQueue,
+  type ScoreSide,
+} from '../src/historyChanges';
 
 const P = ['darren', 'adrian', 'ryan', 'kim'];
 const NOW = Date.UTC(2026, 9, 21, 12);
-const night: OfflineNight = { playedAt: Date.UTC(2026, 8, 5), pairs: { A: ['darren', 'kim'], B: ['adrian', 'ryan'] }, wins: { A: 5, B: 3 } };
+const sides: [ScoreSide, ScoreSide] = [
+  { players: ['darren', 'kim'], nightsWon: 5, gamesWon: 21 },
+  { players: ['adrian', 'ryan'], nightsWon: 3, gamesWon: 17 },
+];
+const propose = (s: unknown = sides) => ({ type: 'propose', change: { kind: 'score', sides: s } }) as ChangeAction;
 
-function act(q: ChangeQueue, by: string, action: ChangeAction, offline: string[] = []): ChangeOutcome {
-  const out = applyChangeAction(q, by, action, NOW, P, offline);
+function act(q: ChangeQueue, by: string, action: ChangeAction, now = NOW): ChangeOutcome {
+  const out = applyChangeAction(q, by, action, now, P);
   if (!out.ok) throw new Error(out.error.code);
   return out.state;
 }
-const code = (q: ChangeQueue, by: string, action: ChangeAction, offline: string[] = []) => {
-  const out = applyChangeAction(q, by, action, NOW, P, offline);
+const code = (q: ChangeQueue, by: string, action: ChangeAction) => {
+  const out = applyChangeAction(q, by, action, NOW, P);
   return out.ok ? 'ok' : out.error.code;
 };
 
-describe('adding offline nights takes everyone\'s approval', () => {
+describe("setting the all-time score takes everyone's approval", () => {
   it('applies only once all four have approved; the proposer counts', () => {
-    let o = act(emptyChangeQueue(), 'ryan', { type: 'propose', change: { kind: 'add', night } });
+    let o = act(emptyChangeQueue(), 'ryan', propose());
     expect(o.applied).toBeNull();
     const id = o.queue.pending[0]!.id;
     expect(o.queue.pending[0]!.approvals).toEqual(['ryan']);
@@ -26,41 +40,48 @@ describe('adding offline nights takes everyone\'s approval', () => {
     o = act(o.queue, 'darren', { type: 'approve', id });
     expect(o.applied).toBeNull();
     o = act(o.queue, 'adrian', { type: 'approve', id });
-    expect(o.applied).toEqual({ kind: 'add', night });
+    expect(o.applied?.change).toEqual({ kind: 'score', sides });
+    expect(o.applied?.at).toBe(NOW);
     expect(o.queue.pending).toEqual([]);
   });
 
   it('any one player can turn it down', () => {
-    let o = act(emptyChangeQueue(), 'ryan', { type: 'propose', change: { kind: 'add', night } });
+    let o = act(emptyChangeQueue(), 'ryan', propose());
     o = act(o.queue, 'adrian', { type: 'reject', id: o.queue.pending[0]!.id });
     expect(o.queue.pending).toEqual([]);
     expect(o.applied).toBeNull();
   });
 
-  it('the night must make sense: a real split of the four, sensible games, a past date', () => {
+  it('the numbers must make sense: a real split of the four, whole numbers from zero', () => {
     const e = emptyChangeQueue();
-    const add = (n: unknown) => ({ type: 'propose', change: { kind: 'add', night: n } }) as ChangeAction;
-    expect(code(e, 'ryan', add({ ...night, pairs: { A: ['darren', 'darren'], B: ['adrian', 'ryan'] } }))).toBe('BAD_NIGHT');
-    expect(code(e, 'ryan', add({ ...night, pairs: { A: ['darren', 'bob'], B: ['adrian', 'ryan'] } }))).toBe('BAD_NIGHT');
-    expect(code(e, 'ryan', add({ ...night, wins: { A: 0, B: 0 } }))).toBe('BAD_NIGHT');
-    expect(code(e, 'ryan', add({ ...night, wins: { A: -1, B: 3 } }))).toBe('BAD_NIGHT');
-    expect(code(e, 'ryan', add({ ...night, wins: { A: 2.5, B: 3 } }))).toBe('BAD_NIGHT');
-    expect(code(e, 'ryan', add({ ...night, playedAt: NOW + 7 * 24 * 3600e3 }))).toBe('BAD_NIGHT');
-    expect(code(e, 'ryan', add(null))).toBe('BAD_NIGHT');
+    expect(code(e, 'ryan', propose([{ ...sides[0], players: ['darren', 'darren'] }, sides[1]]))).toBe('BAD_SCORE');
+    expect(code(e, 'ryan', propose([{ ...sides[0], players: ['darren', 'bob'] }, sides[1]]))).toBe('BAD_SCORE');
+    expect(code(e, 'ryan', propose([{ ...sides[0], nightsWon: -1 }, sides[1]]))).toBe('BAD_SCORE');
+    expect(code(e, 'ryan', propose([{ ...sides[0], gamesWon: 2.5 }, sides[1]]))).toBe('BAD_SCORE');
+    expect(code(e, 'ryan', propose([sides[0]]))).toBe('BAD_SCORE');
+    expect(code(e, 'ryan', propose(null))).toBe('BAD_SCORE');
     expect(code(e, 'ryan', { type: 'dance' } as unknown as ChangeAction)).toBe('BAD_ACTION');
+    // All zeros is fine: that's starting again.
+    expect(code(e, 'ryan', propose(sides.map((s) => ({ ...s, nightsWon: 0, gamesWon: 0 }))))).toBe('ok');
   });
 
-  it('only offline nights can be taken out, and also with everyone\'s approval', () => {
-    expect(code(emptyChangeQueue(), 'ryan', { type: 'propose', change: { kind: 'remove', nightId: '7' } }, ['o1'])).toBe('NOT_OFFLINE');
-    let o = act(emptyChangeQueue(), 'ryan', { type: 'propose', change: { kind: 'remove', nightId: 'o1' } }, ['o1']);
-    expect(code(o.queue, 'kim', { type: 'propose', change: { kind: 'remove', nightId: 'o1' } }, ['o1'])).toBe('ALREADY');
-    for (const p of ['darren', 'adrian', 'kim']) o = act(o.queue, p, { type: 'approve', id: o.queue.pending[0]!.id }, ['o1']);
-    expect(o.applied).toEqual({ kind: 'remove', nightId: 'o1' });
+  it('one change per matchup waits at a time, and a few changes at most', () => {
+    const q = act(emptyChangeQueue(), 'ryan', propose()).queue;
+    const flipped = [{ ...sides[1], players: ['ryan', 'adrian'] }, { ...sides[0], players: ['kim', 'darren'] }];
+    expect(code(q, 'kim', propose(flipped))).toBe('ALREADY');
+    let full = emptyChangeQueue();
+    for (let i = 0; i < MAX_PENDING_CHANGES; i++) full = { ...full, pending: [...full.pending, { ...q.pending[0]!, id: `x${i}`, change: { kind: 'score', sides: [{ ...sides[0], players: [`p${i}`, 'q'] }, sides[1]] } }] };
+    expect(code(full, 'ryan', propose())).toBe('TOO_MANY');
   });
 
-  it('a few changes can wait at once, not an endless pile', () => {
-    let q = emptyChangeQueue();
-    for (let i = 0; i < MAX_PENDING_CHANGES; i++) q = act(q, 'ryan', { type: 'propose', change: { kind: 'add', night } }).queue;
-    expect(code(q, 'ryan', { type: 'propose', change: { kind: 'add', night } })).toBe('TOO_MANY');
+  it('an approved score replaces the last one for that matchup, from when it was proposed', () => {
+    let o = act(emptyChangeQueue(), 'ryan', propose(), NOW - 5000);
+    for (const p of ['darren', 'adrian', 'kim']) o = act(o.queue, p, { type: 'approve', id: o.queue.pending[0]!.id });
+    const once = withOverride([], o.applied!);
+    expect(once).toEqual([{ sides, from: NOW - 5000 }]);
+    const again = withOverride(once, { ...o.applied!, at: NOW, change: { kind: 'score', sides: sides.map((s) => ({ ...s, nightsWon: 0, gamesWon: 0 })) as [ScoreSide, ScoreSide] } });
+    expect(again).toHaveLength(1);
+    expect(again[0]!.from).toBe(NOW);
+    expect(matchupKey(['kim', 'darren'], ['ryan', 'adrian'])).toBe(matchupKey(['adrian', 'ryan'], ['darren', 'kim']));
   });
 });

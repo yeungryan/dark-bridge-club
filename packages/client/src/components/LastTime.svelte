@@ -10,7 +10,7 @@
   let { profiles, me, onHistory }: { profiles: readonly ProfileInfo[]; me: string; onHistory: () => void } = $props();
 
   let last = $state<SavedNight | null>(null);
-  // History changes (offline nights) still waiting for your OK.
+  // New all-time scores still waiting for your OK.
   let needsMe = $state(0);
   onMount(() => {
     loadHistory()
@@ -25,13 +25,13 @@
 </script>
 
 {#if needsMe}
-  <button class="ask panel" onclick={onHistory}>📝 {needsMe} history {needsMe === 1 ? 'change needs' : 'changes need'} your OK ›</button>
+  <button class="ask panel" onclick={onHistory}>📝 {needsMe} score {needsMe === 1 ? 'change needs' : 'changes need'} your OK ›</button>
 {/if}
 {#if last}
   {@const t = themeOf((last.theme ?? 'clubhouse') as ThemeId)}
   {@const award = topAwardOf(last)}
   <section class="last panel" aria-label="Last time">
-    <p class="when">Last time · {shortDate(last.startedAt)} · {#if last.offline}offline{:else}{t.flag} {t.name}{/if}</p>
+    <p class="when">Last time · {shortDate(last.startedAt)} · {t.flag} {t.name}</p>
     <strong class="line">{nightLine(last, profiles)}</strong>
     {#if last.final && last.final.winner !== 'tie'}
       <span class="vs">over {pairName(profiles, last.pairs[loser(last)])}</span>

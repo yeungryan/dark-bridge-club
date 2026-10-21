@@ -29,9 +29,9 @@ Make history matter (promise D) and give each night a link to the last one.
 - **Engine (`rivalry.ts`):** `headToHead`, `partnerRecords`, `partnershipRecords`, `winRate`, `lastNight`, all worked out from the saved nights and games on every request.
 - Still to come: player cards, the moments wall, element and animal records.
 
-## Offline nights (Ryan)
+## Setting the score by hand (Ryan; replaces "offline nights")
 - History keeps every night, all time: nothing is ever trimmed, and every number is recalculated from all of them.
-- **Add an offline night** (History → Nights): the date, who partnered whom (the three splits), and the games each pair won. It goes to the others for approval and counts only once **all four** approve; any one can turn it down. Taking an offline night back out also needs all four.
-- Waiting changes show at the top of History (Approve / Turn down, or Withdraw your own) and as a nudge on the lobby's Last time card. At most 5 wait at once.
-- Offline nights count in head to head and partnerships (their games and winner), show in the night log marked "Offline" (no games to replay), and can be the "Last time…" night.
-- Server: an `offline_nights` table, the waiting changes in storage, `POST /api/history/change` (propose / approve / reject), signed-in only; the engine's `historyChanges.ts` holds the rules (unit tested).
+- **Change score** on any head-to-head matchup: steppers for each pair's nights won and games won, starting from the score as it stands, and "Start again from 0–0". Use it to add nights played away from the app, to stop counting some wins, or to reset. Kept simple on purpose: just the numbers, no dates or notes.
+- It goes to the others and counts only once **all four** approve; any one can turn it down. One change per matchup waits at a time, at most 5 in all. Waiting changes show at the top of History ("Darren & Kim 5–3 Adrian & Ryan · games 21–17", with what it is now) and as a nudge on the lobby's Last time card.
+- Once approved, the agreed numbers are that matchup's score as of when it was proposed; nights begun after that count on top. The card says "Score agreed by all four on …". Partnerships read the same numbers (with four players, each partnership is one side of one matchup). The night log is untouched.
+- Server: the agreed scores and the waiting changes in storage, `POST /api/history/change` (propose / approve / reject), signed-in only; the engine's `historyChanges.ts` holds the rules and `headToHead` applies them (unit tested).

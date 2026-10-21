@@ -338,33 +338,31 @@ test.describe.serial('a night at the DARK table', () => {
     await history.getByRole('button', { name: /^Replay game/ }).first().click();
     const replay = page.getByRole('dialog', { name: /Replay of game/ });
     await expect(replay).toBeVisible();
-    await expect(replay.getByText('The bidding', { exact: true })).toBeVisible();
     await expect(replay.locator('.hand')).toHaveCount(4);
-    await replay.getByRole('button', { name: 'Next set' }).click();
+    await replay.locator('.lanes .set').first().click();
     await expect(replay.locator('.table .spot')).toHaveCount(4);
     await replay.getByRole('button', { name: 'Close the replay' }).click();
     await history.getByRole('button', { name: 'Close the history' }).click();
     await expect(history).toBeHidden();
   });
 
-  test('an offline night joins the all-time scores once all four approve', async ({ request }) => {
+  test('a matchup\'s all-time score can be set by hand once all four approve', async ({ request }) => {
     const page = ryan().page;
     await page.getByRole('region', { name: 'Last time' }).getByRole('button', { name: /History/ }).click();
     const history = page.getByRole('dialog', { name: 'History' });
-    const gamesBefore = await history.locator('.match .sub').allTextContents();
-    await history.getByRole('tab', { name: 'Nights' }).click();
-    await history.getByRole('button', { name: /Add an offline night/ }).click();
-    const form = history.getByRole('region', { name: 'Add an offline night' });
-    const ones = form.getByRole('button', { name: 'One more' });
-    for (let i = 0; i < 3; i++) await ones.first().click();
-    await ones.last().click();
-    await form.getByRole('button', { name: 'Send for approval' }).click();
+    const first = history.locator('.match').first();
+    const before = Number(await first.locator('.big').first().textContent());
+    await first.getByRole('button', { name: /^Change the score/ }).click();
+    const editor = first.getByRole('region', { name: 'Change the score' });
+    const more = editor.getByRole('button', { name: /^One more nights/ }).first();
+    for (let i = 0; i < 3; i++) await more.click();
+    await editor.getByRole('button', { name: 'Send for approval' }).click();
     const pending = history.getByRole('region', { name: 'Changes waiting for approval' });
-    await expect(pending).toContainText(/Add an offline night: .* 3–1 /);
+    await expect(pending).toContainText(`${before + 3}–`);
     await expect(pending).toContainText('1 of 4 OK');
     // Not counted yet.
-    await expect(history.locator('.night .tag')).toHaveCount(0);
-    // The other three approve from their own logins; Kim's OK completes it.
+    await expect(first.locator('.big').first()).toHaveText(String(before));
+    // The other three approve from their own logins; the last OK applies it.
     const id = (await (await request.get(`/api/history?token=${await tokenOf(page)}`)).json()).pending[0].id;
     for (const seat of SEATS.filter((s) => s.id !== 'ryan')) {
       const login = await (await request.post('/api/login', { data: { k: 'dev', profile: seat.id, pin: seat.pin } })).json();
@@ -372,9 +370,8 @@ test.describe.serial('a night at the DARK table', () => {
     }
     await history.getByRole('button', { name: 'Close the history' }).click();
     await page.getByRole('region', { name: 'Last time' }).getByRole('button', { name: /History/ }).click();
-    await expect(history.locator('.match .sub')).not.toHaveText(gamesBefore);
-    await history.getByRole('tab', { name: 'Nights' }).click();
-    await expect(history.locator('.night .tag', { hasText: 'Offline' })).toHaveCount(1);
+    await expect(first.locator('.big').first()).toHaveText(String(before + 3));
+    await expect(first).toContainText('Score agreed by all four');
     await expect(history.getByRole('region', { name: 'Changes waiting for approval' })).toHaveCount(0);
     await history.getByRole('button', { name: 'Close the history' }).click();
   });

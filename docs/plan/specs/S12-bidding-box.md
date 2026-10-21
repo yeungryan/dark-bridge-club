@@ -34,4 +34,6 @@ Replaces the level and suit rows.
 - **Revised (Ryan):** Bid and Pass are two tall buttons in a row to the right of NT: Bid (with the picked bid under the word), then Pass.
 - **Suit order everywhere** (Ryan): hands, the reveal and the replay all use the bidding box's order, ♣ ♦ ♥ ♠, left to right or top to bottom, highest card first within each suit (`sortHand`).
 
-**Going once / twice (Ryan):** no longer small text above the top bid (where it collided with the calls and got clipped). It's a solid accent pill, "🔨 Going once…", straddling the table's bottom rim, clear of the calls however many rows they take.
+**Going once / twice (Ryan):** no longer small text above the top bid (where it collided with the calls and got clipped). It's a solid accent pill, "🔨 Going once…", in the middle of the table.
+
+**Calls on the table (Ryan):** the auction is no longer a strip of named calls. Each call lands on the table's edge right in front of the player who made it, flying in from their seat like a played card, so whose call it was needs no label. A player's calls overlap in a row (a column for the side seats), the latest on top, like bidding cards put down one after another; bids are card-white with the team colour along the bottom, passes are the bidding box's green, and the bid to beat is ringed. Each seat shows its last 4 calls. The replay's bidding step lays the calls out the same way. (During play, the auction button on the scoreboard still opens the full list with names.)

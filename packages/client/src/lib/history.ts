@@ -1,4 +1,4 @@
-import type { Award, ChangeAction, PairId, PendingChange, ProfileInfo, SavedGameDetail, SavedNight } from '@dark/engine';
+import type { Award, ChangeAction, PairId, PendingChange, ProfileInfo, SavedGameDetail, SavedNight, ScoreOverride } from '@dark/engine';
 import { profileOf } from './format';
 import { token } from './session';
 
@@ -14,15 +14,17 @@ async function get<T>(path: string, params: Record<string, string> = {}): Promis
 
 export interface HistoryData {
   readonly nights: SavedNight[];
-  /** Changes to the all-time history (offline nights) waiting for everyone's approval. */
+  /** All-time scores the four of you set by hand (headToHead starts from these). */
+  readonly overrides: ScoreOverride[];
+  /** New all-time scores waiting for everyone's approval. */
   readonly pending: PendingChange[];
 }
 
-/** Every night so far (played here or added offline), newest first, and the changes waiting. */
+/** Every night so far, newest first, the scores set by hand, and the changes waiting. */
 export const loadHistory = () => get<HistoryData>('/api/history');
 export const loadNights = () => loadHistory().then((r) => r.nights);
 
-/** Propose, approve or turn down a history change; resolves to the updated history. */
+/** Propose, approve or turn down a new all-time score; resolves to the updated history. */
 export async function sendChange(action: ChangeAction): Promise<HistoryData> {
   const res = await fetch('/api/history/change', {
     method: 'POST',

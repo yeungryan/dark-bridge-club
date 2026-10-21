@@ -89,7 +89,8 @@ test('the bid ladder: tap a bid to see what it needs, then Bid; Pass is one tap'
   await expect(page.locator('.hand .slot.preview')).toHaveCount(await page.locator(`.hand .card[aria-label$="of ${symbol}"]`).count());
   await expect(page.locator('.confirm')).toContainText(/Bid\s*\d/);
   await page.locator('.confirm').tap();
-  await expect(page.locator('.strip .call').filter({ hasText: 'Ryan' }).last()).toContainText(label);
+  // My bid lands on the table in front of me (Ryan: like a played card, so no name is needed).
+  await expect(page.locator('.calls .at-bottom .tile').last()).toContainText(label);
   // Next time it's my call (this auction or the next game's), Pass goes straight in.
   await playUntil(page, () => page.locator('.box .ladder').isVisible(), { noPass: true });
   const before = await soundCount(page, 'pass');
@@ -203,13 +204,16 @@ test('after a game, replay it set by set with every hand face up', async ({ page
   await open.tap();
   const replay = page.getByRole('dialog', { name: /Replay of game/ });
   await expect(replay).toBeVisible();
-  // It opens on the bidding, with all four hands as dealt.
-  await expect(replay.getByText('The bidding', { exact: true })).toBeVisible();
+  // It opens on the set that decided the game (Ryan), lit up on the strip.
+  await expect(replay.getByText('This set decided it.')).toBeVisible();
+  await expect(replay.locator('.lanes .set.decisive')).toHaveAttribute('aria-current', 'step');
   await expect(replay.locator('.hand')).toHaveCount(4);
   const sets = await replay.locator('.lanes .set').count();
   expect(sets).toBeGreaterThanOrEqual(1);
-  // Set 1: four cards on the table, one marked as led and one as won.
-  await replay.getByRole('button', { name: 'Next set' }).tap();
+  // Back to the bidding, then set 1: four cards on the table, one marked as led and one as won.
+  await replay.getByRole('button', { name: 'The bidding' }).tap();
+  await expect(replay.getByText('The bidding', { exact: true })).toBeVisible();
+  await replay.locator('.lanes .set').first().tap();
   await expect(replay.getByText(`Set 1 of ${sets}`)).toBeVisible();
   await expect(replay.locator('.table .spot')).toHaveCount(4);
   // One player led and one won (the same player gets a single "led · won" tag).
@@ -218,9 +222,6 @@ test('after a game, replay it set by set with every hand face up', async ({ page
   // Each set's mark is the animal of the player who won it (as on the scoreboard), in their lane.
   const winner = await replay.locator('.hand').filter({ has: page.locator('.tag.won') }).locator('.who [data-animal]').getAttribute('data-animal');
   await expect(replay.locator('.lanes .set').first().locator('[data-animal]')).toHaveAttribute('data-animal', winner!);
-  // Jump to the set that decided it, then close.
-  await replay.locator('.lanes .set.decisive').tap();
-  await expect(replay.getByText('This set decided it.')).toBeVisible();
   await replay.getByRole('button', { name: 'Close the replay' }).tap();
   await expect(replay).toBeHidden();
   await expect(page.getByRole('button', { name: 'Next game' })).toBeVisible();

@@ -1,20 +1,25 @@
 import { fail, type Outcome } from './types';
-import type { PairId, ProfileId } from './session';
+import type { ProfileId } from './session';
 
-// Ryan: the all-time scores can take nights played away from the app, but only with everyone's
-// say-so. A change (add an offline night, or take one back out) is proposed by one player, and
-// applies once all four have approved it; any one of them can turn it down.
+// Ryan: the all-time head-to-head can be set by hand, but only with everyone's say-so: to add
+// scores from nights played away from the app, to stop counting some wins, or to start again from
+// zero. One player proposes new numbers for a matchup; they apply once all four have approved,
+// and any one of them can turn it down. Nights played after the proposal count on top.
 
-export interface OfflineNight {
-  /** When it was played (UTC ms). */
-  readonly playedAt: number;
-  readonly pairs: Readonly<Record<PairId, readonly [ProfileId, ProfileId]>>;
-  /** Games won by each pair. */
-  readonly wins: Readonly<Record<PairId, number>>;
-  readonly note?: string;
+/** One pair's all-time numbers against the other pair. */
+export interface ScoreSide {
+  readonly players: readonly [ProfileId, ProfileId];
+  readonly nightsWon: number;
+  readonly gamesWon: number;
 }
 
-export type HistoryChange = { readonly kind: 'add'; readonly night: OfflineNight } | { readonly kind: 'remove'; readonly nightId: string };
+export type HistoryChange = { readonly kind: 'score'; readonly sides: readonly [ScoreSide, ScoreSide] };
+
+/** An approved score: the matchup's numbers as of `from` (nights started from then on count on top). */
+export interface ScoreOverride {
+  readonly sides: readonly [ScoreSide, ScoreSide];
+  readonly from: number;
+}
 
 export interface PendingChange {
   readonly id: string;
@@ -35,76 +40,55 @@ export type ChangeAction =
   | { readonly type: 'reject'; readonly id: string };
 
 export const MAX_PENDING_CHANGES = 5;
-const MAX_GAMES = 99;
-const EARLIEST = Date.UTC(2000, 0, 1);
+const MAX_COUNT = 9999;
 
 export const emptyChangeQueue = (): ChangeQueue => ({ pending: [], seq: 0 });
 
 /** The result: the new queue, and the change that just got everyone's approval (to apply), if any. */
 export interface ChangeOutcome {
   readonly queue: ChangeQueue;
-  readonly applied: HistoryChange | null;
+  readonly applied: PendingChange | null;
 }
 
-const isInt = (n: unknown, max: number): n is number => typeof n === 'number' && Number.isInteger(n) && n >= 0 && n <= max;
+/** The same key for a matchup whichever way round its pairs (and players) are named. */
+export const matchupKey = (a: readonly ProfileId[], b: readonly ProfileId[]): string =>
+  [[...a].sort().join('+'), [...b].sort().join('+')].sort().join(' vs ');
 
-/** A split of exactly these four players into two pairs. */
-function validPairs(pairs: unknown, players: readonly ProfileId[]): boolean {
-  const p = pairs as Record<PairId, unknown> | null;
-  if (!p || !Array.isArray(p.A) || !Array.isArray(p.B) || p.A.length !== 2 || p.B.length !== 2) return false;
-  const all = [...p.A, ...p.B];
-  return new Set(all).size === 4 && all.every((id) => players.includes(id as ProfileId)) && players.every((id) => all.includes(id));
-}
+const isCount = (n: unknown): n is number => typeof n === 'number' && Number.isInteger(n) && n >= 0 && n <= MAX_COUNT;
 
-export function checkOfflineNight(night: unknown, now: number, players: readonly ProfileId[]): string | null {
-  const n = night as OfflineNight | null;
-  if (!n || typeof n !== 'object') return 'Missing the night.';
-  if (typeof n.playedAt !== 'number' || !Number.isFinite(n.playedAt) || n.playedAt < EARLIEST || n.playedAt > now + 36 * 60 * 60 * 1000) {
-    return 'Pick the date it was played.';
-  }
-  if (!validPairs(n.pairs, players)) return 'Pick who partnered whom.';
-  if (!n.wins || !isInt(n.wins.A, MAX_GAMES) || !isInt(n.wins.B, MAX_GAMES) || n.wins.A + n.wins.B < 1) return 'Enter the games each pair won.';
-  if (n.note !== undefined && (typeof n.note !== 'string' || n.note.length > 140)) return 'Keep the note short.';
+/** New numbers for a split of exactly these four players into two pairs. */
+export function checkScoreChange(sides: unknown, players: readonly ProfileId[]): string | null {
+  const s = sides as ScoreSide[] | null;
+  if (!Array.isArray(s) || s.length !== 2) return 'Pick a matchup.';
+  const all = s.flatMap((side) => (Array.isArray(side?.players) && side.players.length === 2 ? side.players : []));
+  if (all.length !== 4 || new Set(all).size !== 4 || !players.every((id) => all.includes(id))) return 'Pick a matchup.';
+  if (!s.every((side) => isCount(side.nightsWon) && isCount(side.gamesWon))) return 'Enter whole numbers, 0 or more.';
   return null;
 }
 
-/**
- * `offlineIds`: the offline nights that exist (a removal must name one). Players approve their
- * own proposal by making it; the change applies when all of `players` have approved.
- */
+/** Players approve their own proposal by making it; the change applies when all of `players` have approved. */
 export function applyChangeAction(
   queue: ChangeQueue,
   by: ProfileId,
   action: ChangeAction,
   now: number,
   players: readonly ProfileId[],
-  offlineIds: readonly string[],
 ): Outcome<ChangeOutcome, never> {
-  const done = (q: ChangeQueue, applied: HistoryChange | null = null): Outcome<ChangeOutcome, never> => ({ ok: true, state: { queue: q, applied }, events: [] });
+  const done = (q: ChangeQueue, applied: PendingChange | null = null): Outcome<ChangeOutcome, never> => ({ ok: true, state: { queue: q, applied }, events: [] });
   switch (action?.type) {
     case 'propose': {
       const change = action.change;
+      if (change?.kind !== 'score') return fail('BAD_CHANGE', 'Unknown change.');
+      const problem = checkScoreChange(change.sides, players);
+      if (problem) return fail('BAD_SCORE', problem);
       if (queue.pending.length >= MAX_PENDING_CHANGES) return fail('TOO_MANY', 'Settle the changes already waiting first.');
-      if (change?.kind === 'add') {
-        const problem = checkOfflineNight(change.night, now, players);
-        if (problem) return fail('BAD_NIGHT', problem);
-      } else if (change?.kind === 'remove') {
-        if (!offlineIds.includes(change.nightId)) return fail('NOT_OFFLINE', 'Only nights added by hand can be taken out.');
-        if (queue.pending.some((p) => p.change.kind === 'remove' && p.change.nightId === change.nightId)) return fail('ALREADY', 'That is already waiting.');
-      } else return fail('BAD_CHANGE', 'Unknown change.');
+      const key = matchupKey(change.sides[0].players, change.sides[1].players);
+      if (queue.pending.some((p) => matchupKey(p.change.sides[0].players, p.change.sides[1].players) === key)) {
+        return fail('ALREADY', 'A change to this matchup is already waiting.');
+      }
       const seq = queue.seq + 1;
-      const clean: HistoryChange =
-        change.kind === 'add'
-          ? {
-              kind: 'add',
-              night: {
-                playedAt: change.night.playedAt,
-                pairs: { A: [...change.night.pairs.A] as [ProfileId, ProfileId], B: [...change.night.pairs.B] as [ProfileId, ProfileId] },
-                wins: { A: change.night.wins.A, B: change.night.wins.B },
-                ...(change.night.note ? { note: change.night.note } : {}),
-              },
-            }
-          : { kind: 'remove', nightId: change.nightId };
+      const tidy = (s: ScoreSide): ScoreSide => ({ players: [s.players[0], s.players[1]], nightsWon: s.nightsWon, gamesWon: s.gamesWon });
+      const clean: HistoryChange = { kind: 'score', sides: [tidy(change.sides[0]), tidy(change.sides[1])] };
       const pending: PendingChange = { id: `c${seq}`, change: clean, proposedBy: by, approvals: [by], at: now };
       return settle({ pending: [...queue.pending, pending], seq }, pending.id, players, done);
     }
@@ -128,9 +112,16 @@ function settle(
   queue: ChangeQueue,
   id: string,
   players: readonly ProfileId[],
-  done: (q: ChangeQueue, applied?: HistoryChange | null) => Outcome<ChangeOutcome, never>,
+  done: (q: ChangeQueue, applied?: PendingChange | null) => Outcome<ChangeOutcome, never>,
 ): Outcome<ChangeOutcome, never> {
   const p = queue.pending.find((x) => x.id === id)!;
   if (!players.every((pl) => p.approvals.includes(pl))) return done(queue);
-  return done({ ...queue, pending: queue.pending.filter((x) => x.id !== id) }, p.change);
+  return done({ ...queue, pending: queue.pending.filter((x) => x.id !== id) }, p);
+}
+
+/** The overrides after an approved change: it replaces any earlier one for the same matchup. */
+export function withOverride(overrides: readonly ScoreOverride[], applied: PendingChange): ScoreOverride[] {
+  const sides = applied.change.sides;
+  const key = matchupKey(sides[0].players, sides[1].players);
+  return [...overrides.filter((o) => matchupKey(o.sides[0].players, o.sides[1].players) !== key), { sides, from: applied.at }];
 }

@@ -47,7 +47,8 @@ import {
   emptyChangeQueue,
   type ChangeAction,
   type ChangeQueue,
-  type OfflineNight,
+  type ScoreOverride,
+  withOverride,
 } from '@dark/engine';
 import type { Env } from './index';
 import { isProfile, PROFILE_IDS, PROFILES, USUAL_PARTNER } from './profiles';
@@ -154,10 +155,6 @@ export class TableRoom extends DurableObject<Env> {
       CREATE TABLE IF NOT EXISTS awards (
         session_id TEXT NOT NULL, kind TEXT NOT NULL, profile_id TEXT NOT NULL, score REAL NOT NULL,
         payload_json TEXT NOT NULL, created_at INTEGER NOT NULL);
-      -- Nights played away from the app, added with everyone's approval (Ryan).
-      CREATE TABLE IF NOT EXISTS offline_nights (
-        id INTEGER PRIMARY KEY AUTOINCREMENT, played_at INTEGER NOT NULL, pairs_json TEXT NOT NULL,
-        wins_json TEXT NOT NULL, note TEXT, added_at INTEGER NOT NULL);
     `);
   }
 
@@ -370,34 +367,14 @@ export class TableRoom extends DurableObject<Env> {
     return json(this.historyPayload(rows.map((row) => this.savedNight(row))));
   }
 
-  /** Every night (played here, and added offline), newest first, with the changes awaiting approval. */
-  private historyPayload(played: SavedNight[]): { nights: SavedNight[]; pending: ChangeQueue['pending'] } {
-    const nights = [...played, ...this.offlineNights()].sort((a, b) => b.startedAt - a.startedAt);
-    return { nights, pending: this.loadChanges().pending };
+  /** Every night, newest first, with the all-time scores set by hand and the changes awaiting approval. */
+  private historyPayload(nights: SavedNight[]): { nights: SavedNight[]; overrides: ScoreOverride[]; pending: ChangeQueue['pending'] } {
+    return { nights, overrides: this.loadOverrides(), pending: this.loadChanges().pending };
   }
 
-  private offlineNights(): SavedNight[] {
-    return this.sql
-      .exec<{ id: number; played_at: number; pairs_json: string; wins_json: string; note: string | null }>(
-        'SELECT id, played_at, pairs_json, wins_json, note FROM offline_nights',
-      )
-      .toArray()
-      .map((row) => {
-        const wins = JSON.parse(row.wins_json) as OfflineNight['wins'];
-        return {
-          id: `o${row.id}`,
-          startedAt: row.played_at,
-          endedAt: row.played_at,
-          theme: null,
-          pairs: JSON.parse(row.pairs_json),
-          seating: null,
-          avatars: null,
-          final: { winner: wins.A > wins.B ? 'A' : wins.B > wins.A ? 'B' : 'tie', reason: 'agreed', wins, discardedDeal: false },
-          games: [],
-          topAward: null,
-          offline: { wins, ...(row.note ? { note: row.note } : {}) },
-        };
-      });
+  private loadOverrides(): ScoreOverride[] {
+    const row = this.sql.exec<{ v: string }>("SELECT v FROM kv WHERE k = 'scoreOverrides'").toArray()[0];
+    return row ? (JSON.parse(row.v) as ScoreOverride[]) : [];
   }
 
   private loadChanges(): ChangeQueue {
@@ -405,32 +382,16 @@ export class TableRoom extends DurableObject<Env> {
     return row ? (JSON.parse(row.v) as ChangeQueue) : emptyChangeQueue();
   }
 
-  /** Propose, approve or turn down a change to the all-time history (offline nights). */
+  /** Propose, approve or turn down a new all-time score for a matchup (it needs all four). */
   private async handleHistoryChange(request: Request): Promise<Response> {
     if (request.method !== 'POST') return json({ error: 'METHOD' }, 405);
     const body = (await request.json().catch(() => null)) as { token?: unknown; action?: unknown } | null;
     const profile = await this.profileForToken(typeof body?.token === 'string' ? body.token : '');
     if (!profile) return json({ error: 'NOT_SIGNED_IN' }, 401);
-    const offlineIds = this.sql
-      .exec<{ id: number }>('SELECT id FROM offline_nights')
-      .toArray()
-      .map((r) => `o${r.id}`);
-    const out = applyChangeAction(this.loadChanges(), profile, body?.action as ChangeAction, Date.now(), PROFILE_IDS, offlineIds);
+    const out = applyChangeAction(this.loadChanges(), profile, body?.action as ChangeAction, Date.now(), PROFILE_IDS);
     if (!out.ok) return json({ error: out.error.code, message: out.error.message }, 400);
     const { queue, applied } = out.state;
-    if (applied?.kind === 'add') {
-      const n = applied.night;
-      this.sql.exec(
-        'INSERT INTO offline_nights (played_at, pairs_json, wins_json, note, added_at) VALUES (?, ?, ?, ?, ?)',
-        n.playedAt,
-        JSON.stringify(n.pairs),
-        JSON.stringify(n.wins),
-        n.note ?? null,
-        Date.now(),
-      );
-    } else if (applied?.kind === 'remove') {
-      this.sql.exec('DELETE FROM offline_nights WHERE id = ?', Number(applied.nightId.slice(1)));
-    }
+    if (applied) this.sql.exec('INSERT OR REPLACE INTO kv (k, v) VALUES (?, ?)', 'scoreOverrides', JSON.stringify(withOverride(this.loadOverrides(), applied)));
     this.sql.exec('INSERT OR REPLACE INTO kv (k, v) VALUES (?, ?)', 'historyChanges', JSON.stringify(queue));
     const rows = this.sql
       .exec<SessionRow>(`SELECT rowid AS rid, ${SESSION_COLUMNS} FROM sessions WHERE pairs_json IS NOT NULL ORDER BY started_at DESC`)
