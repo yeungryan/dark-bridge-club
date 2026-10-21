@@ -216,6 +216,10 @@ export class PracticeTable extends Connection {
     } else if (s.phase === 'partnerPick' && s.captain && s.captain !== this.me) {
       action = { type: 'pickPartner', by: s.captain, partner: s.suggestedPartner ?? bots.find((b) => b !== s.captain)! };
       delay = 3500; // let the captain draw play out
+    } else if (s.phase === 'awaitingDeal' && s.dealer !== null && s.seating![s.dealer] !== this.me) {
+      // A bot dealer shuffles for a moment, then deals.
+      action = { type: 'dealCards', by: s.seating![s.dealer] };
+      delay = think(1600);
     } else if (s.phase === 'betweenDeals') {
       const waiting = bots.find((b) => !s.readyForNext.includes(b));
       if (waiting) {

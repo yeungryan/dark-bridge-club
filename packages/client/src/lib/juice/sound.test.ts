@@ -2,12 +2,12 @@ import { describe, expect, it, vi } from 'vitest';
 
 vi.mock('./settings.svelte', () => ({ settings: { effectiveVolume: 1 } }));
 
-const { comboStep, makeImpulse, sound } = await import('./sound');
+const { comboStep, makeImpulse, riffleTimes, sound } = await import('./sound');
 const { THEMES } = await import('../themes');
 
 describe('sound', () => {
   it('keeps every method the rest of the app (and the e2e tests) rely on', () => {
-    const names = ['tap', 'stamp', 'pass', 'going', 'sold', 'passedOut', 'card', 'lead', 'trumpIn', 'sweep', 'pip', 'trumpTrick', 'firstTrump', 'close', 'decider', 'clinch', 'flip', 'count', 'no', 'tick', 'accent', 'fanfare', 'combo', 'pickup', 'impact', 'riser', 'whoosh'];
+    const names = ['tap', 'stamp', 'pass', 'going', 'sold', 'passedOut', 'card', 'lead', 'trumpIn', 'sweep', 'pip', 'trumpTrick', 'firstTrump', 'close', 'decider', 'clinch', 'flip', 'count', 'no', 'tick', 'accent', 'fanfare', 'combo', 'pickup', 'impact', 'riser', 'whoosh', 'riffle', 'dealCard', 'fan', 'dealButton'];
     for (const n of names) expect(typeof (sound as Record<string, unknown>)[n]).toBe('function');
   });
 
@@ -16,6 +16,10 @@ describe('sound', () => {
       sound.card(true);
       sound.combo(3);
       sound.impact(3);
+      sound.riffle();
+      sound.dealCard(51, 52);
+      sound.fan();
+      sound.dealButton();
     }).not.toThrow();
   });
 
@@ -47,6 +51,20 @@ describe('sound', () => {
       expect(energy).toBeCloseTo(1, 3);
       expect(tail / energy).toBeLessThan(1e-3);
       expect(Math.abs(dc)).toBeLessThan(0.5);
+    }
+  });
+
+  it('times a riffle that speeds up into the middle and slows down at the end', () => {
+    for (let run = 0; run < 20; run++) {
+      const t = riffleTimes(25, 0.5);
+      expect(t).toHaveLength(25);
+      expect(t[0]).toBe(0);
+      expect(t[24]!).toBeCloseTo(0.5, 6);
+      for (let i = 1; i < t.length; i++) expect(t[i]!).toBeGreaterThanOrEqual(t[i - 1]!);
+      const gap = (i: number) => t[i + 1]! - t[i]!;
+      const edges = (gap(0) + gap(1) + gap(22) + gap(23)) / 4;
+      const middle = (gap(10) + gap(11) + gap(12) + gap(13)) / 4;
+      expect(middle).toBeLessThan(edges);
     }
   });
 });

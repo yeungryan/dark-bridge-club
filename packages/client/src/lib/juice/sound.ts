@@ -31,7 +31,7 @@ interface Engine {
 let ctx: AudioContext | null = null;
 let live: Engine | null = null;
 /** Set while rendering into an OfflineAudioContext for tests. */
-let offline: { engine: Engine; volume: number } | null = null;
+let offline: { engine: Engine; volume: number; at?: number } | null = null;
 
 function makeNoise(c: BaseAudioContext): AudioBuffer {
   const buffer = c.createBuffer(1, c.sampleRate * 2, c.sampleRate);
@@ -172,7 +172,7 @@ function ready(): Engine | null {
     const e = offline.engine;
     e.master.gain.value = offline.volume * MASTER;
     tuneRoom(e);
-    e.now = OFFLINE_LEAD;
+    e.now = OFFLINE_LEAD + (offline.at ?? 0);
     return e;
   }
   const volume = settings.effectiveVolume;
@@ -376,6 +376,63 @@ function riserBody(e: Engine, d: number, gain = 1): void {
   noise(e, d, 0.2 * gain, { band: 600, sweepTo: 3600, q: 1.6, shape: 'swell', peak, wet: 0.12 });
   tone(e, 340, d, 0.07 * gain, { type: 'sawtooth', glideTo: 680, lowpass: 1900, attack: d * peak, wet: 0.1 });
   tone(e, 680, d, 0.04 * gain, { glideTo: 1360, attack: d * peak, wet: 0.15 });
+}
+
+interface Tick {
+  /** Seconds after the sound starts. */
+  at: number;
+  gain: number;
+  /** Band-pass centre, Hz. */
+  freq: number;
+  /** Length of the tick, seconds. */
+  dur: number;
+}
+
+/**
+ * A run of tiny papery clicks (card edges flicking past each other) on ONE noise source, ONE
+ * band-pass and ONE gain: each tick is just automation events, so a 30-click riffle costs
+ * 3–4 nodes. Ticks must be in time order and shouldn't overlap.
+ */
+function ticks(e: Engine, list: Tick[], q = 2.2, wet = 0): void {
+  if (!list.length) return;
+  const c = e.ctx;
+  const t0 = e.now;
+  const src = c.createBufferSource();
+  src.buffer = e.noise;
+  src.loop = true;
+  const filter = c.createBiquadFilter();
+  filter.type = 'bandpass';
+  filter.Q.value = q;
+  const g = c.createGain();
+  g.gain.setValueAtTime(0, t0);
+  let end = t0;
+  for (const k of list) {
+    const t = Math.max(end, t0 + k.at);
+    filter.frequency.setValueAtTime(k.freq, t);
+    g.gain.setValueAtTime(0.0001, t);
+    g.gain.linearRampToValueAtTime(k.gain, t + 0.0006);
+    g.gain.exponentialRampToValueAtTime(0.0001, t + k.dur);
+    end = t + k.dur + 0.0004;
+  }
+  g.gain.setValueAtTime(0, end);
+  src.connect(filter).connect(g);
+  route(e, g, wet);
+  src.start(t0, Math.random() * 1.5);
+  src.stop(end + 0.02);
+}
+
+/**
+ * One riffle's click times over `dur` seconds: slow at the edges, fastest in the middle
+ * (thumbs releasing the halves), with a little jitter so repeats never sound identical.
+ */
+export function riffleTimes(n: number, dur: number, rand: () => number = Math.random): number[] {
+  const A = 0.62;
+  const out: number[] = [];
+  for (let k = 0; k < n; k++) {
+    const u = (k + (k > 0 && k < n - 1 ? (rand() - 0.5) * 0.5 : 0)) / (n - 1);
+    out.push(dur * (u + (A * Math.sin(2 * Math.PI * u)) / (2 * Math.PI)));
+  }
+  return out.sort((a, b) => a - b);
 }
 
 /** Major pentatonic ladder for combos: semitones above the base, and how "lit" the step is (0–1). */
@@ -593,6 +650,76 @@ export const sound = {
       noise(e, 0.7, 0.04, { highpass: 6000, delay: 0.3, shape: 'swell', peak: 0.25, wet: 0.4 });
     });
   },
+  /**
+   * One riffle shuffle (~0.65 s): a burst of tiny papery clicks that speeds up then slows down,
+   * then a soft "bridge" whoosh as the halves square up. Repeated every ~1.6 s while waiting for
+   * the dealer, so it is quiet and a little different every time.
+   */
+  riffle() {
+    play('riffle', (e) => {
+      const n = 22 + Math.floor(Math.random() * 7);
+      const dur = 0.5 * vary(0.06);
+      const times = riffleTimes(n, dur);
+      const tilt = vary(0.08);
+      const list: Tick[] = times.map((at, k) => {
+        const u = k / (n - 1);
+        // Louder in the thick of it, softer as the last cards fall.
+        const swell = 0.55 + 0.45 * Math.sin(Math.PI * Math.min(1, u * 1.15));
+        return { at, gain: 0.42 * swell * vary(0.25), freq: (2600 + 1600 * u) * tilt * vary(0.18), dur: 0.004 + Math.random() * 0.0035 };
+      });
+      ticks(e, list, 2.4, 0.04);
+      // A faint papery bed under the clicks (the halves rubbing).
+      noise(e, dur, 0.05, { band: 3200 * tilt, q: 0.8, shape: 'swell', peak: 0.5 });
+      // The bridge: cards cascading back together, then squared with a light tap.
+      noise(e, 0.16, 0.15, { band: 2400 * tilt, sweepTo: 1000, q: 1, shape: 'swell', peak: 0.55, delay: dur + 0.02, wet: 0.06, pan: [0.25, -0.15] });
+      snap(e, 0.05, dur + 0.17, 3800);
+    });
+  },
+  /**
+   * One card dealt (`i` of `of`, ~52 in ~1.4 s): a light "thwip" sweeping up, then a tiny click
+   * as it lands. Brightens gently through the deal; the last card lands a touch fuller.
+   * Six nodes per card (the last one adds a small body).
+   */
+  dealCard(i: number, of: number) {
+    play('dealCard', (e) => {
+      const total = Math.max(1, of || 1);
+      const p = Math.min(1, Math.max(0, (i || 0) / Math.max(1, total - 1)));
+      const last = (i || 0) >= total - 1;
+      const lift = 1 + 0.3 * p;
+      const b = vary(0.06) * lift;
+      const g = (0.1 + 0.03 * p) * vary(0.08);
+      noise(e, 0.03, g, { band: 1500 * b, sweepTo: 4400 * b, q: 1.4, shape: 'swell', peak: 0.75 });
+      noise(e, 0.012 * vary(0.2), (last ? 0.4 : 0.26) * vary(0.1), { band: 3300 * b * vary(0.08), q: 1.6, delay: 0.026 });
+      if (last) {
+        tone(e, 560, 0.06, 0.12, { type: 'triangle', glideTo: 430, delay: 0.026, wet: 0.08, bend: vary() });
+        noise(e, 0.05, 0.08, { band: 1200, q: 0.9, delay: 0.026, wet: 0.06 });
+      }
+    });
+  },
+  /** A hand fanning open: a quick soft ascending paper sweep with a little shimmer in the room. */
+  fan() {
+    play('fan', (e) => {
+      const v = vary(0.05);
+      const n = 9;
+      const list: Tick[] = Array.from({ length: n }, (_, k) => {
+        const u = k / (n - 1);
+        return { at: 0.02 + 0.2 * u ** 0.85, gain: (0.16 + 0.08 * u) * vary(0.15), freq: (1900 + 2600 * u) * v * vary(0.05), dur: 0.007 };
+      });
+      ticks(e, list, 1.8, 0.05);
+      noise(e, 0.28, 0.18, { band: 800 * v, sweepTo: 3600 * v, q: 1.2, shape: 'swell', peak: 0.7, wet: 0.06, pan: [-0.35, 0.35] });
+      noise(e, 0.3, 0.025, { highpass: 6500, delay: 0.18, shape: 'swell', peak: 0.2, wet: 0.5 });
+      bell(e, 12, 0.3, 0.025, 0.22, 0.45, 0.3, v);
+    });
+  },
+  /** The Deal button: the deck slapped on the table, a "thock" with a crisp snap on top. */
+  dealButton() {
+    play('dealButton', (e) => {
+      snap(e, 0.16, 0, 3200);
+      noise(e, 0.06, 0.32, { band: 1300, sweepTo: 800, q: 0.8, wet: 0.05 });
+      knock(e, 420, 0.42, 0.002, 0.08);
+      tone(e, 900, 0.04, 0.05, { type: 'triangle', glideTo: 760, delay: 0.002, wet: 0.05 });
+    });
+  },
 };
 
 export type SoundName = keyof typeof sound;
@@ -609,6 +736,26 @@ export async function __renderForTest(name: string, args: unknown[], seconds: nu
   offline = { engine: buildEngine(c), volume: 1 };
   try {
     (sound as unknown as Record<string, (...a: unknown[]) => void>)[name]!(...args);
+  } finally {
+    offline = null;
+  }
+  const out = await c.startRendering();
+  return [out.getChannelData(0).slice(lead), out.getChannelData(1).slice(lead)];
+}
+
+/**
+ * Test hook: render a timed sequence of sounds (`[name, args, startSeconds]`) into one
+ * OfflineAudioContext through the same chain, so overlaps hit the limiter as they would live.
+ */
+export async function __renderSequenceForTest(steps: [string, unknown[], number][], seconds: number, sampleRate = 48000): Promise<Float32Array[]> {
+  const lead = Math.round(OFFLINE_LEAD * sampleRate);
+  const c = new OfflineAudioContext(2, lead + Math.ceil(seconds * sampleRate), sampleRate);
+  const engine = buildEngine(c);
+  try {
+    for (const [name, args, at] of steps) {
+      offline = { engine, volume: 1, at };
+      (sound as unknown as Record<string, (...a: unknown[]) => void>)[name]!(...args);
+    }
   } finally {
     offline = null;
   }

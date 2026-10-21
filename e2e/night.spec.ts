@@ -124,6 +124,11 @@ async function playAsHuman(player: Player, deals: number): Promise<void> {
       await tap(nextDeal);
       continue;
     }
+    const dealButton = page.getByRole('button', { name: 'Deal', exact: true });
+    if (await dealButton.isVisible()) {
+      await tap(dealButton);
+      continue;
+    }
     const pass = page.getByRole('button', { name: 'Pass', exact: true });
     if (await pass.isVisible()) {
       await tap(pass);
@@ -152,6 +157,7 @@ async function reachMyTurnToPlay(player: Player): Promise<void> {
     if (await page.locator('.picker .animal').first().isVisible()) await pickAvatar(page);
     else if (await partnerButton.isVisible()) await tap(partnerButton);
     else if ((await nextDeal.isVisible()) && (await isEnabledNow(nextDeal))) await tap(nextDeal);
+    else if (await page.getByRole('button', { name: 'Deal', exact: true }).isVisible()) await tap(page.getByRole('button', { name: 'Deal', exact: true }));
     else if (await pass.isVisible()) {
       await tap(pass);
     } else await page.waitForTimeout(200);

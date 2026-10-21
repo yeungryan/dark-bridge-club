@@ -62,6 +62,9 @@ class Director {
   revealHold = $state(false);
   /** Score-bar pips shown, per side, while a trick's orb is still flying there. */
   pipHold = $state<Record<Side, number | null>>({ declarers: null, defenders: null });
+  /** A game just dealt: the cards are flying (DealFlight); the hand fans open when it ends. */
+  dealing = $state<{ id: number; dealer: Seat } | null>(null);
+  private dealSafety: ReturnType<typeof setTimeout> | undefined;
   /** True during a hit-stop: the table's freeze-frame on a big impact. */
   frozen = $state(false);
   /** Sets won in a row by one side (shown as "×n" once its orb lands); n ≥ 2 is a combo. */
@@ -86,8 +89,22 @@ class Director {
         const fly = settings.ms(TIMING.cardFly);
         setTimeout(() => (this.revealHold = false), fly + settings.ms(RESPONSES[5].hitPauseMs + TIMING.clinchShow));
       }
-      if (events.some((e) => e.type === 'dealStarted')) this.reset();
+      const dealt = events.find((e) => e.type === 'dealStarted');
+      if (dealt) {
+        this.reset();
+        if (dealt.type === 'dealStarted' && settings.animated) {
+          this.dealing = { id: ++this.fxId, dealer: dealt.dealer };
+          // Never leave the hand hidden if the flight can't run (the page was hidden, etc.).
+          clearTimeout(this.dealSafety);
+          this.dealSafety = setTimeout(() => this.finishDeal(), settings.ms(3500));
+        }
+      }
     });
+  }
+
+  /** The deal has landed. */
+  finishDeal(): void {
+    if (this.dealing) this.dealing = null;
   }
 
   private reset(): void {

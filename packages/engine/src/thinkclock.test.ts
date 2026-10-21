@@ -14,6 +14,7 @@ function startedGame(): SessionState {
   };
   step({ type: 'start' });
   step({ type: 'pickPartner', by: s.captain!, partner: PROFILES.find((p) => p !== s.captain)! });
+  step({ type: 'dealCards', by: s.seating![s.dealer!] });
   return s;
 }
 

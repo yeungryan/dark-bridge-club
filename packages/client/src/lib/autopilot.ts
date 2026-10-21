@@ -39,6 +39,8 @@ export function startAutopilot(conn: Connection): () => void {
     } else if (view.phase === 'partnerPick' && view.captain === me) {
       const choice = view.suggestedPartner ?? view.profiles.find((p) => p !== me)!;
       act = () => conn.intent({ type: 'pickPartner', partner: choice });
+    } else if (view.phase === 'awaitingDeal' && view.dealer !== null && view.dealer === view.mySeat) {
+      act = () => conn.intent({ type: 'dealCards' });
     } else if (view.phase === 'betweenDeals' && !view.readyForNext.includes(me)) {
       act = () => conn.intent({ type: 'readyForNext' });
     } else if (deal && view.mySeat !== null) {

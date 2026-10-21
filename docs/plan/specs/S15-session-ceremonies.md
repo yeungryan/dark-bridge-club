@@ -30,3 +30,8 @@ Make each night feel like an **event** (promise B), spending the big ceremonies 
 - **The DARK crest is the guest list.** A letter is dim grey while its player is away, lights in their colour when they arrive (with a chime), and fills solid with a check once they've picked their avatar. The player list, the "4/4 here" line and the theme's greeting are gone.
 - The theme's flag sits left of its name.
 - The lobby starts below the theme's scene, so nothing overlaps it.
+
+## The deal (Ryan, M3)
+- **Shuffling:** each game waits for its dealer (engine phase `awaitingDeal`). The deck riffles in the middle of the table; only the dealer's phone plays the riffle sound. The dealer gets a glowing **Deal** button with a shuffle icon, and everyone else sees "Kim is shuffling…". There's **no automatic deal**: starting the game is the dealer's moment. Only the dealer can deal, and no hand exists until they do.
+- **Dealing:** after the tap, 52 cards fly from the deck round the table from the dealer's left, one every 27 ms, each with a light flick that rises in pitch. Your 13 land in your hand, which fans open with a paper sweep. Bidding opens once the cards have landed.
+- **Pass-outs:** the next dealer shuffles and deals again.

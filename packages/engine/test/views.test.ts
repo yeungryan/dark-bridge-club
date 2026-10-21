@@ -21,6 +21,8 @@ const config: SessionConfig = {
 function apply(s: SessionState, a: SessionAction): SessionState {
   const out = applySessionAction(s, a);
   if (!out.ok) throw new Error(out.error.code);
+  // The dealer deals at once (dealing itself is tested in session.test.ts).
+  if (out.state.phase === 'awaitingDeal') return apply(out.state, { type: 'dealCards', by: out.state.seating![out.state.dealer!] });
   return out.state;
 }
 

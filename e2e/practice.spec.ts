@@ -34,7 +34,7 @@ async function dragToTable(page: Page, card: Locator): Promise<void> {
 }
 
 /** Move along (captain draw, partner pick, Next game, passing) until `until` is true. */
-async function playUntil(page: Page, until: () => Promise<boolean>, opts: { stayOnReveal?: boolean; noPass?: boolean } = {}): Promise<void> {
+async function playUntil(page: Page, until: () => Promise<boolean>, opts: { stayOnReveal?: boolean; noPass?: boolean; noDeal?: boolean } = {}): Promise<void> {
   // Only catches a game that has truly stopped (a busy machine can be slow, not stuck).
   const deadline = Date.now() + 240_000;
   while (!(await until())) {
@@ -43,12 +43,14 @@ async function playUntil(page: Page, until: () => Promise<boolean>, opts: { stay
     const partner = page.getByRole('button', { name: /^Partner with/ });
     const next = page.getByRole('button', { name: 'Next game' });
     const pass = page.getByRole('button', { name: 'Pass', exact: true });
+    const dealButton = page.getByRole('button', { name: 'Deal', exact: true });
     const animal = page.locator('.picker .animal').first();
     if (await animal.isVisible()) {
       if (await tap(animal)) await tap(page.locator('.picker .element').first());
     } else if (await skip.isVisible()) await tap(skip);
     else if (await partner.isVisible()) await tap(partner);
     else if (!opts.stayOnReveal && (await next.isVisible()) && (await next.isEnabled())) await tap(next);
+    else if (!opts.noDeal && (await dealButton.isVisible())) await tap(dealButton);
     else if (!opts.noPass && (await pass.isVisible())) await tap(pass);
     else if (await page.locator('.table[data-turn="my-play"]').isVisible()) {
       await dragToTable(page, page.locator('.hand .slot').filter({ has: page.locator('.card:not(.dim)') }).first());
@@ -204,4 +206,28 @@ test('after a game, replay it set by set with every hand face up', async ({ page
   await replay.getByRole('button', { name: 'Close the replay' }).tap();
   await expect(replay).toBeHidden();
   await expect(page.getByRole('button', { name: 'Next game' })).toBeVisible();
+});
+
+test('each game waits for its dealer: shuffle, tap Deal, and 52 cards fly out', async ({ page }) => {
+  await page.goto(PRACTICE);
+  const dealButton = page.getByRole('button', { name: 'Deal', exact: true });
+  const shuffling = page.getByText(/is shuffling…/);
+  // Play along until a game is waiting to be dealt (by me, or by a bot).
+  await playUntil(page, async () => (await dealButton.isVisible()) || (await shuffling.isVisible()), { noDeal: true });
+  await expect(page.locator('.deck')).toBeVisible();
+  if (await shuffling.isVisible()) {
+    // A bot is dealing: no Deal button for me, and the cards arrive when it deals.
+    await expect(dealButton).toHaveCount(0);
+    await expect(page.locator('.hand .slot')).toHaveCount(13, { timeout: 15_000 });
+    return;
+  }
+  // I'm the dealer: nothing happens until I tap Deal (no automatic deal).
+  await page.waitForTimeout(2500);
+  await expect(dealButton).toBeVisible();
+  await expect(page.locator('.hand .slot')).toHaveCount(0);
+  const before = (await sounds(page)).filter((s) => s === 'dealCard').length;
+  await dealButton.tap();
+  await expect(page.locator('.hand .slot')).toHaveCount(13);
+  await expect.poll(async () => (await sounds(page)).filter((s) => s === 'dealCard').length - before).toBe(52);
+  await expect.poll(async () => (await sounds(page)).includes('fan')).toBe(true);
 });

@@ -19,7 +19,9 @@ export interface SessionConfig {
   readonly seed: Seed;
 }
 
-export type SessionPhase = 'lobby' | 'partnerPick' | 'inDeal' | 'betweenDeals' | 'ended';
+/** `awaitingDeal`: the next dealer is known and the deck is being shuffled; nothing is dealt
+ * until they tap Deal (Ryan: the dealer starts each game, no automatic deal). */
+export type SessionPhase = 'lobby' | 'partnerPick' | 'awaitingDeal' | 'inDeal' | 'betweenDeals' | 'ended';
 
 export interface DealRecord {
   readonly dealNumber: number;
@@ -76,6 +78,8 @@ export type SessionAction =
   /** Server timers (R11 clinch window, S04 concession expiry). */
   | { type: 'dealTimer'; action: 'endAtClinch' | 'expireConcession' }
   | { type: 'readyForNext'; by: ProfileId }
+  /** The dealer deals the next game. */
+  | { type: 'dealCards'; by: ProfileId }
   | { type: 'voteEndNight'; by: ProfileId }
   | { type: 'cancelEndNight'; by: ProfileId }
   /** Server: a player has been away for 30 minutes (S05, S08). */
@@ -85,6 +89,7 @@ export type SessionEvent =
   | { type: 'captainDrawn'; captain: ProfileId; suggestedPartner: ProfileId | null }
   | { type: 'partnerChosen'; captain: ProfileId; partner: ProfileId; pairs: Record<PairId, [ProfileId, ProfileId]> }
   | { type: 'seated'; seating: PerSeat<ProfileId> }
+  | { type: 'awaitingDeal'; dealer: Seat }
   | { type: 'dealStarted'; dealNumber: number; dealer: Seat; seed: Seed }
   | { type: 'deal'; event: DealEvent }
   | { type: 'redeal'; nextDealer: Seat }
@@ -140,6 +145,8 @@ export function applySessionAction(state: SessionState, action: SessionAction): 
       return dealTimer(state, action.action);
     case 'readyForNext':
       return readyForNext(state, action.by);
+    case 'dealCards':
+      return dealCards(state, action.by);
     case 'voteEndNight':
       return voteEndNight(state, action.by);
     case 'cancelEndNight':
@@ -190,7 +197,20 @@ function pickPartner(state: SessionState, by: ProfileId, chosen: ProfileId): Ses
     { type: 'seated', seating },
   ];
   const seated: SessionState = { ...state, rng: rng.state(), pairs, seating };
-  return startDeal(seated, dealer, events);
+  return awaitDeal(seated, dealer, events);
+}
+
+/** The next game is ready to be dealt: its dealer shuffles until they tap Deal. */
+function awaitDeal(state: SessionState, dealer: Seat, events: SessionEvent[]): SessionOutcome {
+  events.push({ type: 'awaitingDeal', dealer });
+  return { ok: true, state: { ...state, phase: 'awaitingDeal', dealer, deal: null, readyForNext: [] }, events };
+}
+
+/** Only the dealer can deal, and only when a game is waiting to be dealt. */
+function dealCards(state: SessionState, by: ProfileId): SessionOutcome {
+  if (state.phase !== 'awaitingDeal') return fail('NOT_DEALING', 'There is nothing to deal right now.');
+  if (seatOf(state, by) !== state.dealer) return fail('NOT_DEALER', 'Only the dealer can deal.');
+  return startDeal(state, state.dealer!, []);
 }
 
 function startDeal(state: SessionState, dealer: Seat, events: SessionEvent[]): SessionOutcome {
@@ -243,7 +263,7 @@ function applyToDeal(state: SessionState, action: DealAction): SessionOutcome {
     };
     const nextDealer = next(deal.dealer);
     events.push({ type: 'redeal', nextDealer });
-    return startDeal({ ...updated, records: [...state.records, record], passOuts: state.passOuts + 1 }, nextDealer, events);
+    return awaitDeal({ ...updated, records: [...state.records, record], passOuts: state.passOuts + 1 }, nextDealer, events);
   }
 
   if (deal.phase === 'complete') {
@@ -279,12 +299,12 @@ function readyForNext(state: SessionState, by: ProfileId): SessionOutcome {
   const ready = [...state.readyForNext, by];
   const events: SessionEvent[] = [{ type: 'readyChanged', ready }];
   if (ready.length < 4) return { ok: true, state: { ...state, readyForNext: ready }, events };
-  return startDeal({ ...state, readyForNext: ready }, next(state.dealer!), events);
+  return awaitDeal({ ...state, readyForNext: ready }, next(state.dealer!), events);
 }
 
 /** Ending the night needs all four votes (S05). */
 function voteEndNight(state: SessionState, by: ProfileId): SessionOutcome {
-  if (state.phase !== 'inDeal' && state.phase !== 'betweenDeals') {
+  if (state.phase !== 'inDeal' && state.phase !== 'betweenDeals' && state.phase !== 'awaitingDeal') {
     return fail('CANNOT_END_YET', 'The night can only be ended once play has started.');
   }
   if (!isPlayer(state, by)) return fail('NOT_A_PLAYER', 'Unknown player.');
