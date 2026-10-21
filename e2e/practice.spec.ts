@@ -69,8 +69,8 @@ test('the bid ladder: tap a bid to see what it needs, then Bid; Pass is one tap'
   await expect(page.locator('.confirm')).toContainText(/^Bid \d/);
   await page.locator('.confirm').tap();
   await expect(page.locator('.strip .call').filter({ hasText: 'Ryan' }).last()).toContainText(label);
-  // Next time round, Pass goes straight in.
-  await playUntil(page, () => page.locator('.box .ladder').isVisible(), { stayOnReveal: true, noPass: true });
+  // Next time it's my call (this auction or the next game's), Pass goes straight in.
+  await playUntil(page, () => page.locator('.box .ladder').isVisible(), { noPass: true });
   await page.getByRole('button', { name: 'Pass', exact: true }).tap();
   await expect(page.locator('.strip .call').filter({ hasText: 'Ryan' }).last()).toContainText('Pass');
 });
