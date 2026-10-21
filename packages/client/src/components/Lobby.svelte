@@ -9,12 +9,16 @@
   import AvatarPicker from './AvatarPicker.svelte';
   import History from './History.svelte';
   import LastTime from './LastTime.svelte';
+  import NextNight from './NextNight.svelte';
+  import Scheduler from './Scheduler.svelte';
 
   // Spec S15, cleaned up (Ryan): the DARK crest is the guest list. A letter is dim grey until
   // its player arrives, lights up in their colour when they're here, and fills solid with a
   // small check once they've picked their animal. No list, no counts, no extra words.
   let { conn, complete = false }: { conn: Connection; complete?: boolean } = $props();
   let showHistory = $state(false);
+  let showScheduler = $state(false);
+  let schedulerClosed = $state(0);
 
   const room = $derived(conn.room!);
   const theme = $derived(themeOf(room.theme));
@@ -83,12 +87,27 @@
   {:else}
     <AvatarPicker {conn} />
     <!-- How the last night went (S20); the practice table has no history. -->
-    {#if !conn.offline}<LastTime profiles={room.profiles} onHistory={() => (showHistory = true)} />{/if}
+    {#if !conn.offline}
+      <!-- The next night (S21), then the last one (S20). -->
+      <NextNight profiles={room.profiles} me={conn.view!.me} refreshKey={schedulerClosed} onOpen={() => (showScheduler = true)} />
+      <LastTime profiles={room.profiles} onHistory={() => (showHistory = true)} />
+    {/if}
     <p class="extras">
       <a href="lab.html" target="_blank">sound check</a> · <a href="practice.html" target="_blank">practice table</a>
     </p>
   {/if}
 </main>
+{#if showScheduler}
+  <Scheduler
+    profiles={room.profiles}
+    me={conn.view!.me}
+    theme={room.theme}
+    onClose={() => {
+      showScheduler = false;
+      schedulerClosed++;
+    }}
+  />
+{/if}
 {#if showHistory}
   <History profiles={room.profiles} me={conn.view!.me} theme={room.theme} onClose={() => (showHistory = false)} />
 {/if}

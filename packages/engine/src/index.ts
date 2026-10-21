@@ -16,3 +16,4 @@ export * from './history';
 export * from './moments';
 export * from './captions';
 export * from './rivalry';
+export * from './schedule';

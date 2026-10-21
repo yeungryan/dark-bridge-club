@@ -15,6 +15,14 @@ interface Player {
   frames: Frame[];
 }
 
+/** The login token a page saved (each test seat uses its own storage slot). */
+async function tokenOf(page: Page): Promise<string> {
+  return page.evaluate(() => {
+    const slot = new URLSearchParams(location.search).get('slot') ?? 'main';
+    return localStorage.getItem(`dark.${slot}.token`) ?? '';
+  });
+}
+
 const SEATS = [
   { id: 'darren', pin: '1111', bot: true, slot: 1 },
   { id: 'adrian', pin: '2222', bot: true, slot: 2 },
@@ -274,11 +282,48 @@ test.describe.serial('a night at the DARK table', () => {
     await expect(awards.first().locator('.who')).toHaveText(/Darren|Adrian|Ryan|Kim/);
   });
 
+  test('the end of the night leads to planning the next: propose, vote, lock, add to calendar', async ({ request }) => {
+    // Not signed in: no schedule.
+    expect((await request.get('/api/schedule')).status()).toBe(401);
+    const page = ryan().page;
+    await page.getByRole('button', { name: 'Plan the next night' }).click();
+    const plan = page.getByRole('dialog', { name: 'Next night' });
+    // Proposing takes three taps from here: Propose times, an evening, Propose.
+    await plan.getByRole('button', { name: /Propose times/ }).click();
+    await plan.locator('.chip').nth(1).click();
+    await plan.getByRole('button', { name: /^Propose 1$/ }).click();
+    await expect(plan.locator('.slot')).toHaveCount(1);
+    await expect(plan.getByText(/Waiting on Darren, Adrian, Kim/)).toBeVisible();
+    // The other three say Yes (from their own logins).
+    const slotId = (await (await request.get(`/api/schedule?token=${await tokenOf(page)}`)).json()).schedule.slots[0].id;
+    for (const seat of SEATS.filter((s) => s.id !== 'ryan')) {
+      const login = await (await request.post('/api/login', { data: { k: 'dev', profile: seat.id, pin: seat.pin } })).json();
+      const res = await request.post('/api/schedule', { data: { token: login.token, action: { type: 'vote', slot: slotId, vote: seat.id === 'kim' ? 'maybe' : 'yes' } } });
+      expect(res.ok()).toBe(true);
+    }
+    // A Maybe doesn't lock it; Kim changes to Yes and it locks.
+    const kim = await (await request.post('/api/login', { data: { k: 'dev', profile: 'kim', pin: '4444' } })).json();
+    const locked = await (await request.post('/api/schedule', { data: { token: kim.token, action: { type: 'vote', slot: slotId, vote: 'yes' } } })).json();
+    expect(locked.schedule.locked?.id).toBe(slotId);
+    // Ryan's screen catches up: the night is on, with a calendar file.
+    await plan.getByRole('button', { name: 'Close the scheduler' }).click();
+    await page.getByRole('button', { name: 'Plan the next night' }).click();
+    await expect(plan.getByRole('region', { name: 'The next night is on' })).toBeVisible();
+    const [download] = await Promise.all([page.waitForEvent('download'), plan.getByRole('button', { name: /Add to calendar/ }).click()]);
+    const ics = await (await download.createReadStream()).toArray();
+    const text = Buffer.concat(ics).toString();
+    expect(text).toContain('BEGIN:VEVENT');
+    expect(text).toMatch(/DTSTART:\d{8}T\d{6}Z/);
+    await plan.getByRole('button', { name: 'Close the scheduler' }).click();
+  });
+
   test('the next night opens with "Last time…", and history replays any saved game', async ({ request }) => {
     // History is for the four of you only.
     expect((await request.get('/api/history')).status()).toBe(401);
     const page = ryan().page;
     await page.getByRole('button', { name: 'Start a new night' }).click();
+    // S21: the home screen counts down to the night everyone said Yes to.
+    await expect(page.getByRole('button', { name: 'Next night' })).toContainText(/Next night · (in|now)/, { timeout: 15_000 });
     const last = page.getByRole('region', { name: 'Last time' });
     await expect(last).toBeVisible({ timeout: 15_000 });
     await expect(last).toContainText(/won \d+–\d+|A dead heat/);

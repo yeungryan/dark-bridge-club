@@ -9,11 +9,14 @@
   import { awardText } from '../lib/stories';
   import { pop } from '../lib/juice/particles';
   import { sound } from '../lib/juice/sound';
+  import Scheduler from './Scheduler.svelte';
 
   // Spec S15, end of night: the final tally counts up, then the winners' banner lands with
   // confetti in their colors (or a "dead heat" banner). Then tonight's two top awards (S19;
   // Ryan: just two, for impact) flip in side by side, with a pause between for the banter.
   let { conn }: { conn: Connection } = $props();
+  // Spec S21: the end of a night leads to planning the next, while everyone's in a good mood.
+  let planning = $state(false);
 
   const view = $derived(conn.view!);
   const profiles = $derived(conn.room!.profiles);
@@ -84,8 +87,16 @@
       {/each}
     </section>
   {/if}
-  <button class="primary" onclick={() => conn.send({ type: 'newNight' })}>Start a new night</button>
+  {#if !conn.offline}
+    <button class="primary" onclick={() => (planning = true)}>📅 Plan the next night</button>
+    <button class="ghost again" onclick={() => conn.send({ type: 'newNight' })}>Start a new night</button>
+  {:else}
+    <button class="primary" onclick={() => conn.send({ type: 'newNight' })}>Start a new night</button>
+  {/if}
 </main>
+{#if planning}
+  <Scheduler profiles={conn.room!.profiles} me={conn.view!.me} theme={conn.room!.theme} onClose={() => (planning = false)} />
+{/if}
 
 <style>
   main {
@@ -184,5 +195,9 @@
   button {
     width: 100%;
     min-height: 56px;
+  }
+  .again {
+    margin-top: 10px;
+    min-height: 44px;
   }
 </style>
