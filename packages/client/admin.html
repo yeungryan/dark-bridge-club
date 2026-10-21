@@ -10,12 +10,12 @@
       input, select, button { font: inherit; min-height: 44px; padding: 0 10px; border-radius: 8px; border: 1px solid #546; }
       button { background: #e8c25a; border: 0; font-weight: 650; }
       p { margin: 0; color: #b9b4a5; }
+      h2 { margin: 12px 0 0; font-size: 1.05rem; }
     </style>
   </head>
   <body>
     <main>
-      <h1>Reset a PIN</h1>
-      <p>Clears a player's PIN and signs them out everywhere. Next time they open the link, they choose a new PIN.</p>
+      <h1>Player PINs</h1>
       <label>Admin key <input id="key" type="password" autocomplete="off" /></label>
       <label>Player
         <select id="profile">
@@ -25,17 +25,35 @@
           <option value="kim">Kim</option>
         </select>
       </label>
+      <h2>Set a PIN</h2>
+      <p>Gives the player this PIN and signs them out everywhere, so they sign in with it next time.</p>
+      <label>New PIN <input id="pin" inputmode="numeric" pattern="\d{4}" maxlength="4" autocomplete="off" /></label>
+      <button id="set">Set PIN</button>
+      <h2>Or reset it</h2>
+      <p>Clears the player's PIN and signs them out everywhere. Next time they open the link, they choose a new PIN.</p>
       <button id="go">Reset PIN</button>
       <p id="result" role="status"></p>
     </main>
     <script type="module">
-      document.getElementById('go').addEventListener('click', async () => {
-        const res = await fetch('/api/admin/reset-pin', {
+      const $ = (id) => document.getElementById(id);
+      const who = () => $('profile').selectedOptions[0].textContent;
+      async function post(path, extra) {
+        return fetch(path, {
           method: 'POST',
           headers: { 'content-type': 'application/json' },
-          body: JSON.stringify({ adminKey: document.getElementById('key').value, profile: document.getElementById('profile').value }),
+          body: JSON.stringify({ adminKey: $('key').value, profile: $('profile').value, ...extra }),
         });
-        document.getElementById('result').textContent = res.ok ? 'Done. That PIN is cleared.' : 'That admin key is not right.';
+      }
+      $('set').addEventListener('click', async () => {
+        const pin = $('pin').value.trim();
+        if (!/^\d{4}$/.test(pin)) return ($('result').textContent = 'Enter a 4-digit PIN.');
+        const res = await post('/api/admin/set-pin', { pin });
+        $('result').textContent = res.ok ? `Done. ${who()}'s PIN is set.` : res.status === 403 ? 'That admin key is not right.' : 'That did not work. Try again.';
+        if (res.ok) $('pin').value = '';
+      });
+      $('go').addEventListener('click', async () => {
+        const res = await post('/api/admin/reset-pin', {});
+        $('result').textContent = res.ok ? `Done. ${who()}'s PIN is cleared.` : 'That admin key is not right.';
       });
     </script>
   </body>
