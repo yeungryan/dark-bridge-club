@@ -42,3 +42,16 @@ Each award goes to **whoever earns it** on the night, so the joke's namesake can
 | **Why Don't You Blog About It** | Ryan built a whole blog for his high-school crush. | The night's most dramatic moment: the highest-drama clinch or the cruelest Heartbreak. | "Why don't you blog about that?" |
 | **Banner Moment** | Darren's whole review of his Vietnam trip: "great, they had a banner at the airport." | The most anticlimactic win: a low contract made exactly, with no drama. | "Banner moment na ba yan?" |
 | **That's 10 Dollars** | Adrian's old boss wanted to charge him for long breaks. | The player who spent the longest thinking in total tonight. This needs per-move timing, which the server will record from M3. | "Oh, 10 dollars na yan!" |
+
+## Built (M3 part 3)
+- **Engine** (`moments.ts`, `captions.ts`): every detector and award is calculated from saved history (`DealHistory` / `NightHistory`) by replaying the saved sets against the contract, so old nights can be re-run with the same result.
+- **Thinking time** (`thinkclock.ts`): the clock runs for whoever is due to call or play. It stops while the table is paused, and one turn counts as 3 minutes at most. Totals are saved per game (`deals.think_json`).
+- **Saved data:** each night's seating (`sessions.seating_json`) and the `moments` and `awards` tables.
+- **On screen:** the reveal shows the game's moments as caption chips once all four hands are face up. At the end of the night, up to five award cards flip in one at a time after the winners' banner.
+- **Award selection:**
+  - Each award is scored against a "clearly earned" level.
+  - House awards get a bonus.
+  - Each award kind appears at most once.
+  - A player gets at most two awards, unless that's needed to reach three.
+  - A kind given last night is skipped unless it's clearly earned again.
+- **Epic Attic** counts how far short the declarers would still be even if they had won every set that wasn't played (games stop at the clinch). A defeat qualifies when it's 2+ short or at level 4 or higher. A one-short loss on the last set is a Heartbreak, not an attic.

@@ -256,11 +256,15 @@ test.describe.serial('a night at the DARK table', () => {
     expect(after.length).toBeGreaterThanOrEqual(before.length - 1);
   });
 
-  test('ending the night needs everyone, then shows the final score', async () => {
+  test('ending the night needs everyone, then shows the final score and the awards', async () => {
     const page = ryan().page;
     await page.getByRole('button', { name: 'Menu' }).click();
     await page.getByRole('button', { name: 'End the night' }).click();
     await expect(page.getByText(/win the night|A dead heat/)).toBeVisible({ timeout: 20_000 });
     await expect(page.getByRole('button', { name: 'Start a new night' })).toBeVisible();
+    // S19: at least one award (two full games always have a clinching card), each naming a player.
+    const awards = page.getByRole('region', { name: "Tonight's awards" }).locator('.award');
+    await expect(awards.first()).toBeVisible({ timeout: 10_000 });
+    await expect(awards.first().locator('.who')).toHaveText(/Darren|Adrian|Ryan|Kim/);
   });
 });

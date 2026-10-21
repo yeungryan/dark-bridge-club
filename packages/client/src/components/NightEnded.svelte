@@ -6,9 +6,15 @@
   import { cssColor } from '../lib/themes';
   import { settings } from '../lib/juice/settings.svelte';
   import CountUp from './CountUp.svelte';
+  import Avatar from './Avatar.svelte';
+  import { avatarOf } from '../lib/avatars';
+  import { awardText } from '../lib/stories';
+  import { pop } from '../lib/juice/particles';
+  import { sound } from '../lib/juice/sound';
 
   // Spec S15, end of night: the final tally counts up, then the winners' banner lands with
-  // confetti in their colors (or a "dead heat" banner). Awards and rivalry come in M3.
+  // confetti in their colors (or a "dead heat" banner). Then tonight's awards (S19) flip in,
+  // one at a time, with a pause between for the banter.
   let { conn }: { conn: Connection } = $props();
 
   const view = $derived(conn.view!);
@@ -17,6 +23,29 @@
   let banner = $state<HTMLElement>();
   // Matches the banner's CSS: it starts after 900ms and takes 500ms to land.
   const BANNER_LANDS = 1400;
+  const AWARD_GAP = 1100;
+
+  const awards = $derived(conn.room!.awards ?? []);
+  // svelte-ignore state_referenced_locally
+  let shown = $state(settings.animated ? 0 : awards.length);
+  let cards = $state<HTMLElement[]>([]);
+  onMount(() => {
+    if (!settings.animated) return;
+    const timers = awards.map((_, i) =>
+      setTimeout(
+        () => {
+          shown = i + 1;
+          sound.flip();
+          setTimeout(() => {
+            const r = cards[i]?.getBoundingClientRect();
+            if (r && settings.motion) pop(r.left + r.width / 2, r.top + 28, cssColor('--accent', '#e8c25a'));
+          }, settings.ms(260));
+        },
+        settings.ms(BANNER_LANDS + 700 + i * AWARD_GAP),
+      ),
+    );
+    return () => timers.forEach(clearTimeout);
+  });
 
   onMount(() => {
     if (!settings.motion || final.winner === 'tie') return;
@@ -42,6 +71,23 @@
     <h2 bind:this={banner} class="banner">{pairNames(view, profiles, final.winner)} win the night</h2>
   {/if}
   {#if final.discardedDeal}<p class="muted">The unfinished last game didn't count.</p>{/if}
+  {#if awards.length > 0}
+    <section class="awards" aria-label="Tonight's awards">
+      <h3>Tonight's awards</h3>
+      {#each awards.slice(0, shown) as award, i (award.kind)}
+        {@const text = awardText(award, profiles)}
+        {@const p = profileOf(profiles, award.profile)}
+        <article class="award" bind:this={cards[i]} style="--c: {p.color}">
+          <span class="emoji" aria-hidden="true">{text.emoji}</span>
+          <div>
+            <h4>{text.title}</h4>
+            <p class="who"><Avatar avatar={avatarOf(conn, award.profile)} initial={p.name[0]} ring={p.color} size={22} /> {p.name}</p>
+            <p class="caption">{text.caption}</p>
+          </div>
+        </article>
+      {/each}
+    </section>
+  {/if}
   <button class="primary" onclick={() => conn.send({ type: 'newNight' })}>Start a new night</button>
 </main>
 
@@ -72,6 +118,71 @@
   .score {
     font-size: 1.2rem;
     margin-bottom: 32px;
+  }
+  .awards {
+    display: grid;
+    gap: 10px;
+    margin: 8px 0 24px;
+    perspective: 700px;
+    text-align: left;
+  }
+  .awards h3 {
+    margin: 0;
+    text-align: center;
+    font-size: 12px;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+    color: var(--ink-dim);
+  }
+  /* An award card flips over and settles on a spring. */
+  .award {
+    display: grid;
+    grid-template-columns: 52px 1fr;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 12px;
+    border-radius: 14px;
+    background: var(--panel);
+    box-shadow:
+      0 0 0 1px var(--line),
+      0 0 18px color-mix(in srgb, var(--c) 30%, transparent);
+    animation: award-in calc(var(--spring-wobble-ms, 600ms) * var(--speed)) var(--spring-wobble, cubic-bezier(0.3, 1.5, 0.6, 1)) backwards;
+  }
+  @keyframes award-in {
+    from {
+      transform: rotateY(85deg) scale(0.85);
+      opacity: 0;
+    }
+  }
+  :global(.fx-reduced) .award,
+  :global(.fx-off) .award {
+    animation: fade-in calc(300ms * var(--speed)) backwards;
+  }
+  .emoji {
+    font-size: 40px;
+    line-height: 1;
+    text-align: center;
+  }
+  .award h4 {
+    margin: 0;
+    font-family: var(--font-display);
+    font-size: 1.05rem;
+    color: var(--accent);
+  }
+  .who {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    margin: 4px 0 2px;
+    font-family: var(--font-name);
+    font-weight: 700;
+    color: var(--c);
+  }
+  .caption {
+    margin: 0;
+    font-size: 13.5px;
+    font-style: italic;
+    color: var(--ink-dim);
   }
   button {
     width: 100%;
