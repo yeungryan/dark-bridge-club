@@ -1,4 +1,4 @@
-import { animalById, ELEMENT_INFO, type Avatar, type ProfileId, type Seat } from '@dark/engine';
+import { ELEMENT_INFO, type Avatar, type ProfileId, type Seat } from '@dark/engine';
 import type { Connection } from './connection.svelte';
 import type { Element } from './juice/particles';
 
