@@ -267,4 +267,14 @@ test.describe.serial('a night at the DARK table', () => {
     await expect(awards.first()).toBeVisible({ timeout: 10_000 });
     await expect(awards.first().locator('.who')).toHaveText(/Darren|Adrian|Ryan|Kim/);
   });
+
+  test('the admin page can set a player\'s PIN (and only with the admin key)', async ({ request }) => {
+    const setPin = (adminKey: string, pin: string) => request.post('/api/admin/set-pin', { data: { adminKey, profile: 'kim', pin } });
+    const login = (pin: string) => request.post('/api/login', { data: { k: 'dev', profile: 'kim', pin } });
+    expect((await setPin('wrong', '9876')).status()).toBe(403);
+    expect((await setPin('dev-admin', '98')).status()).toBe(400);
+    expect((await setPin('dev-admin', '9876')).ok()).toBe(true);
+    expect((await login('4444')).status()).toBe(401);
+    expect((await login('9876')).ok()).toBe(true);
+  });
 });

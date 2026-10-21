@@ -199,6 +199,8 @@ export class TableRoom extends DurableObject<Env> {
           return await this.handleWebSocket(request, url);
         case '/api/admin/reset-pin':
           return await this.handleResetPin(request);
+        case '/api/admin/set-pin':
+          return await this.handleSetPin(request);
         default:
           return json({ error: 'NOT_FOUND' }, 404);
       }
@@ -282,6 +284,27 @@ export class TableRoom extends DurableObject<Env> {
     }
     if (!isProfile(body.profile)) return json({ error: 'BAD_REQUEST' }, 400);
     this.sql.exec('DELETE FROM pins WHERE profile_id = ?', body.profile);
+    this.sql.exec('DELETE FROM devices WHERE profile_id = ?', body.profile);
+    return json({ ok: true });
+  }
+
+  /** Admin: set a player's PIN directly (and sign them out everywhere, so it takes effect). */
+  private async handleSetPin(request: Request): Promise<Response> {
+    if (request.method !== 'POST') return json({ error: 'METHOD' }, 405);
+    const body = (await request.json().catch(() => null)) as { adminKey?: unknown; profile?: unknown; pin?: unknown } | null;
+    if (!body || typeof body.adminKey !== 'string' || !this.env.ADMIN_KEY || body.adminKey !== this.env.ADMIN_KEY) {
+      return json({ error: 'FORBIDDEN' }, 403);
+    }
+    if (!isProfile(body.profile) || typeof body.pin !== 'string' || !/^\d{4}$/.test(body.pin)) {
+      return json({ error: 'BAD_REQUEST', message: 'Pick a player and enter a 4-digit PIN.' }, 400);
+    }
+    const salt = randomHex(16);
+    this.sql.exec(
+      'INSERT OR REPLACE INTO pins (profile_id, pin_hash, pin_salt, failed, locked_until) VALUES (?, ?, ?, 0, 0)',
+      body.profile,
+      await sha256(salt + body.pin),
+      salt,
+    );
     this.sql.exec('DELETE FROM devices WHERE profile_id = ?', body.profile);
     return json({ ok: true });
   }
