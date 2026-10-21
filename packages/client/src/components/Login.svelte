@@ -97,6 +97,7 @@
     text-align: center;
   }
   h1 {
+    color: var(--accent);
     letter-spacing: 0.25em;
     font-size: 2rem;
     margin: 12px 0 24px;
