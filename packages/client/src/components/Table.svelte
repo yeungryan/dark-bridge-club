@@ -122,8 +122,9 @@
         <div class="center">
           <!-- The table itself, in tonight's theme (felt and wood, an infinity pool, neon...). -->
           <div class="surface" aria-hidden="true"></div>
-          {#if shuffling || !deal}
-            <Deck riffleSound={iDeal} />
+          {#if shuffling || !deal || director.dealing}
+            <!-- The deck stays put until the last card has flown. -->
+            <Deck riffleSound={iDeal && shuffling} />
           {:else if deal.phase === 'auction'}
             <div class="auction"><AuctionStrip {conn} /></div>
           {:else}
@@ -368,10 +369,12 @@
   :global(.fx-full) .deal:not(:disabled) {
     animation: deal-ready calc(1600ms * var(--speed)) ease-in-out infinite;
   }
+  /* A breathing glow (the button itself stays still, so a tap always lands). */
   @keyframes deal-ready {
     50% {
-      transform: scale(1.04);
-      box-shadow: 0 0 32px var(--accent-glow);
+      box-shadow:
+        0 0 0 3px var(--accent-glow),
+        0 0 36px var(--accent-glow);
     }
   }
   .shuffle {
