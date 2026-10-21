@@ -19,3 +19,12 @@ Make history matter (promise D) and give each night a link to the last one.
 ## Acceptance criteria
 - [ ] Every number on these screens can be recalculated from the saved deals (no separately stored counters that could drift).
 - [ ] Replaying any saved deal exactly matches what happened.
+
+## Built in M3 part 4 (first round)
+- **"Last time…" card** in the lobby: when and where, who won and by how much (or a dead heat), and that night's headline award, with a way into History. Nothing shows before the first finished night.
+- **History** (from the lobby card, or ☰ → History & rivals at the table). The practice table has no history.
+  - **Rivals:** the three ways the four of you can pair up, each with nights won side by side, games won, and when it was last played; then all six partnerships with nights and games won/played, and a win rate once a partnership has 5 games (otherwise "—").
+  - **Nights:** every night, newest first: date, theme, result and pairs. Tap one for its games (contract, declarer, made/defeated with over/under, or passed out); ▶ replays any game that was played out, from your seat that night, in the same replay as after a game.
+- **Server:** `GET /api/history` and `GET /api/history/game?night=&game=`, signed-in only. A night's id is its row number, never its seed (which would give away the hands of games still to come).
+- **Engine (`rivalry.ts`):** `headToHead`, `partnerRecords`, `partnershipRecords`, `winRate`, `lastNight`, all worked out from the saved nights and games on every request.
+- Still to come: player cards, the moments wall, element and animal records.

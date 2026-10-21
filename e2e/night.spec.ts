@@ -274,6 +274,34 @@ test.describe.serial('a night at the DARK table', () => {
     await expect(awards.first().locator('.who')).toHaveText(/Darren|Adrian|Ryan|Kim/);
   });
 
+  test('the next night opens with "Last time…", and history replays any saved game', async ({ request }) => {
+    // History is for the four of you only.
+    expect((await request.get('/api/history')).status()).toBe(401);
+    const page = ryan().page;
+    await page.getByRole('button', { name: 'Start a new night' }).click();
+    const last = page.getByRole('region', { name: 'Last time' });
+    await expect(last).toBeVisible({ timeout: 15_000 });
+    await expect(last).toContainText(/won \d+–\d+|A dead heat/);
+    await last.getByRole('button', { name: /History/ }).click();
+    const history = page.getByRole('dialog', { name: 'History' });
+    // The rivalry board: the three ways the four can pair up, and all six partnerships.
+    await expect(history.locator('.match')).toHaveCount(3);
+    await expect(history.locator('tbody tr')).toHaveCount(6);
+    // The night log: last night's games, each one replayable.
+    await history.getByRole('tab', { name: 'Nights' }).click();
+    await history.locator('.night-head').first().click();
+    await history.getByRole('button', { name: /^Replay game/ }).first().click();
+    const replay = page.getByRole('dialog', { name: /Replay of game/ });
+    await expect(replay).toBeVisible();
+    await expect(replay.getByText('The bidding', { exact: true })).toBeVisible();
+    await expect(replay.locator('.hand')).toHaveCount(4);
+    await replay.getByRole('button', { name: 'Next set' }).click();
+    await expect(replay.locator('.table .spot')).toHaveCount(4);
+    await replay.getByRole('button', { name: 'Close the replay' }).click();
+    await history.getByRole('button', { name: 'Close the history' }).click();
+    await expect(history).toBeHidden();
+  });
+
   test('the admin page can set a player\'s PIN (and only with the admin key)', async ({ request }) => {
     const setPin = (adminKey: string, pin: string) => request.post('/api/admin/set-pin', { data: { adminKey, profile: 'kim', pin } });
     const login = (pin: string) => request.post('/api/login', { data: { k: 'dev', profile: 'kim', pin } });

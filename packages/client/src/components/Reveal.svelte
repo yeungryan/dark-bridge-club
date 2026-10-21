@@ -14,6 +14,7 @@
   import CallText from './CallText.svelte';
   import { MOMENT_EMOJI, momentCaption } from '../lib/stories';
   import Replay from './Replay.svelte';
+  import { liveReplay } from '../lib/replayGame';
   import Suit from './Suit.svelte';
   import AnimalIcon from './AnimalIcon.svelte';
 
@@ -171,7 +172,7 @@
   </div>
 </div>
 
-{#if replaying}<Replay {conn} onClose={() => (replaying = false)} />{/if}
+{#if replaying}<Replay game={liveReplay(conn)} onClose={() => (replaying = false)} />{/if}
 
 <style>
   .replay-open {

@@ -1,9 +1,8 @@
 <script lang="ts">
   import { partner, type Card as CardT, type Seat } from '@dark/engine';
-  import type { Connection } from '../lib/connection.svelte';
-  import { cardText, isRed, nameAtSeat, seatAt, spotOf, type Spot } from '../lib/format';
-  import { avatarAtSeat, teamColor } from '../lib/avatars';
+  import { cardText, isRed, seatAt, spotOf, type Spot } from '../lib/format';
   import { replaySteps } from '../lib/replay';
+  import { targetsOf, type ReplayGame } from '../lib/replayGame';
   import { sound } from '../lib/juice/sound';
   import Card from './Card.svelte';
   import CallText from './CallText.svelte';
@@ -13,15 +12,14 @@
 
   // The replay (Ryan): after a game, step back through it set by set with every hand face up:
   // who led each set, who won it, and what everyone still held. Each player steps through on
-  // their own phone (not synced); to show the others, share your screen on the call.
-  let { conn, onClose }: { conn: Connection; onClose: () => void } = $props();
+  // their own phone (not synced); to show the others, share your screen on the call. Any saved
+  // game opens here too, from the night log (S20).
+  let { game, onClose }: { game: ReplayGame; onClose: () => void } = $props();
 
-  const view = $derived(conn.view!);
-  const deal = $derived(view.deal!);
-  const profiles = $derived(conn.room!.profiles);
-  const me = $derived(view.mySeat!);
-  const contract = $derived(deal.contract!);
-  const steps = $derived(replaySteps(deal.revealedHands!, deal.playedTricks ?? [], contract));
+  const me = $derived(game.me);
+  const contract = $derived(game.contract);
+  const targets = $derived(targetsOf(contract));
+  const steps = $derived(replaySteps(game.dealt, game.tricks, contract));
   let at = $state(0);
   const step = $derived(steps[Math.min(at, steps.length - 1)]!);
 
@@ -68,17 +66,17 @@
     { side: 'defenders' as const, seats: [((contract.declarer + 1) % 4) as Seat, ((contract.declarer + 3) % 4) as Seat] },
   ]);
   const laneOf = (seat: Seat) => (seat % 2 === contract.declarer % 2 ? 0 : 1);
-  const initials = (seats: Seat[]) => seats.map((seat) => nameAtSeat(view, profiles, seat)[0]).join('·');
+  const initials = (seats: Seat[]) => seats.map((seat) => game.name(seat)[0]).join('·');
 </script>
 
 <svelte:window onkeydown={key} />
 
-<div class="replay" role="dialog" aria-modal="true" aria-label="Replay of game {view.dealNumber}">
+<div class="replay" role="dialog" aria-modal="true" aria-label="Replay of {game.title.toLowerCase()}">
   <!-- Tonight's scene along the top, as at the table (the replay's felt would hide the page's). -->
-  <TableScene theme={conn.room!.theme} />
+  <TableScene theme={game.theme} />
   <header>
     <button class="ghost close" aria-label="Close the replay" onclick={onClose}>✕</button>
-    <h2>Replay · Game {view.dealNumber}</h2>
+    <h2>Replay · {game.title}</h2>
     <span class="contract"><CallText call={{ type: 'bid', level: contract.level, strain: contract.strain }} /></span>
   </header>
 
@@ -87,15 +85,15 @@
     {#each SPOTS as spot (spot)}
       {@const seat = seatAt(spot, me)}
       {@const played = playOf(seat)}
-      <section class="hand {spot}" style="--c: {teamColor(conn, seat)}" data-replay-seat={seat}>
+      <section class="hand {spot}" style="--c: {game.color(seat)}" data-replay-seat={seat}>
         <p class="who">
-          <AnimalIcon animal={avatarAtSeat(conn, seat)?.animal} />
-          {nameAtSeat(view, profiles, seat)}
+          <AnimalIcon animal={game.animal(seat)} />
+          {game.name(seat)}
           {#if step.trick?.leader === seat && step.trick?.winner === seat}<b class="tag led won">led · won</b>
           {:else if step.trick?.leader === seat}<b class="tag led">led</b>
           {:else if step.trick?.winner === seat}<b class="tag won">won</b>{/if}
         </p>
-        <div class="suits" aria-label="{nameAtSeat(view, profiles, seat)} still holds">
+        <div class="suits" aria-label="{game.name(seat)} still holds">
           {#each SUITS as suit (suit)}
             <div class:red={isRed({ suit, rank: 2 })}>
               <Suit {suit} />
@@ -116,8 +114,8 @@
         {/each}
       {:else}
         <ol class="calls" aria-label="The bidding">
-          {#each deal.calls as c, i (i)}
-            <li><span>{nameAtSeat(view, profiles, c.seat)}</span> <CallText call={c.call} /></li>
+          {#each game.calls as c, i (i)}
+            <li><span>{game.name(c.seat)}</span> <CallText call={c.call} /></li>
           {/each}
         </ol>
       {/if}
@@ -131,7 +129,7 @@
     <div class="lanes" style="--n: {steps.length - 1}">
       <button class="bids" class:on={at === 0} aria-label="The bidding" aria-current={at === 0 ? 'step' : undefined} onclick={() => go(0)}>Bids</button>
       {#each lanes as lane, l (lane.side)}
-        <span class="lane-name" style="--t: {teamColor(conn, lane.seats[0]!)}; grid-row: {l + 2}">{initials(lane.seats)}</span>
+        <span class="lane-name" style="--t: {game.color(lane.seats[0]!)}; grid-row: {l + 2}">{initials(lane.seats)}</span>
       {/each}
       {#each steps.slice(1) as s, i (i)}
         {@const w = s.trick!.winner}
@@ -139,13 +137,13 @@
           class="set"
           class:on={i + 1 === at}
           class:decisive={s.decisive}
-          style="grid-column: {i + 3}; --t: {teamColor(conn, w)}"
-          aria-label="Set {i + 1}, won by {nameAtSeat(view, profiles, w)}{s.decisive ? ' (decided it)' : ''}"
+          style="grid-column: {i + 3}; --t: {game.color(w)}"
+          aria-label="Set {i + 1}, won by {game.name(w)}{s.decisive ? ' (decided it)' : ''}"
           aria-current={i + 1 === at ? 'step' : undefined}
           onclick={() => go(i + 1)}
         >
           <span class="num">{s.decisive ? '★' : i + 1}</span>
-          <span class="slot" style="grid-row: {laneOf(w) + 2}"><AnimalIcon animal={avatarAtSeat(conn, w)?.animal} silhouette="var(--t)" /></span>
+          <span class="slot" style="grid-row: {laneOf(w) + 2}"><AnimalIcon animal={game.animal(w)} silhouette="var(--t)" /></span>
         </button>
       {/each}
     </div>
@@ -154,7 +152,7 @@
       <p class="status">
         <strong>{label}</strong>
         {#if step.set > 0}
-          <br />Declarers {step.tally.declarers}/{deal.declarerTarget} · Defenders {step.tally.defenders}/{deal.defenderTarget}
+          <br />Declarers {step.tally.declarers}/{targets.declarers} · Defenders {step.tally.defenders}/{targets.defenders}
         {/if}
       </p>
       <button class="step" onclick={() => go(at + 1)} disabled={at === steps.length - 1} aria-label="Next set">▶</button>

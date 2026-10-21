@@ -13,6 +13,7 @@
   import Reveal from './Reveal.svelte';
   import SeatBadge from './SeatBadge.svelte';
   import MenuSheet from './MenuSheet.svelte';
+  import History from './History.svelte';
   import { avatarOf } from '../lib/avatars';
   import { director } from '../lib/juice/director.svelte';
   import { settings } from '../lib/juice/settings.svelte';
@@ -58,6 +59,7 @@
 
   // The menu, or (from the gear, top-right) straight into Settings.
   let menuOpen = $state<'menu' | 'settings' | null>(null);
+  let showHistory = $state(false);
 
   // The pairs for the night are announced as the first deal starts; it doesn't block bidding.
   let showPairs = $state(false);
@@ -104,7 +106,7 @@
   </header>
 
   {#if menuOpen}
-    <MenuSheet {conn} {canConcede} start={menuOpen} onClose={() => (menuOpen = null)} />
+    <MenuSheet {conn} {canConcede} start={menuOpen} onClose={() => (menuOpen = null)} onHistory={() => (showHistory = true)} />
   {/if}
   {#if showPairs}
     <div class="pairs" aria-live="polite">
@@ -148,6 +150,9 @@
     </section>
   {/if}
 
+  {#if showHistory}
+    <History profiles={profiles} me={view.me} theme={conn.room!.theme} onClose={() => (showHistory = false)} />
+  {/if}
   {#if peek && deal?.lastTrick}
     {#key deal.tricksPlayed}
       <LastTrickPeek trick={deal.lastTrick} {view} {profiles} onClose={() => (peek = false)} />
