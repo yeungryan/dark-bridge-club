@@ -9,9 +9,9 @@
   // losing cards, at the real size of the table's trick area (190px, cards 52px wide).
   const ROWS = [
     { id: 'fire', title: 'Fire · Ignite → burnt', note: 'Fireballs set the losers alight; they end charred' },
-    { id: 'air', title: 'Air · Wind slash → sliced', note: 'Slashes cut the losers in two; the halves fly off' },
-    { id: 'water', title: 'Water · Splash crown → pierced', note: 'Ripples under the card; jets punch holes through' },
-    { id: 'earth', title: 'Earth · Boulder slam → toppled', note: 'Boulders knock the losers off the table' },
+    { id: 'air', title: 'Air · Wind slash → sliced', note: 'Slashes cut the losers in two; the halves stay, parted' },
+    { id: 'water', title: 'Water · Splash crown → pierced', note: 'Ripples under the card; jets punch holes, the cards wither' },
+    { id: 'earth', title: 'Earth · Boulder slam → holed', note: 'A giant boulder punches a hole through each loser' },
   ] as const;
   const one = new URLSearchParams(location.search).get('only');
   const rows = one ? ROWS.filter((r) => r.id === one) : ROWS;
