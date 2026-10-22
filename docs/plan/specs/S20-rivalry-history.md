@@ -27,7 +27,7 @@ Make history matter (promise D) and give each night a link to the last one.
   - **Nights:** every night, newest first: date, theme, result and pairs. Tap one for its games (contract, declarer, made/defeated with over/under, or passed out); ▶ replays any game that was played out, from your seat that night, in the same replay as after a game.
 - **Server:** `GET /api/history` and `GET /api/history/game?night=&game=`, signed-in only. A night's id is its row number, never its seed (which would give away the hands of games still to come).
 - **Engine (`rivalry.ts`):** `headToHead`, `partnerRecords`, `partnershipRecords`, `winRate`, `lastNight`, all worked out from the saved nights and games on every request.
-- Still to come: player cards, the moments wall, element and animal records.
+- Player cards, the moments wall, and element and animal records: built in round 7 (below).
 
 ## Setting the score by hand (Ryan; replaces "offline nights")
 - History keeps every night, all time: nothing is ever trimmed, and every number is recalculated from all of them.
@@ -35,3 +35,14 @@ Make history matter (promise D) and give each night a link to the last one.
 - It goes to the others and counts only once **all four** approve; any one can turn it down. One change per matchup waits at a time, at most 5 in all. Waiting changes show at the top of History ("Darren & Kim 5–3 Adrian & Ryan · games 21–17", with what it is now) and as a nudge on the lobby's Last time card.
 - Once approved, the agreed numbers are that matchup's score as of when it was proposed; nights begun after that count on top. The card says "Score agreed by all four on …". Partnerships read the same numbers (with four players, each partnership is one side of one matchup). The night log is untouched.
 - Server: the agreed scores and the waiting changes in storage, `POST /api/history/change` (propose / approve / reject), signed-in only; the engine's `historyChanges.ts` holds the rules and `headToHead` applies them (unit tested).
+
+## Players and moments (Ryan's designs, round 7)
+History has four tabs: **Rivals · Players · Moments · Nights**. Every number is worked out from the saved nights (engine `playerStats.ts`, unit tested).
+- **Players → All:**
+  - **Leaderboard (LB2):** four gold champion cards: Sets won, Games won, Declaring W–L, Defending W–L. Each shows the leader big (animal, name, number), 2nd and 3rd on one line, 4th on the next. Sets and games rank by wins; Declaring and Defending rank by games played in that role. Declaring counts only the declarer (not their partner); Defending counts both defenders.
+  - **Awards (T5):** Epic Attic ("Booked high, fell well short"), Daredevil ("Bids the highest on average"), Heist Master ("Made it with fewer points"): name, meaning, the leader's count as a big number over the award's icon, the leader, then everyone else's count.
+  - **Animals:** each player's most-picked animal (nights) and luckiest (best share of games won, once picked for 5+ games).
+  - **Elements:** each player's share of games won with each element, best in gold, "—" until 5 games.
+- **Players → a player's card:** their latest animal and name, with icon chips for The Wall, Epic Attic, Heist Master and Daredevil (×count, no names); nights and since when. Four tall tiles: Sets won (of all sets played, %), Games won (of games played, %), Declaring (made–down), Defending (beaten–made). **Fave bid suit** and **Fave bid level** side by side: the favourite as a headline (the suit; the level as a little card-white bid tile) with its %, the rest as one quiet line of percentages. **Fave partner:** a tile per partner with win % (once 5 games together) and games played; the best in gold.
+- **Moments:** each night (newest first) shows at most two of its awards, by priority: Epic Attic, Heist Master, Daredevil, That's 10 Dollars, Heartbreak Hotel, then the rest alphabetically. Filter by player; ▶ replays the game it happened in when the award names one.
+- **Server:** each saved night now carries all of its awards (not just the top one).

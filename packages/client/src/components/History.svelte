@@ -11,9 +11,14 @@
   import TableScene from './TableScene.svelte';
   import PendingChanges from './PendingChanges.svelte';
   import ScoreEditor from './ScoreEditor.svelte';
+  import PlayerCard from './PlayerCard.svelte';
+  import AllPlayers from './AllPlayers.svelte';
+  import MomentsWall from './MomentsWall.svelte';
+  import AnimalIcon from './AnimalIcon.svelte';
 
-  // Spec S20 (first part): the rivalry board (the three ways the four of you can pair up, and
-  // every partnership's record) and the night log, where any saved game opens in the replay.
+  // Spec S20: the rivalry board (the three ways the four of you can pair up, and every
+  // partnership's record), the players (everyone's leaderboard, awards, animals and elements, or
+  // one player's card), the moments wall, and the night log, where any saved game opens in the replay.
   let { profiles, me, theme, onClose }: { profiles: readonly ProfileInfo[]; me: string; theme: ThemeId; onClose: () => void } = $props();
 
   let nights = $state<SavedNight[] | null>(null);
@@ -27,7 +32,9 @@
     pending = d.pending;
   };
   let failed = $state(false);
-  let tab = $state<'rivals' | 'nights'>('rivals');
+  let tab = $state<'rivals' | 'players' | 'moments' | 'nights'>('rivals');
+  // Players: "All", or one player's card.
+  let player = $state<string | null>(null);
   let open = $state<string | null>(null);
   let replay = $state<ReplayGame | null>(null);
   let loadingGame = $state<string | null>(null);
@@ -79,6 +86,8 @@
   </header>
   <div class="tabs" role="tablist">
     <button role="tab" aria-selected={tab === 'rivals'} class:on={tab === 'rivals'} onclick={() => (tab = 'rivals')}>Rivals</button>
+    <button role="tab" aria-selected={tab === 'players'} class:on={tab === 'players'} onclick={() => (tab = 'players')}>Players</button>
+    <button role="tab" aria-selected={tab === 'moments'} class:on={tab === 'moments'} onclick={() => (tab = 'moments')}>Moments</button>
     <button role="tab" aria-selected={tab === 'nights'} class:on={tab === 'nights'} onclick={() => (tab = 'nights')}>Nights</button>
   </div>
 
@@ -139,6 +148,25 @@
           </tbody>
         </table>
         <p class="note">Won/played. A win rate shows once a partnership has 5 games behind it.</p>
+      </section>
+    {:else if tab === 'players'}
+      <section aria-label="Players">
+        <div class="chips" role="group" aria-label="Whose card">
+          <button class="chip" class:on={player === null} aria-pressed={player === null} onclick={() => (player = null)}>All</button>
+          {#each profiles as p (p.id)}
+            {@const animal = [...nights].sort((a, b) => b.startedAt - a.startedAt).find((n) => n.avatars?.[p.id])?.avatars?.[p.id]?.animal ?? null}
+            <button class="chip" class:on={player === p.id} aria-pressed={player === p.id} onclick={() => (player = p.id)}><AnimalIcon {animal} size="18px" /> {p.name}</button>
+          {/each}
+        </div>
+        {#if player}
+          <PlayerCard profile={player} {profiles} {nights} />
+        {:else}
+          <AllPlayers {profiles} {nights} />
+        {/if}
+      </section>
+    {:else if tab === 'moments'}
+      <section aria-label="Moments">
+        <MomentsWall {profiles} {nights} onWatch={watch} loading={loadingGame} />
       </section>
     {:else}
       <section aria-label="Night log">
@@ -220,7 +248,7 @@
   }
   .tabs {
     display: grid;
-    grid-template-columns: 1fr 1fr;
+    grid-template-columns: repeat(4, 1fr);
     gap: 6px;
     margin-top: 110px;
     padding: 4px;
@@ -394,6 +422,29 @@
     padding: 0 10px;
     font-size: 12.5px;
     color: var(--ink-dim);
+  }
+  .chips {
+    display: flex;
+    gap: 4px;
+    overflow-x: auto;
+  }
+  .chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    min-height: 32px;
+    padding: 4px 9px;
+    border-radius: 999px;
+    border: 1px solid var(--line);
+    background: none;
+    color: var(--ink);
+    font-size: 13px;
+    white-space: nowrap;
+  }
+  .chip.on {
+    background: var(--ink);
+    color: #141414;
+    border-color: var(--ink);
   }
   .watch {
     min-height: 36px;

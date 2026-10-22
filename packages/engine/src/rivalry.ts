@@ -43,6 +43,8 @@ export interface SavedNight {
   readonly final: NightResult | null;
   readonly games: readonly SavedGame[];
   readonly topAward: SavedAward | null;
+  /** All of the night's awards, in their saved (priority) order (S20 moments wall, awards). */
+  readonly awards?: readonly SavedAward[];
 }
 
 /** A saved game with everything the replay needs. */

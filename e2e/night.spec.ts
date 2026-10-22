@@ -333,6 +333,13 @@ test.describe.serial('a night at the DARK table', () => {
     await expect(history.locator('.match')).toHaveCount(3);
     await expect(history.locator('tbody tr')).toHaveCount(6);
     // The night log: last night's games, each one replayable.
+    // Players: everyone's leaderboard (four champion cards), then one player's card.
+    await history.getByRole('tab', { name: 'Players' }).click();
+    await expect(history.locator('.champ')).toHaveCount(4);
+    await expect(history.locator('.award')).toHaveCount(3);
+    await history.getByRole('button', { name: /Ryan/ }).click();
+    await expect(history.getByRole('region', { name: "Ryan's card" })).toBeVisible();
+    await history.getByRole('tab', { name: 'Moments' }).click();
     await history.getByRole('tab', { name: 'Nights' }).click();
     await history.locator('.night-head').first().click();
     await history.getByRole('button', { name: /^Replay game/ }).first().click();
