@@ -72,9 +72,8 @@ const CONCESSION_MS = 15_000; // S04: concession offer expiry
 const AUTO_CLOSE_MS = 30 * 60_000; // R13: away this long → the night closes
 const MAX_FAILED_PINS = 5;
 const LOCKOUT_MS = 10 * 60_000;
-const SURPRISE_MS = 30_000; // S24: the last one to pick gets "Surprise me" after this long
 
-type TimerKind = 'clinch' | 'concession' | 'grace' | 'autoClose' | 'surprise';
+type TimerKind = 'clinch' | 'concession' | 'grace' | 'autoClose';
 interface Timer {
   kind: TimerKind;
   at: number;
@@ -651,14 +650,6 @@ export class TableRoom extends DurableObject<Env> {
             run({ type: 'autoClose' });
           }
           break;
-        case 'surprise':
-          if (session.phase === 'lobby') {
-            for (const id of PROFILE_IDS) {
-              const out = applyAvatarAction(this.data.avatars, id, { type: 'surprise' }, Math.random);
-              if (out.ok) this.data.avatars = out.state;
-            }
-          }
-          break;
       }
     }
     events.push(...this.maybeStartNight());
@@ -684,11 +675,8 @@ export class TableRoom extends DurableObject<Env> {
     if (!wantConcession) timers = timers.filter((t) => t.kind !== 'concession');
     else if (!timers.some((t) => t.kind === 'concession')) timers.push({ kind: 'concession', at: now + CONCESSION_MS });
 
-    // S24: once the other three are here and locked in, the last one has 30 s before "Surprise me".
-    const allHere = PROFILE_IDS.every((id) => this.data.presence[id]!.status === 'connected');
-    const wantSurprise = session.phase === 'lobby' && allHere && lockedIn(this.data.avatars).length === PROFILE_IDS.length - 1;
-    if (!wantSurprise) timers = timers.filter((t) => t.kind !== 'surprise');
-    else if (!timers.some((t) => t.kind === 'surprise')) timers.push({ kind: 'surprise', at: now + SURPRISE_MS });
+    // No one is picked for automatically any more (Ryan, round 12): the night waits until all four
+    // have chosen, so whoever is last has time to make sure they're ready.
 
     for (const id of PROFILE_IDS) {
       const presence = this.data.presence[id]!;
@@ -969,7 +957,6 @@ export class TableRoom extends DurableObject<Env> {
       avatarReady: Object.fromEntries(PROFILE_IDS.map((id) => [id, !!this.data.avatars.picks[id]?.avatar])),
       // Choices stay hidden until everyone flips together at the start of the night.
       avatars: this.data.session.phase === 'lobby' ? null : avatarsOf(this.data.avatars),
-      surpriseAt: timer('surprise'),
       theme: this.data.theme,
       gameMoments: this.data.gameMoments,
       awards: this.data.session.phase === 'ended' ? this.data.awards : null,

@@ -26,6 +26,7 @@
   import { buzz } from '../lib/juice/haptics';
   import { sound } from '../lib/juice/sound';
   import AnimalIcon from './AnimalIcon.svelte';
+  import AllTimeScore from './AllTimeScore.svelte';
   import MenuIcon from '@lucide/svelte/icons/menu';
   import SettingsIcon from '@lucide/svelte/icons/settings';
 
@@ -100,7 +101,12 @@
 <div class="table" class:decider data-turn={iDeal ? 'my-deal' : deal?.turn === me ? (deal.phase === 'auction' ? 'my-call' : deal.phase === 'play' && !leadHold.waiting ? 'my-play' : '') : ''}>
   <header>
     <button class="ghost menu" aria-label="Menu" onclick={() => (menuOpen = menuOpen ? null : 'menu')}><MenuIcon size={22} strokeWidth={2} /></button>
-    <h1 class="game">Game {shuffling ? view.dealNumber + 1 : view.dealNumber}</h1>
+    <div class="title">
+      <h1 class="game">Game {shuffling ? view.dealNumber + 1 : view.dealNumber}</h1>
+      <!-- Ryan (round 12): tonight's all-time score, just under the title. It catches up as each new
+           game starts, so it never gives a result away before the finisher has played. -->
+      {#if !conn.offline && view.pairs}<AllTimeScore {profiles} small pairs={[view.pairs.A, view.pairs.B]} refresh={view.dealNumber} />{/if}
+    </div>
     <button class="ghost gear" aria-label="Settings" onclick={() => (menuOpen = menuOpen ? null : 'settings')}>
       <SettingsIcon size={21} strokeWidth={2} aria-hidden="true" />
     </button>
@@ -243,6 +249,10 @@
     grid-template-columns: 48px 1fr 48px;
     align-items: center;
     min-height: 48px;
+  }
+  .title {
+    display: grid;
+    justify-items: center;
   }
   .game {
     margin: 0;

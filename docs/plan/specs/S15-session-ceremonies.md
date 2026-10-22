@@ -42,3 +42,5 @@ Make each night feel like an **event** (promise B), spending the big ceremonies 
 
 ## The all-time score (Ryan, round 9, option S1)
 One line under "Bridge Club" in the lobby: the usual pairing's all-time **games won** (the matchup played most), team black's tiles on the left and team red's on the right, both numbers in white. It counts the carried-forward totals too (S20), so it keeps stacking after old games are deleted, and goes back to 0–0 only when all four approve a reset. Nothing shows before the first game; the practice table has none.
+
+**Round 12 (Ryan):** the same line, a size smaller than "Game N", sits just under the "Game N" header while you play, showing tonight's pairing. It catches up as each new game starts (never mid-finisher, so it can't give a result away).

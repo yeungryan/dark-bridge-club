@@ -74,20 +74,27 @@
 
 <h3>Animals</h3>
 <div class="card">
-  <div class="an-row head"><span></span><span>Most picked</span><span>Luckiest</span></div>
-  {#each animals as a (a.profile)}
-    <div class="an-row">
-      <b>{name(a.profile)}</b>
-      <span>{#if a.mostPicked}<AnimalIcon animal={a.mostPicked.animal} size="20px" /> ×{a.mostPicked.nights}{:else}—{/if}</span>
-      <span>{#if a.luckiest}<AnimalIcon animal={a.luckiest.animal} size="20px" /> {a.luckiest.pct}%{:else}—{/if}</span>
-    </div>
-  {/each}
+  <!-- The same columns as Elements below (Ryan, round 12): Most picked under Fire, Luckiest under Air. -->
+  <table class="grid">
+    <thead><tr><th></th><th class="lbl">Most picked</th><th></th><th class="lbl">Luckiest</th><th></th></tr></thead>
+    <tbody>
+      {#each animals as a (a.profile)}
+        <tr>
+          <th scope="row">{name(a.profile)}</th>
+          <td><span class="pick">{#if a.mostPicked}<AnimalIcon animal={a.mostPicked.animal} size="20px" /> ×{a.mostPicked.nights}{:else}—{/if}</span></td>
+          <td></td>
+          <td><span class="pick">{#if a.luckiest}<AnimalIcon animal={a.luckiest.animal} size="20px" /> {a.luckiest.pct}%{:else}—{/if}</span></td>
+          <td></td>
+        </tr>
+      {/each}
+    </tbody>
+  </table>
   <p class="note">Luckiest: the best share of games won, among animals picked for at least 5 games.</p>
 </div>
 
 <h3>Elements</h3>
 <div class="card">
-  <table>
+  <table class="grid">
     <thead><tr><th></th>{#each ELEMENTS as e (e)}<th><img src={elementArt(e)} alt={e} /></th>{/each}</tr></thead>
     <tbody>
       {#each elements as r (r.profile)}
@@ -242,26 +249,6 @@
     line-height: 1.4;
     color: var(--ink-dim);
   }
-  .an-row {
-    display: grid;
-    grid-template-columns: 64px 1fr 1fr;
-    gap: 6px;
-    align-items: center;
-    margin: 6px 0;
-    font-size: 13px;
-  }
-  .an-row span {
-    display: flex;
-    align-items: center;
-    gap: 5px;
-  }
-  .an-row.head span {
-    font-size: 11.5px;
-    color: var(--ink-dim);
-  }
-  .an-row b {
-    font-family: var(--font-name);
-  }
   table {
     width: 100%;
     border-collapse: collapse;
@@ -286,5 +273,26 @@
   td.best {
     color: var(--win);
     font-weight: 700;
+  }
+  /* Animals and Elements share these columns, so they line up (Ryan, round 12). */
+  table.grid {
+    table-layout: fixed;
+  }
+  table.grid th:first-child {
+    width: 28%;
+  }
+  .lbl {
+    font-size: 11.5px;
+    font-weight: 400;
+    color: var(--ink-dim);
+    white-space: nowrap;
+    overflow: visible;
+  }
+  .pick {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 4px;
+    white-space: nowrap;
   }
 </style>

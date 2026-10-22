@@ -24,6 +24,8 @@ export type Team = 'red' | 'black';
 
 /** Team Red is the pair Ryan sits in (Ryan: Adrian & Ryan are Team Red), the same on every phone. */
 export const RED_ANCHOR: ProfileId = 'ryan';
+/** The usual pairing's black side (Ryan, round 12): Darren & Kim vs Adrian & Ryan heads the rivalry board. */
+export const MAIN_PAIR: readonly ProfileId[] = ['darren', 'kim'];
 
 /** Which team a seat is on, given the night's seating (without Ryan seated, your own pair is red). */
 export function teamFor(seating: Readonly<Record<Seat, ProfileId>> | null | undefined, seat: Seat, fallback: Seat): Team {

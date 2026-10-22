@@ -50,8 +50,6 @@ export interface RoomInfo {
   readonly avatarReady: Readonly<Record<ProfileId, boolean>>;
   /** Everyone's avatar, once the night has started; null before then (or if none). */
   readonly avatars: Readonly<Record<ProfileId, Avatar | null>> | null;
-  /** When a player who hasn't picked gets "Surprise me" (epoch ms), if that timer is running. */
-  readonly surpriseAt: number | null;
   /** Tonight's theme (S18), rolled when the lobby opens. */
   readonly theme: ThemeId;
   /** The latest finished game's moments (S19), for its reveal. */

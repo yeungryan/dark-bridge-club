@@ -1,6 +1,5 @@
 <script lang="ts">
   import { animalById, ELEMENT_INFO, ELEMENTS, type Element } from '@dark/engine';
-  import { onDestroy } from 'svelte';
   import type { Connection } from '../lib/connection.svelte';
   import { ELEMENT_RING } from '../lib/avatars';
   import { buzz } from '../lib/juice/haptics';
@@ -10,7 +9,8 @@
 
   // Spec S24, simplified (Ryan): two animals, four elements, no words and no buttons to confirm.
   // Picking one of each locks you in; tapping another changes it until the night starts.
-  // Nobody sees anyone's choice until everyone flips together.
+  // Nobody sees anyone's choice until everyone flips together. Nobody is picked for, either
+  // (Ryan, round 12): the night waits for the last one to choose.
   let { conn }: { conn: Connection } = $props();
 
   const pick = $derived(conn.myAvatar);
@@ -26,13 +26,6 @@
     }
     if (animal && pick && !pick.offered.includes(animal)) animal = null;
   });
-
-  let now = $state(Date.now());
-  const timer = setInterval(() => (now = conn.now()), 500);
-  onDestroy(() => clearInterval(timer));
-  const surpriseIn = $derived(
-    conn.room?.surpriseAt && !pick?.avatar ? Math.max(0, Math.ceil((conn.room.surpriseAt - now) / 1000)) : null,
-  );
 
   function choose(next: { animal?: string; element?: Element }) {
     if (next.animal) animal = next.animal;
@@ -71,7 +64,6 @@
         >
       {/each}
     </div>
-    {#if surpriseIn !== null}<p class="hurry">Everyone else is ready: picking for you in {surpriseIn}s</p>{/if}
   </section>
 {/if}
 
@@ -143,10 +135,5 @@
     box-shadow:
       0 0 0 3px var(--accent),
       0 0 22px var(--el);
-  }
-  .hurry {
-    margin: 0;
-    font-size: 13px;
-    color: var(--accent);
   }
 </style>
