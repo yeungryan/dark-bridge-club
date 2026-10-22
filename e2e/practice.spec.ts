@@ -144,7 +144,7 @@ test('avatars: two animals, tap one and an element to lock in; the crest shows w
   await expect(page.locator('.picker .animal')).toHaveCount(2);
   await expect(page.getByRole('button', { name: /Surprise me|Lock in|Show me/ })).toHaveCount(0);
   // The bots fill their crest letters as they pick.
-  await expect(page.locator('.crest span.ready')).toHaveCount(3, { timeout: 10_000 });
+  await expect(page.locator('.crest .slot.ready')).toHaveCount(3, { timeout: 10_000 });
 
   await page.locator('.picker .animal').first().tap();
   await page.getByRole('button', { name: 'Water' }).tap();
