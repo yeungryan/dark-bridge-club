@@ -175,7 +175,8 @@ function applyCall(state: DealState, seat: Seat, call: Call): DealOutcome {
 
   const { contract } = status;
   // House rule R4: the player on declarer's right (the next seat counter-clockwise) leads.
-  const openingLeader = next(contract.declarer);
+  // R4: declarer's right leads; in a no-trump game declarer leads (Ryan, round 10).
+  const openingLeader = contract.strain === 'NT' ? contract.declarer : next(contract.declarer);
   events.push({
     type: 'contractSet',
     contract,

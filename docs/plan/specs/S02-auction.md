@@ -6,7 +6,7 @@ Run the bidding exactly as your house rules (R3, R4) describe.
 
 ## Behaviour
 - **Calls:** `Pass` or `Bid(level 1–7, strain ♣<♦<♥<♠<NT)`. **No double or redouble.**
-- The dealer calls first. After that, `next(current)`, counter-clockwise.
+- The player on the dealer's right (`next(dealer)`) calls first (Ryan, round 10; it was the dealer). After that, `next(current)`, counter-clockwise.
 - A bid is legal only if it **outranks** the last bid: a higher level, or the same level with a higher strain.
 - **The auction ends when** three consecutive passes follow a bid → contract = the last bid, **declarer = the seat that made it** (R4).
 - **Pass-out:** four opening passes → `PassedOut`. The session layer (S05) redeals with the dealer rotated.

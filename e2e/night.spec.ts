@@ -338,7 +338,8 @@ test.describe.serial('a night at the DARK table', () => {
     // Players: everyone's leaderboard (four champion cards), then one player's card.
     await history.getByRole('tab', { name: 'Players' }).click();
     await expect(history.locator('.champ')).toHaveCount(4);
-    await expect(history.locator('.award')).toHaveCount(3);
+    // Five award tiles (round 10: the two sweeps follow Heist Master, a swipe away).
+    await expect(history.locator('.award')).toHaveCount(5);
     await history.getByRole('button', { name: /Ryan/ }).click();
     await expect(history.getByRole('region', { name: "Ryan's card" })).toBeVisible();
     // Moments live in the night log now (Ryan): three tabs.

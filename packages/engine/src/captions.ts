@@ -49,7 +49,15 @@ export const MOMENT_CAPTIONS: Record<MomentKind, (m: Moment, name: Name) => stri
  */
 export const AWARDS: Record<
   AwardKind,
-  { title: string; emoji: string; headline?: string; detail: (a: Award) => string; caption: (a: Award, name: Name) => string }
+  {
+    title: string;
+    emoji: string;
+    /** Show the emoji upside down (Dog Mroob's broom). */
+    flip?: boolean;
+    headline?: string;
+    detail: (a: Award) => string;
+    caption: (a: Award, name: Name) => string;
+  }
 > = {
   mvp: {
     title: 'MVP',
@@ -88,6 +96,22 @@ export const AWARDS: Record<
       a.payload.hcp === undefined
         ? `${name(a.profile)} made ${contractOf(a.payload)} with ${a.payload.hcpGap} fewer points than the defenders.`
         : `${name(a.profile)} robbed the table on ${a.payload.hcp} HCP: ${contractOf(a.payload)}, won.`,
+  },
+  // Ryan (round 10): a clean sweep of all 13 sets, by the side that bid it or the side that didn't.
+  broomGod: {
+    title: 'Broom God',
+    emoji: '🧹',
+    headline: 'Spotless. Not one set left on the floor.',
+    detail: (a) => `Bid ${contractOf(a.payload)} and swept all 13 sets`,
+    caption: (a, name) => `${name(a.profile)} bid ${contractOf(a.payload)} and swept all 13 sets. Spotless. Not one set left on the floor.`,
+  },
+  dogMroob: {
+    title: 'Dog Mroob',
+    emoji: '🧹',
+    flip: true,
+    headline: 'They bid it. We binned it.',
+    detail: (a) => `Swept all 13 sets against ${contractOf(a.payload)}`,
+    caption: (a, name) => `${name(a.profile)} swept all 13 sets against ${contractOf(a.payload)}. They bid it. We binned it.`,
   },
   heartbreakHotel: {
     title: 'Heartbreak Hotel',

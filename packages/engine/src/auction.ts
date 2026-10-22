@@ -1,7 +1,8 @@
 import { next } from './seats';
 import { LEVELS, STRAINS, type Call, type Contract, type Level, type Seat, type Strain } from './types';
 
-// Spec S02. Bidding starts with the dealer and goes counter-clockwise (house rule R3).
+// Spec S02. Bidding starts with the player on the dealer's right (the next seat; Ryan, round 10)
+// and goes counter-clockwise (house rule R3).
 
 export interface AuctionCall {
   readonly seat: Seat;
@@ -53,7 +54,7 @@ export function auctionStatus(auction: AuctionState): AuctionStatus {
       return { kind: 'contract', contract: { level, strain, declarer: last.seat } };
     }
   }
-  let turn = auction.dealer;
+  let turn = next(auction.dealer);
   for (let i = 0; i < calls.length; i++) turn = next(turn);
   return { kind: 'open', turn };
 }

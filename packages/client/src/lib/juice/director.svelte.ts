@@ -40,6 +40,8 @@ type Link = Pick<Connection, 'view' | 'room' | 'onEvents'>;
 const TRUMP_COLOR = '#c58bff';
 /** How long after the attack hits that a streak stamp lands (ms, before the speed setting). */
 const STAMP_DELAY = 200;
+/** On a game-winning set, how long after the finisher the streak stamp lands. */
+const STAMP_AFTER_FINISH = 200;
 /** The theme's accent (gold in the Clubhouse). */
 const gold = () => cssColor('--accent', '#e8c25a');
 
@@ -86,6 +88,9 @@ class Director {
   /** Ids for one-off effects (flashes, banners, clinches). */
   private fxId = 0;
   private stop: (() => void) | null = null;
+  /** How long the set just completed takes to play out (ms), for the hold before the results. */
+  private lastSetMs = 0;
+  private revealTimer: ReturnType<typeof setTimeout> | undefined;
 
   attach(conn: Link): void {
     this.stop?.();
@@ -94,13 +99,17 @@ class Director {
       if (!conn.view) return;
       const moments = momentsFrom(events, conn.view);
       const settles = moments.some((m) => m.kind === 'clinch');
+      this.lastSetMs = 0;
       for (const m of moments) this.respond(m, conn, settles);
-      // The last card of a game stays on the table for a few seconds before the results take over
-      // (Ryan), whether it's the 13th set or the end of a game played out after it was decided.
-      if (settles && moments.some((m) => m.kind === 'dealComplete')) {
+      // The game's last card stays on the table before the results take over (Ryan): its set's
+      // effects play out (the attack, the sweep, the orb and any streak stamp reaching the
+      // scoreboard, or the deciding set's finisher), then 3 s more. That's the deciding set and
+      // the 13th set of a game played out after it was decided alike (round 10). A game ended at
+      // the clinch window, with no card just played, goes straight to the results.
+      if (moments.some((m) => m.kind === 'dealComplete') && moments.some((m) => m.kind === 'trickWon' || m.kind === 'clinch')) {
         this.revealHold = true;
-        const fly = settings.animated ? settings.ms(TIMING.cardFly + RESPONSES[5].hitPauseMs) : 0;
-        setTimeout(() => (this.revealHold = false), fly + settings.ms(TIMING.resultsDelay));
+        clearTimeout(this.revealTimer);
+        this.revealTimer = setTimeout(() => (this.revealHold = false), this.lastSetMs + settings.ms(TIMING.resultsDelay));
       }
       const swapped = events.find((e) => e.type === 'seatsSwapped');
       if (swapped?.type === 'seatsSwapped') {
@@ -241,9 +250,36 @@ class Director {
           sound.riser(0.9);
         }, fly + 300);
         break;
-      case 'clinch':
-        setTimeout(() => this.playClinch(m, conn), fly);
+      case 'clinch': {
+        // A beat to see the deciding cards first (round 10), then the clinch.
+        const scan = settings.animated ? settings.ms(TIMING.scan) : 0;
+        setTimeout(() => this.playClinch(m, conn), fly + scan);
+        const pause = settings.animated ? settings.ms(RESPONSES[5].hitPauseMs) : 0;
+        const finished = fly + scan + pause + (settings.motion ? settings.ms(TIMING.gameWonFx) : 0);
+        this.lastSetMs = Math.max(this.lastSetMs, finished);
+        // Ryan (round 10): a game-winning set that also extends a streak gets its stamp too, just
+        // after the finisher; it shrinks into the scoreboard, where the "×n" stays. The results
+        // wait for it (lastSetMs).
+        const run = streak(conn.view?.deal?.trickWinners ?? []);
+        const name = streakName(run);
+        if (name) {
+          const dealNumber = conn.view?.dealNumber;
+          const mySeat = conn.view?.mySeat ?? null;
+          const mine = mySeat !== null && (m.seat - mySeat) % 2 === 0;
+          const at = finished + settings.ms(STAMP_AFTER_FINISH);
+          const hold = settings.animated ? settings.ms(TIMING.trickHold) : 900;
+          const flyMs = settings.ms(TIMING.orbFly);
+          setTimeout(() => {
+            if (conn.view?.dealNumber !== dealNumber) return;
+            this.slamStamp(conn, m.seat, m.side, run, name, mine, hold);
+            setTimeout(() => {
+              if (conn.view?.dealNumber === dealNumber) this.combo = { side: m.side, n: run, id: ++this.fxId };
+            }, hold + flyMs);
+          }, at);
+          this.lastSetMs = Math.max(this.lastSetMs, at + hold + flyMs);
+        }
         break;
+      }
       case 'nightEnded':
         sound.fanfare();
         break;
@@ -269,9 +305,12 @@ class Director {
     const level = intensityOf(m) as Level;
     const id = ++this.seq;
     const alive = () => this.trickFx?.trick === trick && this.seq === id;
+    // A beat to see the cards and who won before the effects start (Ryan, round 10).
+    const scan = settings.animated ? settings.ms(TIMING.scan) : 0;
     const pause = settings.animated ? settings.ms(RESPONSES[level].hitPauseMs) : 0;
     const hold = settings.animated ? settings.ms(TIMING.trickHold + (kind === 'first' ? TIMING.firstTrumpHold : 0)) : 900;
     const sweep = settings.motion ? settings.ms(TIMING.sweep) : 0;
+    this.lastSetMs = Math.max(this.lastSetMs, fly + scan + pause + hold + sweep + settings.ms(TIMING.orbFly));
 
     this.trickFx = { trick, winner: m.winner, kind, phase: 'landing' };
     this.pipHold = { ...this.pipHold, [side]: m.pip };
@@ -333,18 +372,18 @@ class Director {
         const delay = settings.ms(STAMP_DELAY);
         setTimeout(() => alive() && this.slamStamp(conn, m.winner, side, run, name, mineWon, hold - delay + sweep), delay);
       }
-    }, fly + pause);
+    }, fly + scan + pause);
 
     setTimeout(() => {
       if (!alive()) return;
       this.trickFx = { ...this.trickFx!, phase: 'sweep' };
       if (sweep > 0) sound.sweep();
-    }, fly + pause + hold);
+    }, fly + scan + pause + hold);
 
     setTimeout(() => {
       if (this.seq === id && this.trickFx) this.trickFx = { ...this.trickFx, phase: 'done' };
       this.sendOrb(conn, m.winner, side, m.pip, kind, run);
-    }, fly + pause + hold + sweep);
+    }, fly + scan + pause + hold + sweep);
   }
 
   /**

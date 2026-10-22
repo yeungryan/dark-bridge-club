@@ -19,15 +19,16 @@ import { act, runAuction } from './helpers';
 const SEED = 'aaaaaaaabbbbbbbbccccccccdddddddd';
 
 describe('S02 auction', () => {
-  it('the dealer calls first, then bidding goes counter-clockwise', () => {
+  it("the player on the dealer's right calls first (Ryan, round 10), then bidding goes counter-clockwise", () => {
     let s = newDeal(SEED, 2);
-    expect(seatToAct(s)).toBe(2);
-    s = act(s, { type: 'call', seat: 2, call: PASS });
     expect(seatToAct(s)).toBe(next(2));
+    s = act(s, { type: 'call', seat: next(2), call: PASS });
+    expect(seatToAct(s)).toBe(next(next(2)));
   });
 
   it('rejects calls made out of turn', () => {
-    const out = applyDealAction(newDeal(SEED, 0), { type: 'call', seat: 1, call: PASS });
+    // The dealer doesn't open any more: it's seat 1's turn.
+    const out = applyDealAction(newDeal(SEED, 0), { type: 'call', seat: 0, call: PASS });
     expect(out.ok).toBe(false);
     if (!out.ok) expect(out.error.code).toBe('NOT_YOUR_TURN');
   });
@@ -43,20 +44,32 @@ describe('S02 auction', () => {
 
   it('1♠ P P P: contract 1♠ and the opener declares', () => {
     const s = runAuction(newDeal(SEED, 0), [bid(1, 'S'), PASS, PASS, PASS]);
-    expect(s.contract).toEqual({ level: 1, strain: 'S', declarer: 0 });
+    expect(s.contract).toEqual({ level: 1, strain: 'S', declarer: next(0) });
     expect(s.phase).toBe('play');
   });
 
   it('house rule R4: 1♥ P 2♥ P P P makes the RAISER (final bidder) declarer, not the opener', () => {
     const s = runAuction(newDeal(SEED, 0), [bid(1, 'H'), PASS, bid(2, 'H'), PASS, PASS, PASS]);
-    expect(s.contract).toEqual({ level: 2, strain: 'H', declarer: next(next(0)) });
+    expect(s.contract).toEqual({ level: 2, strain: 'H', declarer: next(next(next(0))) });
   });
 
-  it('house rule R4: the player on declarer’s right (next counter-clockwise) leads first', () => {
-    const s = runAuction(newDeal(SEED, 3), [PASS, bid(1, 'NT'), PASS, PASS, PASS]);
-    expect(s.contract!.declarer).toBe(next(3));
-    expect(s.currentTrick!.leader).toBe(next(next(3)));
+  it('house rule R4: in a suit contract the player on declarer’s right (next counter-clockwise) leads first', () => {
+    const s = runAuction(newDeal(SEED, 3), [PASS, bid(1, 'S'), PASS, PASS, PASS]);
+    expect(s.contract!.declarer).toBe(next(next(3)));
+    expect(s.currentTrick!.leader).toBe(next(s.contract!.declarer));
     expect(seatToAct(s)).toBe(next(s.contract!.declarer));
+  });
+
+  it('house rule R4 (Ryan, round 10): in a no-trump contract declarer leads first', () => {
+    for (const dealer of [0, 1, 2, 3] as const) {
+      for (const opener of [0, 1, 2, 3]) {
+        // Pass round to the opener, then 1NT and three passes.
+        const passes = (opener - next(dealer) + 4) % 4;
+        const s = runAuction(newDeal(SEED, dealer), [...Array(passes).fill(PASS), bid(1, 'NT'), PASS, PASS, PASS]);
+        expect(s.contract!.declarer).toBe(opener);
+        expect(s.currentTrick!.leader).toBe(opener);
+      }
+    }
   });
 
   it('four passes is a pass-out', () => {
