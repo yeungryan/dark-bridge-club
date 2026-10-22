@@ -95,6 +95,14 @@ const robberyHands: PerSeat<Card[]> = {
   3: [...cards('D', range(10, 14)), ...cards('C', range(7, 14))],
 };
 const robbery = (n: number) => game(n, robberyHands, [bid(1, 'S'), PASS, PASS, PASS]);
+/** Darren (6 HCP: ♠K Q J and small spades) declares 1♠ and makes it: a thin-hand win. */
+const hopeHands: PerSeat<Card[]> = {
+  0: [...cards('S', range(2, 13)), ...cards('H', [2])],
+  1: [...cards('H', range(3, 14)), ...cards('S', [14])],
+  2: cards('D', range(2, 14)),
+  3: cards('C', range(2, 14)),
+};
+const hope = (n: number) => game(n, hopeHands, [bid(1, 'S'), PASS, PASS, PASS]);
 const passOut = (n: number) => game(n, SUITS4, [PASS, PASS, PASS, PASS]);
 
 const night = (deals: DealHistory[]): NightHistory => ({ seating: SEATING, pairs: PAIRS, deals });
@@ -279,33 +287,31 @@ describe('award candidates', () => {
     expect(candidate(comeback, 'wall')).toMatchObject({ profile: 'kim', score: 4 });
     expect(candidate(night([oneSpade(1), oneSpade(2)]), 'wall')).toBeUndefined();
   });
-  it('Daredevil: highest average level, 2+ contracts', () => {
-    expect(candidate(night([sixSpades(1), deciderMade(2)]), 'daredevil')).toMatchObject({
-      profile: 'darren',
-      score: 6.5,
-      payload: { contracts: 2 },
-    });
+  it('Daredevil: the declarer won it holding 7 or fewer HCP of their own', () => {
+    expect(hope(1).result).toMatchObject({ winner: 'declarers' });
+    expect(candidate(night([hope(1)]), 'daredevil')).toMatchObject({ profile: 'darren', score: 2, payload: { hcp: 6, level: 1, strain: 'S', dealNumber: 1 } });
+    // 10 HCP is too many; a Robbery's 0-HCP partner isn't the declarer.
     expect(candidate(night([sixSpades(1)]), 'daredevil')).toBeUndefined();
-    expect(candidate(night([oneSpade(1), oneSpade(2)]), 'daredevil')).toBeUndefined();
+    expect(candidate(night([robbery(1)]), 'daredevil')).toBeUndefined();
   });
-  it('Heist Master: the biggest Robbery, to the declarer', () => {
-    expect(candidate(night([robbery(1)]), 'heist')).toMatchObject({ profile: 'darren', score: 20 });
+  it('Heist Master: anyone on the winning side but the declarer, on 7 or fewer HCP', () => {
+    // Adrian (Darren's partner) held 0 HCP: a Yarborough, and the win.
+    expect(candidate(night([robbery(1)]), 'heist')).toMatchObject({ profile: 'adrian', score: 8, payload: { hcp: 0, level: 1 } });
+    // Everyone holds a whole suit (10 HCP): no heist.
     expect(candidate(night([oneSpade(1)]), 'heist')).toBeUndefined();
   });
   it('Heartbreak Hotel: most Heartbreaks as declarer', () => {
     expect(candidate(night([heartbreak(1)]), 'heartbreakHotel')).toMatchObject({ profile: 'darren', score: 1 });
     expect(candidate(night([trumpOver(1)]), 'heartbreakHotel')).toBeUndefined();
   });
-  it('Epic Attic: the biggest overbid, never counting sets that were not played', () => {
-    // 7♥ beaten on the first set: the game stopped there, so it is one short, not thirteen.
-    expect(candidate(night([heartbreak(1), trumpOver(2)]), 'epicAttic')).toMatchObject({
-      profile: 'adrian',
-      score: 1,
-      payload: { tricksShort: 1, level: 7, strain: 'H' },
+  it('Epic Attic: a contract of 4 or higher, won by its declarer (the highest one)', () => {
+    expect(candidate(night([sixSpades(1), deciderMade(2)]), 'epicAttic')).toMatchObject({
+      profile: 'darren',
+      score: 7,
+      payload: { level: 7, strain: 'S', dealNumber: 2 },
     });
-    // One short on the very last set is a Heartbreak, not an attic.
-    expect(candidate(night([heartbreak(1)]), 'epicAttic')).toBeUndefined();
-    // A made contract is never an attic.
+    // A lost 7♥ or a made 1♠ doesn't count.
+    expect(candidate(night([trumpOver(1)]), 'epicAttic')).toBeUndefined();
     expect(candidate(night([oneSpade(1)]), 'epicAttic')).toBeUndefined();
   });
   it('Why Don’t You Blog About It: the clinching card of the most dramatic game', () => {
@@ -384,7 +390,9 @@ describe('award selection', () => {
 
   it("skips last night's kinds unless clearly earned", () => {
     const list = [a('mvp', 'kim', 3), a('wall', 'ryan', 4), a('heist', 'darren', 5)];
-    expect(selectAwards(list, ['mvp', 'wall']).map((x) => x.kind)).toEqual(['wall', 'heist']);
+    // MVP (given last night, not clearly earned now) is skipped; The Wall is clearly earned again.
+    // Heist at 5 (a 3-HCP win) is clearly earned too, and comes first in the fixed order.
+    expect(selectAwards(list, ['mvp', 'wall']).map((x) => x.kind)).toEqual(['heist', 'wall']);
   });
 
   it('is deterministic: same night, same awards', () => {
@@ -413,6 +421,7 @@ describe('captions', () => {
     trumpOver(9),
     trumpOver(10),
     trumpOver(11),
+    hope(12),
   ]);
   const everyone = Object.values(SEATING);
   const others = (ids: readonly ProfileId[]) => everyone.filter((p) => !ids.includes(p)).map(name);
@@ -448,9 +457,9 @@ describe('captions', () => {
 
   it("house awards keep Ryan's exact lines", () => {
     const by = Object.fromEntries(awardCandidates(rich).map((c) => [c.kind, c]));
-    expect(AWARDS.epicAttic.caption(by.epicAttic!, name)).toBe(
-      'Adrian: 7♥, one short. Booked for ten, delivered an attic. Epic attic levels na yan!',
-    );
+    expect(AWARDS.epicAttic.caption(by.epicAttic!, name)).toBe('Darren threaded a 7+ needle: 7♠, won.');
+    expect(AWARDS.daredevil.caption(by.daredevil!, name)).toBe('Darren bid on 6 HCP worth of hope and won 1♠.');
+    expect(AWARDS.heist.caption(by.heist!, name)).toBe('Adrian robbed the table on 0 HCP: 1♠, won.');
     expect(AWARDS.blogAboutIt.caption(by.blogAboutIt!, name)).toMatch(/Why don't you blog about that\?$/);
     expect(AWARDS.bannerMoment.caption(by.bannerMoment!, name)).toBe('Darren: 1♠, made exactly. Banner moment na ba yan?');
     expect(AWARDS.tenDollars.caption(by.tenDollars!, name)).toBe('Kim: 3 minutes of thinking. Oh, 10 dollars na yan!');

@@ -339,7 +339,8 @@ test.describe.serial('a night at the DARK table', () => {
     await expect(history.locator('.award')).toHaveCount(3);
     await history.getByRole('button', { name: /Ryan/ }).click();
     await expect(history.getByRole('region', { name: "Ryan's card" })).toBeVisible();
-    await history.getByRole('tab', { name: 'Moments' }).click();
+    // Moments live in the night log now (Ryan): three tabs.
+    await expect(history.getByRole('tab')).toHaveCount(3);
     await history.getByRole('tab', { name: 'Nights' }).click();
     await history.locator('.night-head').first().click();
     await history.getByRole('button', { name: /^Replay game/ }).first().click();

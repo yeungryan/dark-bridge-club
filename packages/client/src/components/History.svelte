@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { headToHead, partnershipRecords, winRate, type PendingChange, type ProfileInfo, type SavedNight, type ScoreOverride, type ThemeId } from '@dark/engine';
+  import { AWARDS, headToHead, momentsWall, partnershipRecords, winRate, type PendingChange, type ProfileInfo, type SavedNight, type ScoreOverride, type ThemeId } from '@dark/engine';
   import { onMount } from 'svelte';
   import { profileOf } from '../lib/format';
   import { loadGame, loadHistory, nightLine, pairName, shortDate, type HistoryData } from '../lib/history';
@@ -13,12 +13,13 @@
   import ScoreEditor from './ScoreEditor.svelte';
   import PlayerCard from './PlayerCard.svelte';
   import AllPlayers from './AllPlayers.svelte';
-  import MomentsWall from './MomentsWall.svelte';
+  import Highlight from './Highlight.svelte';
   import AnimalIcon from './AnimalIcon.svelte';
 
   // Spec S20: the rivalry board (the three ways the four of you can pair up, and every
   // partnership's record), the players (everyone's leaderboard, awards, animals and elements, or
-  // one player's card), the moments wall, and the night log, where any saved game opens in the replay.
+  // one player's card), and the night log: each night with its two highlights (Ryan: the moments
+  // wall lives here now), where any saved game opens in the replay.
   let { profiles, me, theme, onClose }: { profiles: readonly ProfileInfo[]; me: string; theme: ThemeId; onClose: () => void } = $props();
 
   let nights = $state<SavedNight[] | null>(null);
@@ -32,7 +33,7 @@
     pending = d.pending;
   };
   let failed = $state(false);
-  let tab = $state<'rivals' | 'players' | 'moments' | 'nights'>('rivals');
+  let tab = $state<'rivals' | 'players' | 'nights'>('rivals');
   // Players: "All", or one player's card.
   let player = $state<string | null>(null);
   let open = $state<string | null>(null);
@@ -46,6 +47,8 @@
   });
 
   const ids = $derived(profiles.map((p) => p.id));
+  // Each night's top two awards, by night id.
+  const highlights = $derived(new Map((nights ? momentsWall(nights, (k) => AWARDS[k as keyof typeof AWARDS]?.title ?? k) : []).map((m) => [m.night.id, m.awards])));
   const board = $derived(nights ? headToHead(ids, nights, overrides) : []);
   const name = (id: string) => profileOf(profiles, id).name;
 
@@ -87,7 +90,6 @@
   <div class="tabs" role="tablist">
     <button role="tab" aria-selected={tab === 'rivals'} class:on={tab === 'rivals'} onclick={() => (tab = 'rivals')}>Rivals</button>
     <button role="tab" aria-selected={tab === 'players'} class:on={tab === 'players'} onclick={() => (tab = 'players')}>Players</button>
-    <button role="tab" aria-selected={tab === 'moments'} class:on={tab === 'moments'} onclick={() => (tab = 'moments')}>Moments</button>
     <button role="tab" aria-selected={tab === 'nights'} class:on={tab === 'nights'} onclick={() => (tab = 'nights')}>Nights</button>
   </div>
 
@@ -159,14 +161,10 @@
           {/each}
         </div>
         {#if player}
-          <PlayerCard profile={player} {profiles} {nights} />
+          <PlayerCard profile={player} {profiles} {nights} onWatch={watch} loading={loadingGame} />
         {:else}
           <AllPlayers {profiles} {nights} />
         {/if}
-      </section>
-    {:else if tab === 'moments'}
-      <section aria-label="Moments">
-        <MomentsWall {profiles} {nights} onWatch={watch} loading={loadingGame} />
       </section>
     {:else}
       <section aria-label="Night log">
@@ -179,6 +177,14 @@
               <strong>{nightLine(night, profiles)}</strong>
               <span class="pairs">{pairName(profiles, night.pairs.A)} vs {pairName(profiles, night.pairs.B)}</span>
             </button>
+            <!-- The night's two highlights, by Ryan's priority (outside the header button: no nested buttons). -->
+            {#if highlights.has(night.id)}
+              <div class="highlights">
+                {#each highlights.get(night.id)! as award, i (i)}
+                  <Highlight {award} {night} {profiles} onWatch={watch} loading={loadingGame} />
+                {/each}
+              </div>
+            {/if}
             {#if open === night.id}
               <ol class="games">
                 {#each night.games as g (g.dealNumber)}
@@ -248,7 +254,7 @@
   }
   .tabs {
     display: grid;
-    grid-template-columns: repeat(4, 1fr);
+    grid-template-columns: repeat(3, 1fr);
     gap: 6px;
     margin-top: 110px;
     padding: 4px;
@@ -373,6 +379,11 @@
     background: var(--panel);
     border: 1px solid var(--line);
     overflow: hidden;
+  }
+  .highlights {
+    display: grid;
+    gap: 6px;
+    padding: 0 10px 10px;
   }
   .night-head {
     display: grid;

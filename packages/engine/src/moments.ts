@@ -352,10 +352,10 @@ export const AWARD_ORDER: readonly AwardKind[] = [
 export const STRONG_AT: Readonly<Record<AwardKind, number>> = {
   mvp: 4, // clinching cards
   wall: 4, // contracts set
-  daredevil: 5, // average contract level
-  heist: 10, // HCP gap
+  daredevil: 5, // 8 − the declarer's HCP (3 or fewer is clearly earned)
+  heist: 5, // 8 − the winner's HCP (3 or fewer is clearly earned)
   heartbreakHotel: 2, // heartbreaks
-  epicAttic: 3, // tricks short (still short even had they won every unplayed set)
+  epicAttic: 4, // contract level (any made 4+ contract is clearly earned)
   blogAboutIt: 4, // drama points (e.g. a Decider that was also a Heartbreak)
   bannerMoment: 8, // = a level-2 (or lower) contract made exactly with no moments
   tenDollars: 900, // seconds of thinking (15 minutes)
@@ -418,10 +418,13 @@ class Tally {
  * - mvp: clinching cards played (the card that won the clinching trick). Needs 2+.
  * - wall: contracts set as a defender. Needs 2+. Partners tie by definition; the one who won
  *   more tricks in those games gets it.
- * - daredevil: average contract level as declarer. Needs 2+ contracts and an average of 3+.
- * - heist: the largest Robbery HCP gap; the declarer earns it.
+ * - daredevil (Ryan): a contract won as declarer holding 7 or fewer HCP. Score 8 − HCP, so the
+ *   thinnest hand wins; then the higher contract.
+ * - heist (Ryan): a game won by a player on the winning side who is not the declarer (the
+ *   declarer's partner, or a defender), holding 7 or fewer HCP. Score 8 − HCP; then the higher contract.
  * - heartbreakHotel: Heartbreaks suffered as declarer. Needs 1+.
- * - epicAttic: tricks short (target − declarer tricks at the end of the saved play). Needs 2+.
+ * - epicAttic (Ryan; no longer a roast): a contract at level 4 or higher, won by the declarer.
+ *   Score: the level; the higher contract wins, then the earlier game.
  * - blogAboutIt: drama points of the most dramatic game (decider 2, heartbreak 2, trumpCard 1,
  *   grandAmbition 1, robbery 1; ties → the later game), to whoever played its clinching card. Needs 2+.
  * - bannerMoment: 10 − 4 × tricks to spare − level, for a level ≤ 2 contract made with no
@@ -439,7 +442,7 @@ export function awardCandidates(night: NightHistory): Award[] {
   const mvp = new Tally();
   const wall = new Tally();
   const heartbreaks = new Tally();
-  const declared = new Map<ProfileId, number[]>();
+  const daredevils: (Entry & { payload: Award['payload'] })[] = [];
   const heists: (Entry & { payload: Award['payload'] })[] = [];
   const attics: (Entry & { payload: Award['payload'] })[] = [];
   const blogs: (Entry & { payload: Award['payload'] })[] = [];
@@ -451,8 +454,9 @@ export function awardCandidates(night: NightHistory): Award[] {
     const r = replay(deal);
     const moments = dealMoments(deal, night);
     const declarer = who(contract.declarer);
-    declared.set(declarer, [...(declared.get(declarer) ?? []), contract.level]);
     const winner = deal.result || r?.clinch ? winningSide(deal, r) : null;
+    const hcpOf = deal.hands ? (s: Seat) => hcp(deal.hands![s]) : null;
+    const facts = { ...contractPayload(contract), dealNumber: deal.dealNumber };
 
     if (r?.clinch) mvp.add(who(r.clinch.trick.winner), i);
 
@@ -462,26 +466,20 @@ export function awardCandidates(night: NightHistory): Award[] {
 
     for (const m of moments) {
       if (m.kind === 'heartbreak') heartbreaks.add(m.players[0]!, i);
-      if (m.kind === 'robbery') {
-        heists.push({ profile: m.players[0]!, keys: [Number(m.payload.hcpGap), -i], payload: { ...m.payload, dealNumber: deal.dealNumber } });
-      }
     }
 
-    if (r && winner === 'defenders') {
-      // How far short they'd still be even if they had won every set that wasn't played
-      // (a game stops at the clinch, so unplayed sets never count against them): 1 for a
-      // game stopped at the clinch, the real count when it was played out. A defeat counts
-      // as an overbid when it was 2+ short, or a contract at level 4 or higher.
-      const unplayed = 13 - (r.declarersEnd + r.defendersEnd);
-      const short = r.declarerTarget - (r.declarersEnd + unplayed);
-      // One set short on the very last set is a Heartbreak (its own award), not an attic.
-      const heartbroken = moments.some((m) => m.kind === 'heartbreak');
-      if (!heartbroken && (short >= 2 || contract.level >= 4)) {
-        attics.push({
-          profile: declarer,
-          keys: [short, contract.level, -i],
-          payload: { tricksShort: short, ...contractPayload(contract), dealNumber: deal.dealNumber },
-        });
+    // Epic Attic and Daredevil: the declarer won it, at 4+ or on 7 or fewer HCP of their own.
+    if (winner === 'declarers') {
+      if (contract.level >= 4) attics.push({ profile: declarer, keys: [contract.level, -i], payload: facts });
+      const h = hcpOf?.(contract.declarer);
+      if (h !== undefined && h <= 7) daredevils.push({ profile: declarer, keys: [8 - h, contract.level, -i], payload: { hcp: h, ...facts } });
+    }
+    // Heist Master: anyone else on the winning side, on 7 or fewer HCP.
+    if (winner && hcpOf) {
+      for (const s of sideSeats(contract, winner)) {
+        if (s === contract.declarer) continue;
+        const h = hcpOf(s);
+        if (h <= 7) heists.push({ profile: who(s), keys: [8 - h, contract.level, -i], payload: { hcp: h, ...facts } });
       }
     }
 
@@ -515,18 +513,11 @@ export function awardCandidates(night: NightHistory): Award[] {
   const wallBest = best(wall.entries().filter((e) => e.keys[0]! >= 2), night);
   push('wall', wallBest, (e) => ({ sets: e.keys[0]! }));
 
-  const daredevils: Entry[] = [];
-  for (const [profile, levels] of declared) {
-    if (levels.length < 2) continue;
-    const avg = Math.round((levels.reduce((a, b) => a + b, 0) / levels.length) * 100) / 100;
-    if (avg >= 3) daredevils.push({ profile, keys: [avg, levels.length] });
-  }
-  push('daredevil', best(daredevils, night), (e) => ({ averageLevel: e.keys[0]!, contracts: e.keys[1]! }));
-
   const pick = (kind: AwardKind, list: (Entry & { payload: Award['payload'] })[]) => {
     const b = best(list, night) as (Entry & { payload: Award['payload'] }) | null;
     push(kind, b, () => b!.payload);
   };
+  pick('daredevil', daredevils);
   pick('heist', heists);
 
   const hbBest = best(heartbreaks.entries(), night);

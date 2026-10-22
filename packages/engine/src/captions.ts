@@ -63,19 +63,31 @@ export const AWARDS: Record<
     detail: (a) => `${a.payload.sets} ${plural(a.payload.sets, 'contract', 'contracts')} set`,
     caption: (a, name) => `${name(a.profile)} set ${a.payload.sets} contracts.`,
   },
+  // Ryan: Daredevil and Heist Master are thin-hand wins (7 or fewer HCP): as declarer, or as
+  // anyone else on the winning side. Nights saved before then carry the old facts.
   daredevil: {
     title: 'Daredevil',
     emoji: '🎢',
-    detail: (a) => `level ${Number(a.payload.averageLevel).toFixed(1).replace(/\.0$/, '')} on average`,
+    detail: (a) =>
+      a.payload.hcp === undefined
+        ? `level ${Number(a.payload.averageLevel).toFixed(1).replace(/\.0$/, '')} on average`
+        : `Bid on ${a.payload.hcp} HCP worth of hope and won · ${contractOf(a.payload)}`,
     caption: (a, name) =>
-      `${name(a.profile)} declared at level ${Number(a.payload.averageLevel).toFixed(1).replace(/\.0$/, '')} on average.`,
+      a.payload.hcp === undefined
+        ? `${name(a.profile)} declared at level ${Number(a.payload.averageLevel).toFixed(1).replace(/\.0$/, '')} on average.`
+        : `${name(a.profile)} bid on ${a.payload.hcp} HCP worth of hope and won ${contractOf(a.payload)}.`,
   },
   heist: {
     title: 'Heist Master',
     emoji: '🦹',
-    detail: (a) => `${contractOf(a.payload)} made with ${a.payload.hcpGap} fewer points`,
+    detail: (a) =>
+      a.payload.hcp === undefined
+        ? `${contractOf(a.payload)} made with ${a.payload.hcpGap} fewer points`
+        : `Robbed the table on ${a.payload.hcp} HCP · ${contractOf(a.payload)}`,
     caption: (a, name) =>
-      `${name(a.profile)} made ${contractOf(a.payload)} with ${a.payload.hcpGap} fewer points than the defenders.`,
+      a.payload.hcp === undefined
+        ? `${name(a.profile)} made ${contractOf(a.payload)} with ${a.payload.hcpGap} fewer points than the defenders.`
+        : `${name(a.profile)} robbed the table on ${a.payload.hcp} HCP: ${contractOf(a.payload)}, won.`,
   },
   heartbreakHotel: {
     title: 'Heartbreak Hotel',
@@ -84,13 +96,19 @@ export const AWARDS: Record<
     caption: (a, name) =>
       `${name(a.profile)}: ${a.payload.heartbreaks} ${plural(a.payload.heartbreaks, 'contract', 'contracts')} lost by a single trick.`,
   },
+  // Ryan: no longer a roast. A contract of 4 or higher, won by its declarer.
   epicAttic: {
     title: 'Epic Attic',
     emoji: '🏚️',
-    headline: 'Epic attic levels na yan!',
-    detail: (a) => `${contractOf(a.payload)}, ${word(a.payload.tricksShort)} short. Booked for ten, delivered an attic.`,
+    // Awards saved before Ryan redefined it (round 7) were overbids that went down: keep their words.
+    detail: (a) =>
+      a.payload.tricksShort !== undefined
+        ? `${contractOf(a.payload)}, ${word(a.payload.tricksShort)} short`
+        : `Threaded a ${a.payload.level}+ needle · ${contractOf(a.payload)}`,
     caption: (a, name) =>
-      `${name(a.profile)}: ${contractOf(a.payload)}, ${word(a.payload.tricksShort)} short. Booked for ten, delivered an attic. Epic attic levels na yan!`,
+      a.payload.tricksShort !== undefined
+        ? `${name(a.profile)}: ${contractOf(a.payload)}, ${word(a.payload.tricksShort)} short.`
+        : `${name(a.profile)} threaded a ${a.payload.level}+ needle: ${contractOf(a.payload)}, won.`,
   },
   blogAboutIt: {
     title: "Why Don't You Blog About It",

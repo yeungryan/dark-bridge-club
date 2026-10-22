@@ -1,14 +1,27 @@
 <script lang="ts">
-  import { AWARDS, playerStats, shares, winRate, type AwardKind, type ProfileInfo, type SavedNight, type Strain, type Suit as SuitT } from '@dark/engine';
+  import { AWARDS, momentsWall, playerStats, shares, winRate, type AwardKind, type ProfileInfo, type SavedNight, type Strain, type Suit as SuitT } from '@dark/engine';
   import { profileOf } from '../lib/format';
   import { shortDate } from '../lib/history';
   import AnimalIcon from './AnimalIcon.svelte';
+  import Highlight from './Highlight.svelte';
   import Suit from './Suit.svelte';
 
   // Spec S20, a player's card (Ryan's design): the award icons beside the name, four tall stat
   // tiles, the favourite bid suit and level side by side (the favourite as a headline, the rest
-  // as one quiet line), and the favourite partner.
-  let { profile, profiles, nights }: { profile: string; profiles: readonly ProfileInfo[]; nights: readonly SavedNight[] } = $props();
+  // as one quiet line), the favourite partner, and their highlights (newest first, each with ▶).
+  let {
+    profile,
+    profiles,
+    nights,
+    onWatch,
+    loading,
+  }: {
+    profile: string;
+    profiles: readonly ProfileInfo[];
+    nights: readonly SavedNight[];
+    onWatch: (night: SavedNight, game: number) => void;
+    loading: string | null;
+  } = $props();
 
   const ids = $derived(profiles.map((p) => p.id));
   const s = $derived(playerStats(profile, ids, nights));
@@ -25,6 +38,8 @@
   const levels = $derived(shares(s.levels).filter((l) => l.pct > 0));
   const declared = $derived(s.declaring.won + s.declaring.lost);
   const RED: Strain[] = ['H', 'D'];
+  // Their awards from every night (the top two a night, as on the night log).
+  const highlights = $derived(momentsWall(nights, (k) => AWARDS[k as AwardKind]?.title ?? k, profile).flatMap((m) => m.awards.map((award) => ({ night: m.night, award }))));
 
   // Partners, best win rate first ("—" until 5 games together).
   const partners = $derived(
@@ -90,6 +105,13 @@
   {/each}
 </div>
 <p class="note">Win % with each partner (once you've played 5 games together), and games played.</p>
+
+<h3 class="sec">Highlights</h3>
+{#if highlights.length}
+  <div class="highlights">
+    {#each highlights as h, i (i)}<Highlight award={h.award} night={h.night} {profiles} {onWatch} {loading} />{/each}
+  </div>
+{:else}<p class="note">No highlights yet.</p>{/if}
 
 <style>
   .card {
@@ -275,6 +297,10 @@
   }
   .pt.top b {
     color: var(--win);
+  }
+  .highlights {
+    display: grid;
+    gap: 6px;
   }
   .note {
     margin: 6px 2px 0;

@@ -23,9 +23,9 @@
 
   // The award tracker (Ryan): three awards, each with what it means in a few words.
   const TRACKED: { kind: AwardKind; means: string }[] = [
-    { kind: 'epicAttic', means: 'Booked high, fell well short' },
-    { kind: 'daredevil', means: 'Bids the highest on average' },
-    { kind: 'heist', means: 'Made it with fewer points' },
+    { kind: 'epicAttic', means: 'Bid 4+ and won it.' },
+    { kind: 'daredevil', means: 'Bid on the hope of <8 HCP and won.' },
+    { kind: 'heist', means: 'Stole a win on standby with <8 HCP.' },
   ];
 
   const animals = $derived(animalRecords(ids, nights));
