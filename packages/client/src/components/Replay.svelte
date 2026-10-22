@@ -136,9 +136,10 @@
 
     <div class="table" aria-live="polite">
       {#if step.trick}
-        {#each step.trick.cards as play (play.seat)}
+        {#each step.trick.cards as play, i (play.seat)}
           <div class="spot {spotOf(play.seat, me)}" class:winner={play.seat === step.trick.winner}>
             <Card card={play.card} width={36} highlight={play.seat === step.trick.winner} />
+            {#if i === 0}<span class="first-badge lead" aria-label="led">1st</span>{/if}
           </div>
         {/each}
       {:else}
@@ -344,6 +345,12 @@
     right: 6px;
     top: 50%;
     translate: 0 -50%;
+  }
+  .lead {
+    position: absolute;
+    z-index: 2;
+    top: -7px;
+    left: -7px;
   }
   .spot.winner {
     z-index: 1;

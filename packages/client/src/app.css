@@ -127,3 +127,17 @@ h2,
 .display {
   font-family: var(--font-display);
 }
+
+/* "1st" (Ryan): the one mark for every first, on the card that leads a set (and, in SeatCalls,
+   the game's opening bid). */
+.first-badge {
+  padding: 1px 4px;
+  border-radius: 6px;
+  background: #141414;
+  color: #fff;
+  font: 800 8.5px/1.2 system-ui, sans-serif;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  box-shadow: 0 0 0 1.2px #fff;
+  pointer-events: none;
+}

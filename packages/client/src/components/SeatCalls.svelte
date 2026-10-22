@@ -24,6 +24,8 @@
   const KEEP = 4;
   const SEATS: Seat[] = [0, 1, 2, 3];
   const lastBid = $derived(calls.map((c) => c.call.type).lastIndexOf('bid'));
+  // The game's opening bid wears a "1st" badge (Ryan: every first gets the same mark).
+  const firstBid = $derived(calls.findIndex((c) => c.call.type === 'bid'));
   const bySeat = $derived(
     SEATS.map((seat) => ({
       seat,
@@ -57,7 +59,7 @@
   {#each bySeat as { seat, calls: mine } (seat)}
     <ol class="spot at-{spotOf(seat, me)}" data-calls-seat={seat} style="--c: {color(seat)}">
       {#each mine as c (c.i)}
-        <li class="tile" data-call={c.i} class:pass={c.call.type === 'pass'} class:top={c.i === lastBid} use:arrive={seat}>
+        <li class="tile" data-call={c.i} class:pass={c.call.type === 'pass'} class:top={c.i === lastBid} class:first={c.i === firstBid} use:arrive={seat}>
           <CallText call={c.call} red="var(--card-red)" />
         </li>
       {/each}
@@ -101,6 +103,24 @@
   .at-right {
     right: 0;
   }
+  /* "1st": the mark for every first (the opening bid here, the card that leads a set). */
+  .tile.first::after {
+    content: '1st';
+    position: absolute;
+    top: -8px;
+    left: -7px;
+  }
+  .tile.first::after {
+    padding: 1px 4px;
+    border-radius: 6px;
+    background: #141414;
+    color: #fff;
+    font: 800 8.5px/1.2 system-ui, sans-serif;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    box-shadow: 0 0 0 1.2px #fff;
+    pointer-events: none;
+  }
   /* A bidding card: card-white, its player's team colour along the bottom. */
   .tile {
     position: relative;
@@ -135,11 +155,18 @@
   .at-right .tile + .tile {
     margin-top: max(-9px, -5.3cqw);
   }
-  /* A pass is the green card of a bidding box, and quieter. */
+  /* A pass looks like the bidding box's Pass button: a quiet dark tile, faintly lit. Solid, so
+     overlapping passes don't show through each other. */
   .tile.pass {
-    background: #3f8f5a;
-    color: #f2fff5;
+    background: color-mix(in srgb, #ffffff 12%, var(--sheet));
+    color: var(--ink);
+    box-shadow:
+      inset 0 0 0 1px var(--line),
+      0 1px 3px rgba(0, 0, 0, 0.5);
     font-size: min(9.5px, 5.8cqw);
+  }
+  .tile.first {
+    z-index: 2;
   }
   /* The bid to beat. */
   .tile.top {
