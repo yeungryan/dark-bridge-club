@@ -107,7 +107,7 @@
       <span class="flash" class:big={director.flash.big} aria-hidden="true"><Suit suit={director.flash.suit} label={false} /></span>
     {/key}
   {/if}
-  {#each showing as play (play.seat + ':' + play.card.suit + play.card.rank)}
+  {#each showing as play, i (play.seat + ':' + play.card.suit + play.card.rank)}
     {@const spot = spotOf(play.seat, me)}
     <div class="spot {spot}" data-seat={play.seat}>
       <div class="fly {motion}" use:arrive={play} use:sweep={sweepingTo}>
@@ -119,6 +119,8 @@
           class:trumpwin={celebrating && winner === play.seat && fx?.kind !== 'normal'}
         >
           <Card card={play.card} width={cardWidth} highlight={leading === play.seat || (celebrating && winner === play.seat)} trump={play.card.suit === trump} />
+          <!-- The card that led the set (Ryan: every first gets the same "1st" mark). -->
+          {#if i === 0}<span class="first-badge lead" aria-label="led">1st</span>{/if}
         </div>
       </div>
     </div>
@@ -182,8 +184,15 @@
     animation: fade-in calc(160ms * var(--speed)) ease-out backwards;
   }
   .face {
+    position: relative;
     border-radius: 6px;
     transition: filter calc(200ms * var(--speed));
+  }
+  .lead {
+    position: absolute;
+    z-index: 2;
+    top: -7px;
+    left: -7px;
   }
   /* The hit-stop's freeze-frame: the table holds, overexposed, for a beat (lib/juice/director). */
   .area.frozen {
@@ -219,7 +228,7 @@
     }
   }
   .face.win {
-    box-shadow: 0 0 16px 2px var(--accent-glow);
+    box-shadow: 0 0 16px 2px var(--win-glow);
   }
   .face.trumpwin {
     box-shadow: 0 0 20px 4px rgba(197, 139, 255, 0.85);

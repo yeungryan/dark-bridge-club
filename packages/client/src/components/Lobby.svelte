@@ -78,7 +78,7 @@
       {#each room.profiles as p, i (p.id)}
         {@const a = avatarOf(conn, p.id)}
         <div class="card" bind:this={cards[i]} style="--c: {p.color}">
-          <Avatar avatar={a} initial={p.name[0]} ring={p.color} size={64} />
+          <Avatar avatar={a} initial={p.name[0]} size={64} />
           <strong>{p.name}</strong>
         </div>
       {/each}
@@ -89,7 +89,7 @@
     {#if !conn.offline}
       <!-- The next night (S21), then the last one (S20). -->
       <NextNight profiles={room.profiles} me={conn.view!.me} refreshKey={schedulerClosed} onOpen={() => (showScheduler = true)} />
-      <LastTime profiles={room.profiles} onHistory={() => (showHistory = true)} />
+      <LastTime profiles={room.profiles} me={conn.view!.me} onHistory={() => (showHistory = true)} />
     {/if}
     <p class="extras">
       <a href="lab.html" target="_blank">sound check</a> · <a href="practice.html" target="_blank">practice table</a>

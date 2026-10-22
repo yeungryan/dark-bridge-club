@@ -1,4 +1,4 @@
-import type { Award, PairId, ProfileInfo, SavedGameDetail, SavedNight } from '@dark/engine';
+import type { Award, ChangeAction, PairId, PendingChange, ProfileInfo, SavedGameDetail, SavedNight, ScoreOverride } from '@dark/engine';
 import { profileOf } from './format';
 import { token } from './session';
 
@@ -12,8 +12,29 @@ async function get<T>(path: string, params: Record<string, string> = {}): Promis
   return (await res.json()) as T;
 }
 
-/** Every night so far, newest first. */
-export const loadNights = () => get<{ nights: SavedNight[] }>('/api/history').then((r) => r.nights);
+export interface HistoryData {
+  readonly nights: SavedNight[];
+  /** All-time scores the four of you set by hand (headToHead starts from these). */
+  readonly overrides: ScoreOverride[];
+  /** New all-time scores waiting for everyone's approval. */
+  readonly pending: PendingChange[];
+}
+
+/** Every night so far, newest first, the scores set by hand, and the changes waiting. */
+export const loadHistory = () => get<HistoryData>('/api/history');
+export const loadNights = () => loadHistory().then((r) => r.nights);
+
+/** Propose, approve or turn down a new all-time score; resolves to the updated history. */
+export async function sendChange(action: ChangeAction): Promise<HistoryData> {
+  const res = await fetch('/api/history/change', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ token: token(), action }),
+  });
+  const body = (await res.json().catch(() => ({}))) as HistoryData & { message?: string };
+  if (!res.ok) throw new Error(body.message ?? 'That didn’t go through. Try again.');
+  return body;
+}
 
 /** One saved game in full, for the replay. */
 export const loadGame = (night: string, game: number) => get<SavedGameDetail>('/api/history/game', { night, game: String(game) });

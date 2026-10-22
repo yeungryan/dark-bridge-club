@@ -1,5 +1,5 @@
 import { suitSymbol, trumpSuit, type Card, type Seat, type Side, type Suit } from '@dark/engine';
-import { elementAtSeat } from '../avatars';
+import { elementAtSeat, teamOf } from '../avatars';
 import { cssColor } from '../themes';
 import type { Connection } from '../connection.svelte';
 import { buzz } from './haptics';
@@ -414,11 +414,10 @@ class Director {
     if (suit && settings.animated) this.flash = { suit, big, id: ++this.fxId };
   }
 
-  /** Effects take the team colour, like the avatar rings: your pair's gold, the other pair's silver. */
+  /** Effects take the team colour: Team Red's red; Team Black's sparks are silver, since black
+   *  sparks would vanish on the felt. */
   private colorOf(conn: Link, seat: Seat): string {
-    const me = conn.view?.mySeat;
-    const mine = me !== null && me !== undefined && (seat - me) % 2 === 0;
-    return mine ? cssColor('--gold', '#e8c25a') : cssColor('--silver', '#c9ced6');
+    return teamOf(conn, seat) === 'red' ? cssColor('--team-red', '#d23a3a') : '#c9ced6';
   }
 
   private centerOf(selector: string): { x: number; y: number } | null {

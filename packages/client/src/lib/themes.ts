@@ -23,9 +23,12 @@ const base = {
   '--good': '#63c58b',
   '--bad': '#e2725b',
   '--trump': '#c58bff',
-  /* Team colours in every theme (Ryan): your pair is gold, the other pair silver. */
-  '--gold': '#e8c25a',
-  '--silver': '#c9ced6',
+  /* Team colours in every theme (Ryan): Team Red and Team Black, like the cards' suits. */
+  '--team-red': '#d23a3a',
+  '--team-black': '#161616',
+  /* Gold means winning or leading (the bid to beat, the card winning the set), in every theme. */
+  '--win': '#e8c25a',
+  '--win-glow': 'rgba(232, 194, 90, 0.6)',
   '--font': "system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif",
   '--font-display': "system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif",
 };

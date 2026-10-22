@@ -20,14 +20,28 @@ export function elementAtSeat(conn: Link, seat: Seat): Element | null {
 
 export const glyphOf = (a: Avatar | null) => (a ? ELEMENT_INFO[a.element].glyph : '');
 
-/**
- * During play, colour means partnership (Ryan's call): your pair wears the theme's accent,
- * the other pair silver. Personal colours stay for the lobby, crest and history.
- */
-export function teamColor(conn: Link, seat: Seat): string {
-  const me = conn.view?.mySeat;
-  return me !== null && me !== undefined && (seat - me) % 2 === 0 ? 'var(--gold)' : 'var(--silver)';
+export type Team = 'red' | 'black';
+
+/** Team Red is the pair Ryan sits in (Ryan: Adrian & Ryan are Team Red), the same on every phone. */
+export const RED_ANCHOR: ProfileId = 'ryan';
+
+/** Which team a seat is on, given the night's seating (without Ryan seated, your own pair is red). */
+export function teamFor(seating: Readonly<Record<Seat, ProfileId>> | null | undefined, seat: Seat, fallback: Seat): Team {
+  const anchor = seating ? ([0, 1, 2, 3] as Seat[]).find((s) => seating[s] === RED_ANCHOR) : undefined;
+  return (seat - (anchor ?? fallback)) % 2 === 0 ? 'red' : 'black';
 }
+
+/**
+ * During play, colour means partnership (Ryan): Team Red and Team Black, like the cards' suits.
+ * Gold is kept for winning and leading. Personal colours stay for the lobby, crest and history.
+ */
+export function teamOf(conn: Link, seat: Seat): Team {
+  return teamFor(conn.view?.seating, seat, conn.view?.mySeat ?? 0);
+}
+
+export const TEAM_COLOR: Record<Team, string> = { red: 'var(--team-red)', black: 'var(--team-black)' };
+
+export const teamColor = (conn: Link, seat: Seat): string => TEAM_COLOR[teamOf(conn, seat)];
 
 /** Element ring colours for badges and cards. */
 /** Each element's primary colour (Ryan): red fire, yellow air, blue water, green earth. */

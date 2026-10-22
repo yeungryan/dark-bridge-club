@@ -43,6 +43,12 @@ import {
   tidySchedule,
   type Schedule,
   type ScheduleAction,
+  applyChangeAction,
+  emptyChangeQueue,
+  type ChangeAction,
+  type ChangeQueue,
+  type ScoreOverride,
+  withOverride,
 } from '@dark/engine';
 import type { Env } from './index';
 import { isProfile, PROFILE_IDS, PROFILES, USUAL_PARTNER } from './profiles';
@@ -214,6 +220,8 @@ export class TableRoom extends DurableObject<Env> {
           return await this.handleHistory(url);
         case '/api/history/game':
           return await this.handleHistoryGame(url);
+        case '/api/history/change':
+          return await this.handleHistoryChange(request);
         case '/api/schedule':
           return request.method === 'POST' ? await this.handleScheduleAction(request) : await this.handleSchedule(url);
         default:
@@ -356,7 +364,39 @@ export class TableRoom extends DurableObject<Env> {
     const rows = this.sql
       .exec<SessionRow>(`SELECT rowid AS rid, ${SESSION_COLUMNS} FROM sessions WHERE pairs_json IS NOT NULL ORDER BY started_at DESC`)
       .toArray();
-    return json({ nights: rows.map((row) => this.savedNight(row)) });
+    return json(this.historyPayload(rows.map((row) => this.savedNight(row))));
+  }
+
+  /** Every night, newest first, with the all-time scores set by hand and the changes awaiting approval. */
+  private historyPayload(nights: SavedNight[]): { nights: SavedNight[]; overrides: ScoreOverride[]; pending: ChangeQueue['pending'] } {
+    return { nights, overrides: this.loadOverrides(), pending: this.loadChanges().pending };
+  }
+
+  private loadOverrides(): ScoreOverride[] {
+    const row = this.sql.exec<{ v: string }>("SELECT v FROM kv WHERE k = 'scoreOverrides'").toArray()[0];
+    return row ? (JSON.parse(row.v) as ScoreOverride[]) : [];
+  }
+
+  private loadChanges(): ChangeQueue {
+    const row = this.sql.exec<{ v: string }>("SELECT v FROM kv WHERE k = 'historyChanges'").toArray()[0];
+    return row ? (JSON.parse(row.v) as ChangeQueue) : emptyChangeQueue();
+  }
+
+  /** Propose, approve or turn down a new all-time score for a matchup (it needs all four). */
+  private async handleHistoryChange(request: Request): Promise<Response> {
+    if (request.method !== 'POST') return json({ error: 'METHOD' }, 405);
+    const body = (await request.json().catch(() => null)) as { token?: unknown; action?: unknown } | null;
+    const profile = await this.profileForToken(typeof body?.token === 'string' ? body.token : '');
+    if (!profile) return json({ error: 'NOT_SIGNED_IN' }, 401);
+    const out = applyChangeAction(this.loadChanges(), profile, body?.action as ChangeAction, Date.now(), PROFILE_IDS);
+    if (!out.ok) return json({ error: out.error.code, message: out.error.message }, 400);
+    const { queue, applied } = out.state;
+    if (applied) this.sql.exec('INSERT OR REPLACE INTO kv (k, v) VALUES (?, ?)', 'scoreOverrides', JSON.stringify(withOverride(this.loadOverrides(), applied)));
+    this.sql.exec('INSERT OR REPLACE INTO kv (k, v) VALUES (?, ?)', 'historyChanges', JSON.stringify(queue));
+    const rows = this.sql
+      .exec<SessionRow>(`SELECT rowid AS rid, ${SESSION_COLUMNS} FROM sessions WHERE pairs_json IS NOT NULL ORDER BY started_at DESC`)
+      .toArray();
+    return json(this.historyPayload(rows.map((row) => this.savedNight(row))));
   }
 
   /** One saved game in full, for the replay. */

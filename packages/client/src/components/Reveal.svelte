@@ -296,6 +296,8 @@
   }
   .hand {
     border-left: 3px solid var(--c);
+    /* A hairline of light beside it, so Team Black's edge shows on the dark panel. */
+    box-shadow: -1px 0 0 rgba(255, 255, 255, 0.35);
     padding-left: 10px;
   }
   .who {

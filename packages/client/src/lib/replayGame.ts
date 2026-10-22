@@ -12,7 +12,7 @@ import {
   type Seat,
   type ThemeId,
 } from '@dark/engine';
-import { avatarAtSeat, teamColor } from './avatars';
+import { avatarAtSeat, TEAM_COLOR, teamFor, teamOf, type Team } from './avatars';
 import type { Connection } from './connection.svelte';
 import { nameAtSeat, profileOf } from './format';
 
@@ -28,11 +28,10 @@ export interface ReplayGame {
   readonly theme: ThemeId;
   name(seat: Seat): string;
   animal(seat: Seat): string | null;
-  /** Your pair gold, the other silver. */
+  /** Team Red (Ryan's pair) or Team Black, as a colour and by name. */
   color(seat: Seat): string;
+  team(seat: Seat): Team;
 }
-
-const sameSide = (a: Seat, b: Seat) => (a - b) % 2 === 0;
 
 /** The game just finished at the table. */
 export function liveReplay(conn: Connection): ReplayGame {
@@ -49,7 +48,8 @@ export function liveReplay(conn: Connection): ReplayGame {
     theme: conn.room!.theme,
     name: (seat) => nameAtSeat(view, profiles, seat),
     animal: (seat) => avatarAtSeat(conn, seat)?.animal ?? null,
-    color: (seat) => teamColor(conn, seat),
+    color: (seat) => TEAM_COLOR[teamOf(conn, seat)],
+    team: (seat) => teamOf(conn, seat),
   };
 }
 
@@ -71,7 +71,8 @@ export function savedReplay(detail: SavedGameDetail, viewer: ProfileId | null, p
     theme,
     name: (seat) => profileOf(profiles, profileAt(seat)).name,
     animal: (seat) => night.avatars?.[profileAt(seat) ?? '']?.animal ?? null,
-    color: (seat) => (sameSide(seat, me) ? 'var(--gold)' : 'var(--silver)'),
+    color: (seat) => TEAM_COLOR[teamFor(seating, seat, me)],
+    team: (seat) => teamFor(seating, seat, me),
   };
 }
 

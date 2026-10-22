@@ -1,11 +1,13 @@
 import type { Avatar } from './avatars';
 import type { DealResult } from './deal';
+import { matchupKey, type ScoreOverride } from './historyChanges';
 import type { CompletedTrick } from './play';
 import type { NightResult, PairId, ProfileId } from './session';
 import type { Call, Card, Contract, PerSeat, Seat } from './types';
 
 // Spec S20, the history the four of you share: every number here is worked out from the saved
-// nights and games each time (nothing is kept as a running counter that could drift).
+// nights and games each time (nothing is kept as a running counter that could drift), starting
+// from a matchup's agreed score where all four have set one by hand (historyChanges.ts).
 
 /** One finished or passed-out game, as history keeps it. */
 export interface SavedGame {
@@ -52,6 +54,13 @@ export interface SavedGameDetail {
   readonly tricks: readonly CompletedTrick[];
 }
 
+/** Games won by each pair in a night, counted from its saved games. */
+export function gamesWonIn(night: SavedNight): Record<PairId, number> {
+  const won = { A: 0, B: 0 };
+  for (const g of night.games) if (g.winningPair) won[g.winningPair]++;
+  return won;
+}
+
 /** Stats show "—" until there are at least this many games behind them (S20 rules). */
 export const MIN_SAMPLE = 5;
 
@@ -82,29 +91,37 @@ export interface MatchupRecord {
   readonly games: number;
   /** The last night this way round, if any. */
   readonly lastPlayed: number | null;
+  /** When the four of you last set this matchup's score by hand, if ever. */
+  readonly setAt: number | null;
 }
 
-/** Head to head (S20 rivalry board): for each of the three matchups, nights and games won. */
-export function headToHead(profiles: readonly ProfileId[], nights: readonly SavedNight[]): MatchupRecord[] {
+/**
+ * Head to head (S20 rivalry board): for each of the three matchups, nights and games won. Where
+ * all four agreed a score for a matchup, it starts from that, and only nights begun since count on top.
+ */
+export function headToHead(profiles: readonly ProfileId[], nights: readonly SavedNight[], overrides: readonly ScoreOverride[] = []): MatchupRecord[] {
   return allMatchups(profiles).map(([a, b]) => {
     const ka = pairKey(a);
     const kb = pairKey(b);
-    let nightsA = 0;
-    let nightsB = 0;
-    let gamesA = 0;
-    let gamesB = 0;
-    let finished = 0;
+    const set = overrides.find((o) => matchupKey(o.sides[0].players, o.sides[1].players) === matchupKey(a, b)) ?? null;
+    const base = (k: string) => set?.sides.find((s) => pairKey(s.players) === k);
+    let nightsA = base(ka)?.nightsWon ?? 0;
+    let nightsB = base(kb)?.nightsWon ?? 0;
+    let gamesA = base(ka)?.gamesWon ?? 0;
+    let gamesB = base(kb)?.gamesWon ?? 0;
+    let finished = nightsA + nightsB;
     let lastPlayed: number | null = null;
     for (const night of nights) {
       const keys = { A: pairKey(night.pairs.A), B: pairKey(night.pairs.B) };
       const isThis = (keys.A === ka && keys.B === kb) || (keys.A === kb && keys.B === ka);
       if (!isThis) continue;
       lastPlayed = Math.max(lastPlayed ?? 0, night.startedAt);
+      if (set && night.startedAt < set.from) continue;
       const sideOf = (pair: PairId) => (keys[pair] === ka ? 'a' : 'b');
-      for (const g of night.games) {
-        if (!g.winningPair) continue;
-        if (sideOf(g.winningPair) === 'a') gamesA++;
-        else gamesB++;
+      const won = gamesWonIn(night);
+      for (const pair of ['A', 'B'] as const) {
+        if (sideOf(pair) === 'a') gamesA += won[pair];
+        else gamesB += won[pair];
       }
       if (night.final) {
         finished++;
@@ -122,6 +139,7 @@ export function headToHead(profiles: readonly ProfileId[], nights: readonly Save
       nights: finished,
       games: gamesA + gamesB,
       lastPlayed,
+      setAt: set?.from ?? null,
     };
   });
 }
@@ -136,29 +154,24 @@ export interface PartnerRecord {
   readonly gamesWon: number;
 }
 
-/** One player's record with each of the other three as partner. */
-export function partnerRecords(profile: ProfileId, profiles: readonly ProfileId[], nights: readonly SavedNight[]): PartnerRecord[] {
+/**
+ * One player's record with each of the other three as partner: their side of the matchup that
+ * partnership plays in (four players, so each partnership meets just one other pair).
+ */
+export function partnerRecords(
+  profile: ProfileId,
+  profiles: readonly ProfileId[],
+  nights: readonly SavedNight[],
+  overrides: readonly ScoreOverride[] = [],
+): PartnerRecord[] {
+  const board = headToHead(profiles, nights, overrides);
   return profiles
     .filter((p) => p !== profile)
     .map((partner) => {
-      let n = 0;
-      let nWon = 0;
-      let g = 0;
-      let gWon = 0;
-      for (const night of nights) {
-        const mine = (['A', 'B'] as const).find((pair) => night.pairs[pair].includes(profile));
-        if (!mine || !night.pairs[mine].includes(partner)) continue;
-        for (const game of night.games) {
-          if (!game.winningPair) continue;
-          g++;
-          if (game.winningPair === mine) gWon++;
-        }
-        if (night.final) {
-          n++;
-          if (night.final.winner === mine) nWon++;
-        }
-      }
-      return { partner, nights: n, nightsWon: nWon, games: g, gamesWon: gWon };
+      const key = pairKey([profile, partner]);
+      const m = board.find((x) => x.sides.some((s) => pairKey(s.players) === key));
+      const side = m?.sides.find((s) => pairKey(s.players) === key);
+      return { partner, nights: m?.nights ?? 0, nightsWon: side?.nightsWon ?? 0, games: m?.games ?? 0, gamesWon: side?.gamesWon ?? 0 };
     });
 }
 
@@ -171,11 +184,11 @@ export interface PartnershipRecord {
 }
 
 /** Every partnership (six for four players), with its record together. */
-export function partnershipRecords(profiles: readonly ProfileId[], nights: readonly SavedNight[]): PartnershipRecord[] {
+export function partnershipRecords(profiles: readonly ProfileId[], nights: readonly SavedNight[], overrides: readonly ScoreOverride[] = []): PartnershipRecord[] {
   const out: PartnershipRecord[] = [];
   profiles.forEach((a, i) =>
     profiles.slice(i + 1).forEach((b) => {
-      const r = partnerRecords(a, profiles, nights).find((x) => x.partner === b)!;
+      const r = partnerRecords(a, profiles, nights, overrides).find((x) => x.partner === b)!;
       out.push({ pair: [a, b], nights: r.nights, nightsWon: r.nightsWon, games: r.games, gamesWon: r.gamesWon });
     }),
   );

@@ -12,9 +12,10 @@
   import Scoreboard from './Scoreboard.svelte';
   import Reveal from './Reveal.svelte';
   import SeatBadge from './SeatBadge.svelte';
+  import SeatCalls from './SeatCalls.svelte';
   import MenuSheet from './MenuSheet.svelte';
   import History from './History.svelte';
-  import { avatarOf } from '../lib/avatars';
+  import { avatarOf, teamColor } from '../lib/avatars';
   import { director } from '../lib/juice/director.svelte';
   import { settings } from '../lib/juice/settings.svelte';
   import { TIMING } from '../lib/juice/timing';
@@ -139,7 +140,16 @@
             <!-- The deck stays put until the last card has flown. -->
             <Deck riffleSound={iDeal && shuffling} />
           {:else if deal.phase === 'auction'}
-            <div class="auction"><AuctionStrip {conn} /></div>
+            <!-- Each call lands in front of its player, like a played card (Ryan). -->
+            <SeatCalls calls={deal.calls} {me} color={(seat) => teamColor(conn, seat)} fly />
+            <!-- After a bid, each pass counts it down, in the middle of the table. -->
+            {#if director.going > 0}
+              {#key director.going}
+                <div class="going" role="status" aria-label={director.going === 1 ? 'Going once…' : 'Going twice…'}>
+                  <small aria-hidden="true">Going</small><b aria-hidden="true">{director.going === 1 ? 'once…' : 'twice…'}</b>
+                </div>
+              {/key}
+            {/if}
           {:else}
             <TrickArea {conn} />
           {/if}
@@ -359,12 +369,49 @@
     align-items: center;
     min-width: 0;
     aspect-ratio: 1 / 1;
+    container-type: inline-size;
   }
-  .auction {
-    position: relative;
-    padding: 10px;
-    max-height: 100%;
-    overflow-y: auto;
+  /* "Going once / twice": a small stamp in the middle of the table, narrow enough to sit between
+     the side seats' calls. */
+  .going {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    z-index: 2;
+    translate: -50% -50%;
+    display: grid;
+    justify-items: center;
+    gap: 1px;
+    padding: min(5px, 3cqw) min(8px, 4.5cqw) min(6px, 3.5cqw);
+    border-radius: min(12px, 7cqw);
+    background: var(--accent);
+    color: var(--accent-ink);
+    line-height: 1;
+    text-transform: uppercase;
+    white-space: nowrap;
+    box-shadow:
+      0 4px 14px rgba(0, 0, 0, 0.45),
+      0 0 18px var(--accent-glow);
+    animation: going-in calc(var(--spring-pop-ms, 380ms) * var(--speed)) var(--spring-pop, cubic-bezier(0.3, 1.6, 0.6, 1)) backwards;
+  }
+  .going small {
+    font-size: min(9px, 5.4cqw);
+    font-weight: 700;
+    letter-spacing: 0.08em;
+  }
+  .going b {
+    font-size: min(15px, 9cqw);
+    font-weight: 850;
+    letter-spacing: 0.02em;
+  }
+  @keyframes going-in {
+    from {
+      scale: 1.6;
+      opacity: 0;
+    }
+  }
+  :global(.fx-reduced) .going {
+    animation: fade-in calc(250ms * var(--speed)) backwards;
   }
   .surface {
     position: absolute;

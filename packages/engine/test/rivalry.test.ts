@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { allMatchups, headToHead, lastNight, pairKey, partnerRecords, partnershipRecords, winRate, type SavedGame, type SavedNight } from '../src/rivalry';
 import type { PairId } from '../src/session';
+import type { ScoreOverride } from '../src/historyChanges';
 
 const P = ['darren', 'adrian', 'ryan', 'kim'];
 
@@ -67,6 +68,37 @@ describe('S20 rivalry and history', () => {
     const all = headToHead(P, nights);
     expect(all.reduce((t, m) => t + m.nights, 0)).toBe(4);
     expect(all.reduce((t, m) => t + m.games, 0)).toBe(nights.flatMap((n) => n.games).filter((g) => g.winningPair).length);
+  });
+
+  it('a score all four agreed is where a matchup starts; nights begun since count on top', () => {
+    const nights = [
+      night('1', 100, ['darren', 'kim'], ['adrian', 'ryan'], ['A', 'B', 'A'], 'A'),
+      // Started after the agreed score: counts on top of it.
+      night('2', 900, ['adrian', 'ryan'], ['kim', 'darren'], ['A', 'A'], 'A'),
+      // A different matchup: untouched.
+      night('3', 950, ['darren', 'ryan'], ['adrian', 'kim'], ['B'], 'B'),
+    ];
+    const set: ScoreOverride = {
+      sides: [
+        { players: ['kim', 'darren'], nightsWon: 7, gamesWon: 30 },
+        { players: ['ryan', 'adrian'], nightsWon: 4, gamesWon: 22 },
+      ],
+      from: 500,
+    };
+    const board = headToHead(P, nights, [set]);
+    const dk = board.find((m) => m.sides.some((s) => pairKey(s.players) === pairKey(['darren', 'kim'])))!;
+    const side = (k: string) => dk.sides.find((s) => pairKey(s.players) === k)!;
+    // Night 1 (before) is replaced by the agreed score; night 2 (after) adds to it.
+    expect(side(pairKey(['darren', 'kim']))).toMatchObject({ nightsWon: 7, gamesWon: 30 });
+    expect(side(pairKey(['adrian', 'ryan']))).toMatchObject({ nightsWon: 5, gamesWon: 24 });
+    expect(dk).toMatchObject({ nights: 12, games: 54, setAt: 500, lastPlayed: 900 });
+    const other = board.find((m) => m.sides.some((s) => pairKey(s.players) === pairKey(['darren', 'ryan'])))!;
+    expect(other).toMatchObject({ nights: 1, games: 1, setAt: null });
+    // Starting again from zero.
+    const zero: ScoreOverride = { sides: set.sides.map((s) => ({ ...s, nightsWon: 0, gamesWon: 0 })) as unknown as ScoreOverride['sides'], from: 1000 };
+    expect(headToHead(P, nights, [zero]).find((m) => m.setAt === 1000)).toMatchObject({ nights: 0, games: 0 });
+    // Partner records read the same agreed numbers.
+    expect(partnerRecords('kim', P, nights, [set]).find((r) => r.partner === 'darren')).toMatchObject({ nights: 12, nightsWon: 7, games: 54, gamesWon: 30 });
   });
 
   it('partner records: nights and games with each partner', () => {

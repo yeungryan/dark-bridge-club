@@ -8,7 +8,10 @@
   --accent-ink: #1d1a10;
   --accent-glow: rgba(232, 194, 90, 0.6);
   --trump: #c58bff;
-  --silver: #c9ced6;
+  --team-red: #d23a3a;
+  --team-black: #161616;
+  --win: #e8c25a;
+  --win-glow: rgba(232, 194, 90, 0.6);
   --surface: radial-gradient(circle at 50% 40%, #1d5a3e 0%, #154630 70%, #113a28 100%);
   --surface-rim: 0 0 0 7px #5a3a22, 0 10px 30px rgba(0, 0, 0, 0.45);
   --surface-radius: 50%;
@@ -126,4 +129,18 @@ h1,
 h2,
 .display {
   font-family: var(--font-display);
+}
+
+/* "1st" (Ryan): the one mark for every first, on the card that leads a set (and, in SeatCalls,
+   the game's opening bid). */
+.first-badge {
+  padding: 1px 4px;
+  border-radius: 6px;
+  background: #141414;
+  color: #fff;
+  font: 800 8.5px/1.2 system-ui, sans-serif;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  box-shadow: 0 0 0 1.2px #fff;
+  pointer-events: none;
 }

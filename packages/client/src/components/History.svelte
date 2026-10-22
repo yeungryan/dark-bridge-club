@@ -1,20 +1,31 @@
 <script lang="ts">
-  import { headToHead, partnershipRecords, winRate, type ProfileInfo, type SavedNight, type ThemeId } from '@dark/engine';
+  import { headToHead, partnershipRecords, winRate, type PendingChange, type ProfileInfo, type SavedNight, type ScoreOverride, type ThemeId } from '@dark/engine';
   import { onMount } from 'svelte';
   import { profileOf } from '../lib/format';
-  import { loadGame, loadNights, nightLine, pairName, shortDate } from '../lib/history';
+  import { loadGame, loadHistory, nightLine, pairName, shortDate, type HistoryData } from '../lib/history';
   import { sound } from '../lib/juice/sound';
   import { savedReplay, type ReplayGame } from '../lib/replayGame';
   import { themeOf } from '../lib/themes';
   import CallText from './CallText.svelte';
   import Replay from './Replay.svelte';
   import TableScene from './TableScene.svelte';
+  import PendingChanges from './PendingChanges.svelte';
+  import ScoreEditor from './ScoreEditor.svelte';
 
   // Spec S20 (first part): the rivalry board (the three ways the four of you can pair up, and
   // every partnership's record) and the night log, where any saved game opens in the replay.
   let { profiles, me, theme, onClose }: { profiles: readonly ProfileInfo[]; me: string; theme: ThemeId; onClose: () => void } = $props();
 
   let nights = $state<SavedNight[] | null>(null);
+  let overrides = $state<ScoreOverride[]>([]);
+  let pending = $state<PendingChange[]>([]);
+  // The matchup whose score is being changed (Ryan: set by hand, with everyone's OK).
+  let editing = $state<number | null>(null);
+  const update = (d: HistoryData) => {
+    nights = d.nights;
+    overrides = d.overrides;
+    pending = d.pending;
+  };
   let failed = $state(false);
   let tab = $state<'rivals' | 'nights'>('rivals');
   let open = $state<string | null>(null);
@@ -22,17 +33,17 @@
   let loadingGame = $state<string | null>(null);
 
   onMount(() => {
-    loadNights()
-      .then((n) => (nights = n))
+    loadHistory()
+      .then(update)
       .catch(() => (failed = true));
   });
 
   const ids = $derived(profiles.map((p) => p.id));
-  const board = $derived(nights ? headToHead(ids, nights) : []);
+  const board = $derived(nights ? headToHead(ids, nights, overrides) : []);
   const name = (id: string) => profileOf(profiles, id).name;
 
   // Every partnership (six of them): nights and games together.
-  const partnerships = $derived(nights ? partnershipRecords(ids, nights) : []);
+  const partnerships = $derived(nights ? partnershipRecords(ids, nights, overrides) : []);
 
   const rate = (won: number, played: number) => {
     const r = winRate(won, played);
@@ -76,12 +87,14 @@
       <p class="muted">Couldn't load the history. Try again in a moment.</p>
     {:else if !nights}
       <p class="muted">Loading…</p>
-    {:else if tab === 'rivals'}
+    {:else}
+      <PendingChanges {profiles} {me} {pending} {board} onUpdate={update} />
+      {#if tab === 'rivals'}
       <section aria-label="Head to head">
         <h3>Head to head</h3>
         {#each board as m, i (i)}
           {@const [a, b] = m.sides}
-          <article class="match" class:fresh={m.nights === 0 && m.games === 0}>
+          <article class="match" class:fresh={m.nights === 0 && m.games === 0 && editing !== i}>
             <div class="side">
               <span class="who">{pairName(profiles, a.players)}</span>
               <strong class="big">{a.nightsWon}</strong>
@@ -98,7 +111,15 @@
                 {m.nights} {m.nights === 1 ? 'night' : 'nights'} · games {a.gamesWon}–{b.gamesWon}{#if m.lastPlayed}
                   · last {shortDate(m.lastPlayed)}{/if}
               {/if}
+              {#if m.setAt}<br /><span class="set">Score agreed by all four on {shortDate(m.setAt)}</span>{/if}
             </p>
+            {#if editing === i}
+              <ScoreEditor {profiles} match={m} onUpdate={update} onCancel={() => (editing = null)} />
+            {:else}
+              <button class="ghost edit" aria-label="Change the score: {pairName(profiles, a.players)} vs {pairName(profiles, b.players)}" onclick={() => (editing = i)}
+                >✏️ Change score</button
+              >
+            {/if}
           </article>
         {/each}
       </section>
@@ -162,6 +183,7 @@
           </article>
         {/each}
       </section>
+      {/if}
     {/if}
   </div>
 </div>
@@ -360,6 +382,18 @@
   }
   .what {
     font-family: var(--font-card);
+  }
+  .set {
+    font-size: 11.5px;
+    color: var(--accent);
+  }
+  .edit {
+    grid-column: 1 / -1;
+    justify-self: center;
+    min-height: 32px;
+    padding: 0 10px;
+    font-size: 12.5px;
+    color: var(--ink-dim);
   }
   .watch {
     min-height: 36px;

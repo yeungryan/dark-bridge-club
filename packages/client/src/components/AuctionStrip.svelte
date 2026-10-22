@@ -3,19 +3,18 @@
   import { avatarAtSeat, teamColor } from '../lib/avatars';
   import { profileOf } from '../lib/format';
   import CallText from './CallText.svelte';
-  import { director } from '../lib/juice/director.svelte';
   import AnimalIcon from './AnimalIcon.svelte';
 
   // Spec S12: each call in turn order, underlined in its team's colour. Bids stamp in harder as the
   // level rises; passes slide in quietly. After a bid, each pass counts down on it:
-  // "Going once…", "Going twice…" (the third pass is the "Sold!" in the header).
+  // "Going once…", "Going twice…" (a pill on the table itself, see Table; the third pass is the
+  // "Sold!").
   let { conn }: { conn: Connection } = $props();
 
   const view = $derived(conn.view!);
   const profiles = $derived(conn.room!.profiles);
   const calls = $derived(view.deal!.calls);
   const lastBid = $derived(calls.map((c) => c.call.type).lastIndexOf('bid'));
-  const going = $derived(view.deal!.phase === 'auction' ? director.going : 0);
 </script>
 
 <div class="strip" aria-label="Auction">
@@ -25,11 +24,6 @@
     <span class="call" class:pass={level === 0} class:top={i === lastBid} style="--c: {teamColor(conn, entry.seat)}; --weight: {level}">
       <small><AnimalIcon animal={avatarAtSeat(conn, entry.seat)?.animal} /> {p.name}</small>
       <strong><CallText call={entry.call} /></strong>
-      {#if i === lastBid && going > 0}
-        {#key going}
-          <em class="going">{going === 1 ? 'Going once…' : 'Going twice…'}</em>
-        {/key}
-      {/if}
     </span>
   {:else}
     <span class="muted">No calls yet.</span>
@@ -52,6 +46,8 @@
     flex-direction: column;
     align-items: center;
     border-bottom: 3px solid var(--c);
+    /* A hairline of light under it, so Team Black's underline shows on the dark panel. */
+    box-shadow: 0 1px 0 rgba(255, 255, 255, 0.35);
     padding: 2px 6px;
     background: var(--panel);
     border-radius: 6px 6px 0 0;
@@ -78,25 +74,7 @@
     animation-name: fade-in;
   }
   .call.top {
-    box-shadow: 0 0 0 1px var(--c);
-  }
-  .going {
-    position: absolute;
-    top: -18px;
-    left: 50%;
-    transform: translateX(-50%);
-    white-space: nowrap;
-    font-size: 12px;
-    font-style: normal;
-    font-weight: 700;
-    color: var(--accent);
-    animation: going calc(320ms * var(--speed)) cubic-bezier(0.3, 1.6, 0.6, 1) backwards;
-  }
-  @keyframes going {
-    0% {
-      transform: translateX(-50%) scale(1.6);
-      opacity: 0;
-    }
+    box-shadow: 0 0 0 1.5px var(--win);
   }
   small {
     font-family: var(--font-name);

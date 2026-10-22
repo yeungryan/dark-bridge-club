@@ -1,0 +1,178 @@
+<script lang="ts">
+  import type { Call, Seat } from '@dark/engine';
+  import { spotOf } from '../lib/format';
+  import { settings } from '../lib/juice/settings.svelte';
+  import CallText from './CallText.svelte';
+
+  // The bidding, laid on the table the way cards are played (Ryan): each player's calls sit on the
+  // table's edge right in front of them, so whose call it was is plain without a name. Each new
+  // call overlaps the one before (like bidding cards put down in a row), the latest on top; the
+  // highest bid so far is ringed. Shows each player's last few calls (a long auction rarely has more).
+  let {
+    calls,
+    me,
+    color,
+    fly = false,
+  }: {
+    calls: readonly { readonly seat: Seat; readonly call: Call }[];
+    me: Seat;
+    color: (seat: Seat) => string;
+    /** Each new call flies in from its player's seat badge (at the table, not in the replay). */
+    fly?: boolean;
+  } = $props();
+
+  const KEEP = 4;
+  const SEATS: Seat[] = [0, 1, 2, 3];
+  const lastBid = $derived(calls.map((c) => c.call.type).lastIndexOf('bid'));
+  // The game's opening bid wears a "1st" badge (Ryan: every first gets the same mark).
+  const firstBid = $derived(calls.findIndex((c) => c.call.type === 'bid'));
+  const bySeat = $derived(
+    SEATS.map((seat) => ({
+      seat,
+      calls: calls
+        .map((c, i) => ({ ...c, i }))
+        .filter((c) => c.seat === seat)
+        .slice(-KEEP),
+    })),
+  );
+
+  /** In from the player's badge, like a card being played. */
+  function arrive(node: HTMLElement, seat: Seat) {
+    if (!fly || !settings.motion) return;
+    const badge = document.querySelector(`[data-badge-seat="${seat}"]`)?.getBoundingClientRect();
+    if (!badge) return;
+    const r = node.getBoundingClientRect();
+    const dx = badge.left + badge.width / 2 - (r.left + r.width / 2);
+    const dy = badge.top + badge.height / 2 - (r.top + r.height / 2);
+    node.animate(
+      [
+        { transform: `translate(${dx}px, ${dy}px) scale(0.5)`, opacity: 0.3 },
+        { transform: 'scale(1.15, 0.88)', opacity: 1, offset: 0.65 },
+        { transform: 'none', opacity: 1 },
+      ],
+      { duration: settings.ms(320), easing: 'cubic-bezier(0.2, 0.8, 0.3, 1)', fill: 'backwards' },
+    );
+  }
+</script>
+
+<div class="calls" aria-label="The bidding">
+  {#each bySeat as { seat, calls: mine } (seat)}
+    <ol class="spot at-{spotOf(seat, me)}" data-calls-seat={seat} style="--c: {color(seat)}">
+      {#each mine as c (c.i)}
+        <li class="tile" data-call={c.i} class:pass={c.call.type === 'pass'} class:top={c.i === lastBid} class:first={c.i === firstBid} use:arrive={seat}>
+          <CallText call={c.call} red="var(--card-red)" />
+        </li>
+      {/each}
+    </ol>
+  {/each}
+</div>
+
+<style>
+  .calls {
+    position: absolute;
+    inset: 4px;
+    /* Tiles scale with the table, so a small phone's small table still fits four seats of calls. */
+    container-type: size;
+  }
+  .spot {
+    position: absolute;
+    display: flex;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+  .at-top {
+    top: 0;
+    left: 50%;
+    translate: -50% 0;
+  }
+  .at-bottom {
+    bottom: 0;
+    left: 50%;
+    translate: -50% 0;
+  }
+  .at-left,
+  .at-right {
+    top: 50%;
+    flex-direction: column;
+    translate: 0 -50%;
+  }
+  .at-left {
+    left: 0;
+  }
+  .at-right {
+    right: 0;
+  }
+  /* "1st": the mark for every first (the opening bid here, the card that leads a set). */
+  .tile.first::after {
+    content: '1st';
+    position: absolute;
+    /* Above any later call laid over this one; the tile itself stays under them. */
+    z-index: 3;
+    top: -8px;
+    left: -7px;
+  }
+  .tile.first::after {
+    padding: 1px 4px;
+    border-radius: 6px;
+    background: #141414;
+    color: #fff;
+    font: 800 8.5px/1.2 system-ui, sans-serif;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    box-shadow: 0 0 0 1.2px #fff;
+    pointer-events: none;
+  }
+  /* A bidding card: card-white, its player's team colour along the bottom. */
+  .tile {
+    position: relative;
+    display: grid;
+    /* The call sits at the tile's leading corner, so it still reads when the next call overlaps. */
+    place-items: center start;
+    padding-left: min(4px, 2.5cqw);
+    width: min(34px, 20cqw);
+    height: min(24px, 14cqw);
+    flex: none;
+    border-radius: 4px;
+    background: var(--card);
+    color: var(--card-ink);
+    border-bottom: 3px solid var(--c);
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.5);
+    font-family: var(--font-card);
+    font-weight: 800;
+    font-size: min(13px, 8cqw);
+    line-height: 1;
+  }
+  /* Each call overlaps the one before it; the latest is on top. */
+  .at-top .tile + .tile,
+  .at-bottom .tile + .tile {
+    margin-left: max(-13px, -7.6cqw);
+  }
+  .at-left .tile,
+  .at-right .tile {
+    align-items: start;
+    padding-top: min(4px, 2.4cqw);
+  }
+  .at-left .tile + .tile,
+  .at-right .tile + .tile {
+    margin-top: max(-9px, -5.3cqw);
+  }
+  /* A pass looks like the bidding box's Pass button: a quiet dark tile, faintly lit. Solid, so
+     overlapping passes don't show through each other. */
+  .tile.pass {
+    background: color-mix(in srgb, #ffffff 12%, var(--sheet));
+    color: var(--ink);
+    box-shadow:
+      inset 0 0 0 1px var(--line),
+      0 1px 3px rgba(0, 0, 0, 0.5);
+    font-size: min(9.5px, 5.8cqw);
+  }
+  /* The bid to beat, in gold (gold means leading or winning, in every theme). */
+  .tile.top {
+    z-index: 1;
+    box-shadow:
+      0 0 0 2px var(--win),
+      0 0 12px var(--win-glow),
+      0 2px 4px rgba(0, 0, 0, 0.5);
+  }
+</style>
