@@ -10,6 +10,7 @@
   import AvatarPicker from './AvatarPicker.svelte';
   import History from './History.svelte';
   import LastTime from './LastTime.svelte';
+  import AllTimeScore from './AllTimeScore.svelte';
   import NextNight from './NextNight.svelte';
   import Scheduler from './Scheduler.svelte';
 
@@ -73,6 +74,8 @@
     {/each}
   </div>
   <h2>Bridge Club</h2>
+  <!-- The all-time score (Ryan, S1); the practice table has no history. -->
+  {#if !conn.offline}<AllTimeScore profiles={room.profiles} />{/if}
   <p class="tonight">
     <span class="label">Tonight's table</span>
     <strong class="display"><span class="flag">{theme.flag}</span> {theme.name}</strong>
