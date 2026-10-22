@@ -453,12 +453,13 @@ export class TableRoom extends DurableObject<Env> {
       )
       .toArray();
     // The night's awards are saved in order of priority, so the first is its headline.
-    const award = this.sql
+    const awards = this.sql
       .exec<{ kind: string; profile_id: string; payload_json: string }>(
-        'SELECT kind, profile_id, payload_json FROM awards WHERE session_id = ? ORDER BY rowid LIMIT 1',
+        'SELECT kind, profile_id, payload_json FROM awards WHERE session_id = ? ORDER BY rowid',
         row.id,
       )
-      .toArray()[0];
+      .toArray()
+      .map((a) => ({ kind: a.kind, profile: a.profile_id, payload: JSON.parse(a.payload_json) }));
     return {
       id: String(row.rid),
       startedAt: row.started_at,
@@ -469,7 +470,8 @@ export class TableRoom extends DurableObject<Env> {
       avatars: avatarRows.length ? Object.fromEntries(avatarRows.map((a) => [a.profile_id, { animal: a.animal, element: a.element }])) : null,
       final: row.final_json ? JSON.parse(row.final_json) : null,
       games,
-      topAward: award ? { kind: award.kind, profile: award.profile_id, payload: JSON.parse(award.payload_json) } : null,
+      topAward: awards[0] ?? null,
+      awards,
     };
   }
 

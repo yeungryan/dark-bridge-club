@@ -72,3 +72,5 @@ Each moment now has its own shape, not just more or fewer of the same squares (`
 - **Springs.** Every pop (taking the lead, the set winner, a card landing, stamps, pips, bid tiles) jumps to its peak and settles on a real spring (`spring.ts` samples a damped spring into a CSS `linear()` easing; older browsers fall back to an overshoot curve).
 - **Cards in the hand** lean in 3D: toward your finger when pressed, and into the motion while dragged, with a sheen sliding across the face. A raised card sways gently while it waits.
 - **Sound** is layered (transient + body + sparkle), runs through a gentle limiter and a short, quiet room reverb per theme, and keeps everything in the phone-speaker band. Repeated sounds vary slightly so they never machine-gun.
+
+**Settings, trimmed (Ryan):** the menu, settings and header use monochrome Lucide icons. The Vibrate setting is gone (it couldn't be changed on most phones); vibration stays on where the phone supports it.

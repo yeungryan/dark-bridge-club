@@ -36,8 +36,8 @@ export const TIMING = {
   pipPop: 320,
   /** Shake decays to nothing over this long. */
   shakeDecay: 320,
-  /** A clinch on the last trick: how long the table stays up for it before the reveal. */
-  clinchShow: 1000,
+  /** After a game's last card lands, the table stays up this long before the results (Ryan: 3 s). */
+  resultsDelay: 3000,
   /** "Play it out?" fades in after the clinch moment has landed. */
   clinchPromptDelay: 650,
   /** Numbers counting up (tallies, HCP). */

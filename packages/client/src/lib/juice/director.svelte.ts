@@ -84,10 +84,12 @@ class Director {
       const moments = momentsFrom(events, conn.view);
       const settles = moments.some((m) => m.kind === 'clinch');
       for (const m of moments) this.respond(m, conn, settles);
-      if (settles && moments.some((m) => m.kind === 'dealComplete') && settings.animated) {
+      // The last card of a game stays on the table for a few seconds before the results take over
+      // (Ryan), whether it's the 13th set or the end of a game played out after it was decided.
+      if (settles && moments.some((m) => m.kind === 'dealComplete')) {
         this.revealHold = true;
-        const fly = settings.ms(TIMING.cardFly);
-        setTimeout(() => (this.revealHold = false), fly + settings.ms(RESPONSES[5].hitPauseMs + TIMING.clinchShow));
+        const fly = settings.animated ? settings.ms(TIMING.cardFly + RESPONSES[5].hitPauseMs) : 0;
+        setTimeout(() => (this.revealHold = false), fly + settings.ms(TIMING.resultsDelay));
       }
       const dealt = events.find((e) => e.type === 'dealStarted');
       if (dealt) {

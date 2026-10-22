@@ -43,6 +43,9 @@ export const TEAM_COLOR: Record<Team, string> = { red: 'var(--team-red)', black:
 
 export const teamColor = (conn: Link, seat: Seat): string => TEAM_COLOR[teamOf(conn, seat)];
 
+/** The outline Team Black's shapes wear on dark panels, so they don't vanish (none for red). */
+export const rimFor = (team: Team): string | null => (team === 'black' ? 'rgba(255, 255, 255, 0.9)' : null);
+
 /** Element ring colours for badges and cards. */
 /** Each element's primary colour (Ryan): red fire, yellow air, blue water, green earth. */
 export const ELEMENT_RING: Record<Element, string> = {
@@ -51,3 +54,12 @@ export const ELEMENT_RING: Record<Element, string> = {
   water: '#1e88e5',
   earth: '#43a047',
 };
+
+/** The DARK crest (Ryan): each friend's letter, suit and team, fixed (♠ D, ♥ A, ♦ R, ♣ K). */
+export const CREST: Record<ProfileId, { suit: 'S' | 'H' | 'D' | 'C'; team: Team }> = {
+  darren: { suit: 'S', team: 'black' },
+  adrian: { suit: 'H', team: 'red' },
+  ryan: { suit: 'D', team: 'red' },
+  kim: { suit: 'C', team: 'black' },
+};
+export const crestOf = (id: ProfileId, index: number) => CREST[id] ?? { suit: (['S', 'H', 'D', 'C'] as const)[index % 4]!, team: index % 3 === 0 ? 'black' : 'red' };

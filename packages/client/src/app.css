@@ -131,16 +131,17 @@ h2,
   font-family: var(--font-display);
 }
 
-/* "1st" (Ryan): the one mark for every first, on the card that leads a set (and, in SeatCalls,
-   the game's opening bid). */
-.first-badge {
-  padding: 1px 4px;
-  border-radius: 6px;
-  background: #141414;
-  color: #fff;
-  font: 800 8.5px/1.2 system-ui, sans-serif;
-  letter-spacing: 0.04em;
-  text-transform: uppercase;
-  box-shadow: 0 0 0 1.2px #fff;
+/* "1st" (Ryan's pick, B4): a stone-coloured folded corner, no text, on the top-left of the card
+   that leads a set (and, in SeatCalls, the game's opening bid). Sits inside a positioned parent. */
+.first-fold {
+  position: absolute;
+  z-index: 2;
+  top: 0;
+  left: 0;
+  width: 0;
+  height: 0;
+  border-top: 10px solid #b8b09c;
+  border-right: 10px solid transparent;
+  border-top-left-radius: 5px;
   pointer-events: none;
 }

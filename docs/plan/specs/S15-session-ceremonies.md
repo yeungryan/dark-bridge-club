@@ -37,3 +37,5 @@ Make each night feel like an **event** (promise B), spending the big ceremonies 
 - **Pass-outs:** the next dealer shuffles and deals again.
 
 **Crest colour (Ryan):** all four DARK letters share one colour, the theme's accent (dim until the player arrives, lit when here, solid once they've picked), as does "DARK" on the sign-in screen: the name reads as the title.
+
+**The DARK crest, revised (Ryan, L1 faint):** each letter is a tile in its team colour: D and K Team Black, A and R Team Red, each with its suit small and faint in the top-left corner (♠ D, ♥ A, ♦ R, ♣ K). Not here: a dim outline; here: the letter and edge lit in the team colour (black letters with a light rim); picked: filled, with the ✓. The login title is the same crest, all four filled, with BRIDGE CLUB beneath.

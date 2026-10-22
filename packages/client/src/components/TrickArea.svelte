@@ -119,8 +119,8 @@
           class:trumpwin={celebrating && winner === play.seat && fx?.kind !== 'normal'}
         >
           <Card card={play.card} width={cardWidth} highlight={leading === play.seat || (celebrating && winner === play.seat)} trump={play.card.suit === trump} />
-          <!-- The card that led the set (Ryan: every first gets the same "1st" mark). -->
-          {#if i === 0}<span class="first-badge lead" aria-label="led">1st</span>{/if}
+          <!-- The card that led the set: the "1st" fold (Ryan: every first gets the same mark). -->
+          {#if i === 0}<span class="first-fold" role="img" aria-label="led"></span>{/if}
         </div>
       </div>
     </div>
@@ -187,12 +187,6 @@
     position: relative;
     border-radius: 6px;
     transition: filter calc(200ms * var(--speed));
-  }
-  .lead {
-    position: absolute;
-    z-index: 2;
-    top: -7px;
-    left: -7px;
   }
   /* The hit-stop's freeze-frame: the table holds, overexposed, for a beat (lib/juice/director). */
   .area.frozen {

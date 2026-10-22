@@ -1,4 +1,9 @@
 <script lang="ts">
+  import Flag from '@lucide/svelte/icons/flag';
+  import Undo2 from '@lucide/svelte/icons/undo-2';
+  import Moon from '@lucide/svelte/icons/moon';
+  import History from '@lucide/svelte/icons/history';
+  import AudioLines from '@lucide/svelte/icons/audio-lines';
   import type { Connection } from '../lib/connection.svelte';
   import { pairNames } from '../lib/format';
   import { themeOf } from '../lib/themes';
@@ -45,31 +50,31 @@
     </div>
 
     <button class="row" disabled={!canConcede} onclick={() => act(() => conn.intent({ type: 'deal', action: { type: 'proposeConcession' } }))}>
-      <span class="icon" aria-hidden="true">🏳️</span>
+      <span class="icon" aria-hidden="true"><Flag size={22} strokeWidth={1.75} /></span>
       <span class="text"><strong>Concede the rest of this game</strong><small>{canConcede ? 'Your partner has to agree' : 'Only while cards are being played'}</small></span>
     </button>
 
     {#if voted}
       <button class="row" onclick={() => act(() => conn.intent({ type: 'cancelEndNight' }))}>
-        <span class="icon" aria-hidden="true">↩️</span>
+        <span class="icon" aria-hidden="true"><Undo2 size={22} strokeWidth={1.75} /></span>
         <span class="text"><strong>Take back my vote to end</strong><small>{votes}/4 want to end the night</small></span>
       </button>
     {:else}
       <button class="row" onclick={() => act(() => conn.intent({ type: 'voteEndNight' }))}>
-        <span class="icon" aria-hidden="true">🌙</span>
+        <span class="icon" aria-hidden="true"><Moon size={22} strokeWidth={1.75} /></span>
         <span class="text"><strong>End the night</strong><small>All four have to agree{votes ? ` · ${votes}/4 so far` : ''}</small></span>
       </button>
     {/if}
 
     {#if !conn.offline}
       <button class="row" onclick={() => act(onHistory)}>
-        <span class="icon" aria-hidden="true">📜</span>
+        <span class="icon" aria-hidden="true"><History size={22} strokeWidth={1.75} /></span>
         <span class="text"><strong>History &amp; rivals</strong><small>Head to head, partnerships, and every past game</small></span>
       </button>
     {/if}
 
     <a class="row" href="lab.html" target="_blank" rel="noopener">
-      <span class="icon" aria-hidden="true">🔊</span>
+      <span class="icon" aria-hidden="true"><AudioLines size={22} strokeWidth={1.75} /></span>
       <span class="text"><strong>Sound &amp; effects check</strong><small>Opens in a new tab</small></span>
     </a>
 
@@ -164,9 +169,11 @@
   .row:active:not(:disabled) {
     transform: scale(0.98);
   }
+  /* Lucide icons, one colour (Ryan). */
   .icon {
-    font-size: 22px;
-    text-align: center;
+    display: grid;
+    place-items: center;
+    color: var(--ink);
   }
   .text {
     display: grid;

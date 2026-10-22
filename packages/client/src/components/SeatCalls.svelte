@@ -24,7 +24,7 @@
   const KEEP = 4;
   const SEATS: Seat[] = [0, 1, 2, 3];
   const lastBid = $derived(calls.map((c) => c.call.type).lastIndexOf('bid'));
-  // The game's opening bid wears a "1st" badge (Ryan: every first gets the same mark).
+  // The game's opening bid wears the "1st" fold (Ryan: every first gets the same mark).
   const firstBid = $derived(calls.findIndex((c) => c.call.type === 'bid'));
   const bySeat = $derived(
     SEATS.map((seat) => ({
@@ -103,24 +103,18 @@
   .at-right {
     right: 0;
   }
-  /* "1st": the mark for every first (the opening bid here, the card that leads a set). */
+  /* "1st" (Ryan's pick, B4): a stone-coloured folded corner on the opening bid, no text, at the
+     top-left where the next call laid over it never covers it. */
   .tile.first::after {
-    content: '1st';
+    content: '';
     position: absolute;
-    /* Above any later call laid over this one; the tile itself stays under them. */
-    z-index: 3;
-    top: -8px;
-    left: -7px;
-  }
-  .tile.first::after {
-    padding: 1px 4px;
-    border-radius: 6px;
-    background: #141414;
-    color: #fff;
-    font: 800 8.5px/1.2 system-ui, sans-serif;
-    letter-spacing: 0.04em;
-    text-transform: uppercase;
-    box-shadow: 0 0 0 1.2px #fff;
+    top: 0;
+    left: 0;
+    width: 0;
+    height: 0;
+    border-top: 9px solid #b8b09c;
+    border-right: 9px solid transparent;
+    border-top-left-radius: 4px;
     pointer-events: none;
   }
   /* A bidding card: card-white, its player's team colour along the bottom. */

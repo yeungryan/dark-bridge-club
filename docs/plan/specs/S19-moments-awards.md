@@ -23,8 +23,9 @@ Each moment saves `{kind, deal, seat(s), payload}`. **Caption templates** are a 
 Chosen by priority with variety (no award twice in a row across sessions unless it's clearly earned):
 - **MVP:** most clinching cards played.
 - **The Wall:** most contracts set as a defender.
-- **Daredevil:** highest average contract level as declarer.
-- **Heist of the Night:** the biggest Robbery.
+- **Daredevil** ("Bid on the hope of <8 HCP and won."): the declarer held 7 or fewer HCP and made the contract. Fewest HCP wins it, then the higher contract.
+- **Heist Master** (was "Heist of the Night"; "Stole a win on standby with <8 HCP."): a player on the winning side who wasn't the declarer (the declarer's partner, or a defender when the defenders won) held 7 or fewer HCP. Fewest HCP wins it, then the higher contract.
+- **Epic Attic** ("Bid 4+ and won it."): see the house awards below.
 - **Heartbreak Hotel:** most Heartbreaks.
 - **Plus your custom awards** (M3 checkpoint): names and inside jokes you supply.
 
@@ -38,7 +39,7 @@ Each award goes to **whoever earns it** on the night, so the joke's namesake can
 
 | Award | The joke | Who earns it | Caption |
 |---|---|---|---|
-| **Epic Attic** | Kim booked a Boracay "room for 10" that was a 10 sqm attic. | Biggest overbid: the declarer whose contract went down by the most tricks. | "Booked for ten, delivered an attic. Epic attic levels na yan!" |
+| **Epic Attic** | Kim booked a Boracay "room for 10" that was a 10 sqm attic. | Ryan redefined it (round 7): no longer a roast. The declarer who bid 4 or higher and made it; the highest contract wins it. | "Darren threaded a 7+ needle: 7♠, won." |
 | **Why Don't You Blog About It** | Ryan built a whole blog for his high-school crush. | The night's most dramatic moment: the highest-drama clinch or the cruelest Heartbreak. | "Why don't you blog about that?" |
 | **Banner Moment** | Darren's whole review of his Vietnam trip: "great, they had a banner at the airport." | The most anticlimactic win: a low contract made exactly, with no drama. | "Banner moment na ba yan?" |
 | **That's 10 Dollars** | Adrian's old boss wanted to charge him for long breaks. | The player who spent the longest thinking in total tonight. This needs per-move timing, which the server will record from M3. | "Oh, 10 dollars na yan!" |
@@ -54,5 +55,5 @@ Each award goes to **whoever earns it** on the night, so the joke's namesake can
   - Each award kind appears at most once.
   - A player gets at most two awards, unless that's needed to reach three.
   - A kind given last night is skipped unless it's clearly earned again.
-- **Epic Attic** counts how far short the declarers would still be even if they had won every set that wasn't played (games stop at the clinch). A defeat qualifies when it's 2+ short or at level 4 or higher. A one-short loss on the last set is a Heartbreak, not an attic.
+- **Epic Attic, Daredevil, Heist Master (round 7, Ryan):** redefined as above. Their lines: "Threaded a 4+ needle", "Bid on 6 HCP worth of hope and won", "Robbed the table on 3 HCP". Each counts as clearly earned at level 4+ (Epic Attic) or on 3 HCP or fewer (the other two). Awards already saved keep their old wording.
 - **Award cards trimmed (Ryan):** no avatars. The house awards lead with their joke line as the headline, and the others with their name. One plain line follows: the player · the fact (e.g. "Darren · 2♠, made exactly").

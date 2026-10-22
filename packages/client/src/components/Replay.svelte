@@ -10,6 +10,7 @@
   import AnimalIcon from './AnimalIcon.svelte';
   import TableScene from './TableScene.svelte';
   import SeatCalls from './SeatCalls.svelte';
+  import { rimFor } from '../lib/avatars';
 
   // The replay (Ryan): after a game, step back through it set by set with every hand face up:
   // who led each set, who won it, and what everyone still held. Each player steps through on
@@ -139,7 +140,7 @@
         {#each step.trick.cards as play, i (play.seat)}
           <div class="spot {spotOf(play.seat, me)}" class:winner={play.seat === step.trick.winner}>
             <Card card={play.card} width={36} highlight={play.seat === step.trick.winner} />
-            {#if i === 0}<span class="first-badge lead" aria-label="led">1st</span>{/if}
+            {#if i === 0}<span class="first-fold" role="img" aria-label="led"></span>{/if}
           </div>
         {/each}
       {:else}
@@ -182,7 +183,7 @@
           onclick={() => go(i + 1)}
         >
           <span class="num">{s.decisive ? '★' : i + 1}</span>
-          <span class="slot" style="grid-row: {laneOf(w) + 3}"><AnimalIcon animal={game.animal(w)} silhouette="var(--t)" /></span>
+          <span class="slot" style="grid-row: {laneOf(w) + 3}"><AnimalIcon animal={game.animal(w)} silhouette="var(--t)" rim={rimFor(game.team(w))} /></span>
         </button>
       {/each}
     </div>
@@ -347,12 +348,6 @@
     top: 50%;
     translate: 0 -50%;
   }
-  .lead {
-    position: absolute;
-    z-index: 2;
-    top: -7px;
-    left: -7px;
-  }
   .spot.winner {
     z-index: 1;
     filter: drop-shadow(0 0 8px var(--win-glow));
@@ -434,9 +429,6 @@
       0 0 1px #fff,
       0 0 1px #fff,
       0 0 3px rgba(255, 255, 255, 0.5);
-  }
-  .set[data-team='black'] .slot {
-    filter: drop-shadow(0 0 0.7px #fff) drop-shadow(0 0 0.7px #fff);
   }
   .lane-name {
     grid-column: 1;

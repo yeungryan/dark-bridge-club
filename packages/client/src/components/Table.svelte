@@ -25,6 +25,8 @@
   import { buzz } from '../lib/juice/haptics';
   import { sound } from '../lib/juice/sound';
   import AnimalIcon from './AnimalIcon.svelte';
+  import MenuIcon from '@lucide/svelte/icons/menu';
+  import SettingsIcon from '@lucide/svelte/icons/settings';
 
   // Spec S10: you at the bottom, partner on top, the next player (counter-clockwise) on your right.
   // The top-right corner is kept clear for Messenger's floating video.
@@ -94,15 +96,10 @@
 
 <div class="table" class:decider data-turn={iDeal ? 'my-deal' : deal?.turn === me ? (deal.phase === 'auction' ? 'my-call' : deal.phase === 'play' ? 'my-play' : '') : ''}>
   <header>
-    <button class="ghost menu" aria-label="Menu" onclick={() => (menuOpen = menuOpen ? null : 'menu')}>☰</button>
+    <button class="ghost menu" aria-label="Menu" onclick={() => (menuOpen = menuOpen ? null : 'menu')}><MenuIcon size={22} strokeWidth={2} /></button>
     <h1 class="game">Game {shuffling ? view.dealNumber + 1 : view.dealNumber}</h1>
     <button class="ghost gear" aria-label="Settings" onclick={() => (menuOpen = menuOpen ? null : 'settings')}>
-      <svg viewBox="0 0 24 24" width="21" height="21" aria-hidden="true"
-        ><path
-          fill="currentColor"
-          d="M19.4 13a7.6 7.6 0 0 0 0-2l2.1-1.6-2-3.5-2.5 1a7.4 7.4 0 0 0-1.7-1L15 3.3h-4l-.4 2.6a7.4 7.4 0 0 0-1.7 1l-2.5-1-2 3.5L6.6 11a7.6 7.6 0 0 0 0 2l-2.1 1.6 2 3.5 2.5-1a7.4 7.4 0 0 0 1.7 1l.4 2.6h4l.4-2.6a7.4 7.4 0 0 0 1.7-1l2.5 1 2-3.5zM12 15.5a3.5 3.5 0 1 1 0-7 3.5 3.5 0 0 1 0 7z"
-        /></svg
-      >
+      <SettingsIcon size={21} strokeWidth={2} aria-hidden="true" />
     </button>
   </header>
 
@@ -244,8 +241,10 @@
     text-shadow: 0 1px 6px rgba(0, 0, 0, 0.6);
   }
   .menu {
-    font-size: 1.3rem;
+    display: grid;
+    place-items: center;
     padding: 0 12px;
+    color: var(--ink);
   }
   .gear {
     display: grid;
@@ -371,7 +370,7 @@
     aspect-ratio: 1 / 1;
     container-type: inline-size;
   }
-  /* "Going once / twice": a small stamp in the middle of the table, narrow enough to sit between
+  /* "Going once / twice": counting down the leading bid, so it's gold in every theme. A small stamp in the middle of the table, narrow enough to sit between
      the side seats' calls. */
   .going {
     position: absolute;
@@ -384,14 +383,14 @@
     gap: 1px;
     padding: min(5px, 3cqw) min(8px, 4.5cqw) min(6px, 3.5cqw);
     border-radius: min(12px, 7cqw);
-    background: var(--accent);
-    color: var(--accent-ink);
+    background: var(--win);
+    color: #1d1a10;
     line-height: 1;
     text-transform: uppercase;
     white-space: nowrap;
     box-shadow:
       0 4px 14px rgba(0, 0, 0, 0.45),
-      0 0 18px var(--accent-glow);
+      0 0 18px var(--win-glow);
     animation: going-in calc(var(--spring-pop-ms, 380ms) * var(--speed)) var(--spring-pop, cubic-bezier(0.3, 1.6, 0.6, 1)) backwards;
   }
   .going small {
