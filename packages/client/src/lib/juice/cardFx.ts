@@ -219,6 +219,8 @@ function slice(card: HTMLElement, th: number): void {
   for (const s of [1, -1]) {
     const piece = card.cloneNode(true) as HTMLElement;
     piece.style.cssText += `position:absolute;left:${card.offsetLeft}px;top:${card.offsetTop}px;clip-path:${half(s)};margin:0;filter:drop-shadow(0 1px 1px rgba(0,0,0,.5));`;
+    // A finisher finds the halves by this (the card itself is hidden).
+    piece.dataset.piece = '1';
     parent.appendChild(piece);
     // Each half slides along the cut in opposite directions and drifts apart a little.
     const along = s * rand(4, 7);

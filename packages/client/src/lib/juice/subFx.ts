@@ -18,12 +18,12 @@ export interface Ctx {
 }
 type Attack = (win: HTMLElement, losers: HTMLElement[], ctx: Ctx) => void;
 
-const BOLT = ['#eaf6ff', '#9fd6ff', '#4aa3ff', '#6f8bff'];
+export const BOLT = ['#eaf6ff', '#9fd6ff', '#4aa3ff', '#6f8bff'];
 const SOUND = ['#fff6cf', '#f4d27a', '#ffffff'];
 const ICE = ['#e8fbff', '#a8e6ff', '#6cc7f0'];
 const METAL = ['#f2f4f7', '#c3c9d2', '#8a929e', '#ffcf8a'];
 
-const angle = (a: Pt, b: Pt) => Math.atan2(b.y - a.y, b.x - a.x);
+export const angle = (a: Pt, b: Pt) => Math.atan2(b.y - a.y, b.x - a.x);
 
 /** A jagged line from a to b. */
 function zigzag(a: Pt, b: Pt, segments: number, jitter: number): Pt[] {
@@ -34,7 +34,7 @@ function zigzag(a: Pt, b: Pt, segments: number, jitter: number): Pt[] {
     return { x: a.x + (b.x - a.x) * t + Math.cos(n) * j, y: a.y + (b.y - a.y) * t + Math.sin(n) * j };
   });
 }
-function bolt(a: Pt, b: Pt, opts: { size?: number; max?: number; delay?: number; color?: string; branches?: number } = {}): void {
+export function bolt(a: Pt, b: Pt, opts: { size?: number; max?: number; delay?: number; color?: string; branches?: number } = {}): void {
   const pts = zigzag(a, b, 8, 9);
   fx([{ shape: 'bolt', x: b.x, y: b.y, points: pts, max: opts.max ?? 12, delay: opts.delay ?? 0, size: opts.size ?? 2.6, color: opts.color ?? BOLT[2]! }]);
   for (let k = 0; k < (opts.branches ?? 2); k++) {
@@ -291,7 +291,7 @@ const bassDrop: Attack = (win, losers, { shake }) => {
 
 // ── Ice ──────────────────────────────────────────────────────────────────────────────────────
 
-const frostBg = `radial-gradient(circle at 30% 25%, rgba(255,255,255,.75), transparent 30%), repeating-conic-gradient(from 10deg at 50% 50%, rgba(232,251,255,.55) 0 6deg, rgba(168,230,255,.25) 6deg 14deg), linear-gradient(160deg, rgba(232,251,255,.65), rgba(108,199,240,.45))`;
+export const frostBg = `radial-gradient(circle at 30% 25%, rgba(255,255,255,.75), transparent 30%), repeating-conic-gradient(from 10deg at 50% 50%, rgba(232,251,255,.55) 0 6deg, rgba(168,230,255,.25) 6deg 14deg), linear-gradient(160deg, rgba(232,251,255,.65), rgba(108,199,240,.45))`;
 
 /** A: a freezing beam; frost spreads over each card and seals it in a block of ice. */
 const deepFreeze: Attack = (win, losers) => {

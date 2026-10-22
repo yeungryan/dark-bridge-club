@@ -1,8 +1,9 @@
 <script lang="ts">
   import type { Card as CardT } from '@dark/engine';
-  import { airAttack, earthAttack, fireAttack, holdStill, waterAttack } from '../lib/juice/cardFx';
+  import { airAttack, at, earthAttack, fireAttack, holdStill, waterAttack } from '../lib/juice/cardFx';
   import { clearEffects } from '../lib/juice/particles';
   import { SUB_SETS } from '../lib/juice/subFx';
+  import { FINISH, powerUp } from '../lib/juice/finishFx';
   import { sound, __renderSequenceForTest } from '../lib/juice/sound';
   import Card from './Card.svelte';
   import Particles from './Particles.svelte';
@@ -27,11 +28,14 @@
     ['ice', 2],
     ['metal', 1],
   ];
-  const picks = params.get('set') === 'picks';
+  // ?set=finish1 / finish2: the game-winning set for batch 1's / batch 2's picks: the attack,
+  // then that element's finisher.
+  const finish = params.get('set') === 'finish1' ? 1 : params.get('set') === 'finish2' ? 2 : 0;
+  const picks = params.get('set') === 'picks' || finish > 0;
   const rows: { id: string; title: string; note: string; i?: number; sub?: string }[] = picks
     ? [
-        ...ROWS,
-        ...PICKS.map(([k, i]) => ({ id: `${k}${i}`, title: `${SUB_SETS[k]!.title.split(' (')[0]} · ${SUB_SETS[k]!.options[i]!.name}`, note: SUB_SETS[k]!.options[i]!.note, i, sub: k })),
+        ...(finish === 2 ? [] : ROWS),
+        ...(finish === 1 ? [] : PICKS).map(([k, i]) => ({ id: `${k}${i}`, title: `${SUB_SETS[k]!.title.split(' (')[0]} · ${SUB_SETS[k]!.options[i]!.name}`, note: SUB_SETS[k]!.options[i]!.note, i, sub: k })),
       ]
     : sub
       ? sub.options.map((o, i) => ({ id: `sub${i}`, title: `${o.label} · ${o.name}`, note: o.note, i }))
@@ -54,6 +58,11 @@
     const shake = (px: number) => cell.animate([0, 1, 2, 3, 4].map((k) => ({ transform: `translate(${k % 2 ? px : -px}px, ${(k % 3) - 1}px)` })).concat([{ transform: 'none' }]), { duration: 160 });
     const id = rows[i]!.id;
     const ctx = { under: cell.querySelector<HTMLElement>('.under')!, shake };
+    if (finish) {
+      const key = rows[i]!.sub ?? id;
+      powerUp(win!);
+      at(1000, () => FINISH[key]?.(win!, losers, ctx));
+    }
     if (rows[i]!.sub) SUB_SETS[rows[i]!.sub!]!.options[rows[i]!.i!]!.play(win!, losers, ctx);
     else if (sub) sub.options[rows[i]!.i!]!.play(win!, losers, ctx);
     else if (id === 'fire') fireAttack(win!, losers);
@@ -152,7 +161,7 @@
 {#if flash}<div class="sync"></div>{/if}
 <main>
   <header>
-    <h1>{sub ? sub.title : picks ? 'Your picks · set won, with sound' : 'Set won · the element attacks the losing cards'}</h1>
+    <h1>{finish ? `Game-winning set · batch ${finish}: the attack, then the finisher` : sub ? sub.title : picks ? 'Your picks · set won, with sound' : 'Set won · the element attacks the losing cards'}</h1>
     <button onclick={playAll}>Play all</button>
     <button onclick={reset}>Reset</button>
   </header>
