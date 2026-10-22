@@ -40,6 +40,8 @@ type Link = Pick<Connection, 'view' | 'room' | 'onEvents'>;
 const TRUMP_COLOR = '#c58bff';
 /** How long after the attack hits that a streak stamp lands (ms, before the speed setting). */
 const STAMP_DELAY = 200;
+/** On a game-winning set, how long after the finisher the streak stamp lands. */
+const STAMP_AFTER_FINISH = 200;
 /** The theme's accent (gold in the Clubhouse). */
 const gold = () => cssColor('--accent', '#e8c25a');
 
@@ -253,7 +255,29 @@ class Director {
         const scan = settings.animated ? settings.ms(TIMING.scan) : 0;
         setTimeout(() => this.playClinch(m, conn), fly + scan);
         const pause = settings.animated ? settings.ms(RESPONSES[5].hitPauseMs) : 0;
-        this.lastSetMs = Math.max(this.lastSetMs, fly + scan + pause + (settings.motion ? settings.ms(TIMING.gameWonFx) : 0));
+        const finished = fly + scan + pause + (settings.motion ? settings.ms(TIMING.gameWonFx) : 0);
+        this.lastSetMs = Math.max(this.lastSetMs, finished);
+        // Ryan (round 10): a game-winning set that also extends a streak gets its stamp too, just
+        // after the finisher; it shrinks into the scoreboard, where the "×n" stays. The results
+        // wait for it (lastSetMs).
+        const run = streak(conn.view?.deal?.trickWinners ?? []);
+        const name = streakName(run);
+        if (name) {
+          const dealNumber = conn.view?.dealNumber;
+          const mySeat = conn.view?.mySeat ?? null;
+          const mine = mySeat !== null && (m.seat - mySeat) % 2 === 0;
+          const at = finished + settings.ms(STAMP_AFTER_FINISH);
+          const hold = settings.animated ? settings.ms(TIMING.trickHold) : 900;
+          const flyMs = settings.ms(TIMING.orbFly);
+          setTimeout(() => {
+            if (conn.view?.dealNumber !== dealNumber) return;
+            this.slamStamp(conn, m.seat, m.side, run, name, mine, hold);
+            setTimeout(() => {
+              if (conn.view?.dealNumber === dealNumber) this.combo = { side: m.side, n: run, id: ++this.fxId };
+            }, hold + flyMs);
+          }, at);
+          this.lastSetMs = Math.max(this.lastSetMs, at + hold + flyMs);
+        }
         break;
       }
       case 'nightEnded':
