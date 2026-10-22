@@ -45,6 +45,8 @@ import {
   type ScheduleAction,
   applyChangeAction,
   carryForward,
+  perSeat,
+  type CompletedTrick,
   emptyCarried,
   emptyChangeQueue,
   KEEP_GAMES,
@@ -456,13 +458,16 @@ export class TableRoom extends DurableObject<Env> {
    *  away the hands of the games still to come tonight). */
   private savedNight(row: SessionRow): SavedNight {
     const games = this.sql
-      .exec<{ record_json: string; replayable: number }>(
-        'SELECT record_json, hands_json IS NOT NULL AS replayable FROM deals WHERE session_id = ? ORDER BY deal_number',
+      .exec<{ record_json: string; replayable: number; tricks_json: string | null }>(
+        'SELECT record_json, hands_json IS NOT NULL AS replayable, tricks_json FROM deals WHERE session_id = ? ORDER BY deal_number',
         row.id,
       )
       .toArray()
       .map((g): SavedGame => {
         const record = JSON.parse(g.record_json) as DealRecord;
+        // Ryan (round 10): each set counts for the player whose card won it.
+        const tricks = g.tricks_json ? (JSON.parse(g.tricks_json) as CompletedTrick[]) : null;
+        const setsBySeat = tricks ? perSeat((seat) => tricks.filter((t) => t.winner === seat).length) : null;
         return {
           dealNumber: record.dealNumber,
           dealer: record.dealer,
@@ -471,6 +476,7 @@ export class TableRoom extends DurableObject<Env> {
           winningPair: record.winningPair,
           replayable: g.replayable === 1,
           seating: record.seating ?? null,
+          setsBySeat,
         };
       });
     const avatarRows = this.sql

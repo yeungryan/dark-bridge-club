@@ -34,8 +34,10 @@
   const pct = (won: number, played: number) => (played ? Math.round((won / played) * 100) : 0);
 
   // Only the noteworthy awards, as icons with counts (Ryan).
-  const CHIPS: AwardKind[] = ['wall', 'epicAttic', 'heist', 'daredevil'];
-  const chips = $derived(CHIPS.filter((k) => (s.awards[k] ?? 0) > 0).map((k) => ({ k, emoji: AWARDS[k].emoji, title: AWARDS[k].title, n: s.awards[k]! })));
+  const CHIPS: AwardKind[] = ['wall', 'epicAttic', 'heist', 'daredevil', 'sanitationEngineer', 'engineerSanitation'];
+  const chips = $derived(
+    CHIPS.filter((k) => (s.awards[k] ?? 0) > 0).map((k) => ({ k, emoji: AWARDS[k].emoji, flip: !!AWARDS[k].flip, title: AWARDS[k].title, n: s.awards[k]! })),
+  );
 
   const suits = $derived(shares(s.strains));
   const levels = $derived(shares(s.levels).filter((l) => l.pct > 0));
@@ -61,7 +63,7 @@
   <div>
     <div class="n">
       {name(profile)}
-      {#each chips as c (c.k)}<span class="aw" title="{c.title} ×{c.n}"><span aria-hidden="true">{c.emoji}</span> <b>×{c.n}</b></span>{/each}
+      {#each chips as c (c.k)}<span class="aw" title="{c.title} ×{c.n}"><span aria-hidden="true" style={c.flip ? 'display: inline-block; rotate: 180deg' : undefined}>{c.emoji}</span> <b>×{c.n}</b></span>{/each}
     </div>
     <div class="sub">{s.nights} {s.nights === 1 ? 'night' : 'nights'}{#if s.since}&nbsp;· since {shortDate(s.since)}{/if}</div>
   </div>

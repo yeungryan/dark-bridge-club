@@ -60,14 +60,14 @@ describe('S02 auction', () => {
     expect(seatToAct(s)).toBe(next(s.contract!.declarer));
   });
 
-  it('house rule R4 (Ryan, round 10): in a no-trump contract the dealer leads first, whoever declares', () => {
+  it('house rule R4 (Ryan, round 10): in a no-trump contract declarer leads first', () => {
     for (const dealer of [0, 1, 2, 3] as const) {
       for (const opener of [0, 1, 2, 3]) {
         // Pass round to the opener, then 1NT and three passes.
         const passes = (opener - next(dealer) + 4) % 4;
         const s = runAuction(newDeal(SEED, dealer), [...Array(passes).fill(PASS), bid(1, 'NT'), PASS, PASS, PASS]);
         expect(s.contract!.declarer).toBe(opener);
-        expect(s.currentTrick!.leader).toBe(dealer);
+        expect(s.currentTrick!.leader).toBe(opener);
       }
     }
   });

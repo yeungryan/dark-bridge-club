@@ -21,11 +21,14 @@
     { key: 'defending', label: 'Defending W–L' },
   ];
 
-  // The award tracker (Ryan): three awards, each with what it means in a few words.
+  // The award tracker (Ryan): each award with what it means in a few words. Three show at a
+  // time; swipe left past Heist Master for the two sweeps (round 10).
   const TRACKED: { kind: AwardKind; means: string }[] = [
-    { kind: 'epicAttic', means: 'Bid 4+ and won it.' },
-    { kind: 'daredevil', means: 'Bid on the hope of <8 HCP and won.' },
-    { kind: 'heist', means: 'Stole a win on standby with <8 HCP.' },
+    { kind: 'epicAttic', means: 'Bid 4+ and won.' },
+    { kind: 'daredevil', means: 'Bid with <8 HCP and won.' },
+    { kind: 'heist', means: 'Stood by with <8 HCP and still won.' },
+    { kind: 'sanitationEngineer', means: 'Bid and swept all sets.' },
+    { kind: 'engineerSanitation', means: 'Stood by and still swept all sets.' },
   ];
 
   const animals = $derived(animalRecords(ids, nights, carried));
@@ -52,12 +55,12 @@
 <p class="note">Declaring and Defending rank by games played in that role.</p>
 
 <h3>Awards</h3>
-<div class="awards">
+<div class="awards" aria-label="Awards (swipe for more)">
   {#each TRACKED as t (t.kind)}
     {@const counts = awardCounts(t.kind, all)}
     {@const lead = counts[0]!}
     <div class="award">
-      <span class="wm" aria-hidden="true">{AWARDS[t.kind].emoji}</span>
+      <span class="wm" class:flip={AWARDS[t.kind].flip} aria-hidden="true">{AWARDS[t.kind].emoji}</span>
       <span class="an">{AWARDS[t.kind].title}</span>
       <span class="means">{t.means}</span>
       <span class="x">{lead.count}</span>
@@ -161,18 +164,32 @@
   .nowrap {
     white-space: nowrap;
   }
-  /* T5: the count as a huge number, the award's icon large behind it. */
+  /* T5: the count as a huge number, the award's icon large behind it. Three tiles across, the
+     rest a swipe away. Every tile shares one set of rows (subgrid), so the big numbers, leaders
+     and runners-up line up however long each description is (Ryan, round 10). */
   .awards {
     display: grid;
-    grid-template-columns: repeat(3, 1fr);
-    gap: 8px;
+    grid-auto-flow: column;
+    grid-auto-columns: calc((100% - 16px) / 3);
+    grid-template-rows: repeat(5, auto);
+    column-gap: 8px;
+    overflow-x: auto;
+    overscroll-behavior-x: contain;
+    scroll-snap-type: x mandatory;
+    scrollbar-width: none;
+  }
+  .awards::-webkit-scrollbar {
+    display: none;
   }
   .award {
     position: relative;
     overflow: hidden;
     display: grid;
+    grid-row: span 5;
+    grid-template-rows: subgrid;
     align-content: start;
-    gap: 2px;
+    row-gap: 2px;
+    scroll-snap-align: start;
     min-height: 168px;
     padding: 10px 8px;
     border-radius: 14px;
@@ -189,6 +206,10 @@
     font-size: 72px;
     line-height: 1;
     opacity: 0.25;
+  }
+  /* Engineer Sanitation's broom, upside down. */
+  .flip {
+    rotate: 180deg;
   }
   .an {
     font: 700 12px var(--font-name);

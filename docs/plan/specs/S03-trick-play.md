@@ -5,7 +5,7 @@
 Card play with **no dummy** and **counter-clockwise** order (R4, R5).
 
 ## Behaviour
-- **The opening lead is made by `next(declarer)`** (the player on declarer's right), **except in no-trumps, where the dealer leads** (Ryan, round 10), even when the dealer is the declarer or their partner.
+- **The opening lead is made by `next(declarer)`** (the player on declarer's right), **except in no-trumps, where declarer leads** (Ryan, round 10).
 - Each trick: the leader plays first, then `next()` three times. So on trick 1 the order is: declarer's right → declarer's partner → declarer's left → **declarer plays last**.
 - **Follow suit:** if you hold the suit led, you must play it. Otherwise any card is legal.
 - **Trick winner:** the highest trump if any trump was played (trumps = the contract's strain; none in NT), otherwise the highest card of the suit led.

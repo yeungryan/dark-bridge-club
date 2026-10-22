@@ -21,7 +21,8 @@ export interface PlayerStats {
   /** Finished nights played, and when the first one was. */
   readonly nights: number;
   readonly since: number | null;
-  /** Sets (tricks) taken by your side, of all the sets played in your games. */
+  /** Sets (tricks) won by your own card (Ryan, round 10: not your partner's), of all the sets
+   *  played in your games. */
   readonly sets: { readonly won: number; readonly played: number };
   /** Games won by your pair, of the games played out or conceded (pass-outs aside). */
   readonly games: { readonly won: number; readonly played: number };
@@ -120,7 +121,7 @@ function countPlayer(profile: ProfileId, profiles: readonly ProfileId[], nights:
       }
       if (seat === null || !g.contract || !g.result) continue;
       const declarerSide = seat % 2 === g.contract.declarer % 2;
-      sets.won += declarerSide ? g.result.declarerTricks : g.result.defenderTricks;
+      sets.won += g.setsBySeat?.[seat] ?? 0;
       sets.played += g.result.declarerTricks + g.result.defenderTricks;
       if (seat === g.contract.declarer) {
         strains[g.contract.strain]++;

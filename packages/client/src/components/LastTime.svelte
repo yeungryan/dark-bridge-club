@@ -38,7 +38,7 @@
     {/if}
     {#if award}
       {@const text = awardText(award, profiles)}
-      <p class="award"><span aria-hidden="true">{text.emoji}</span> <b>{text.headline}</b> {text.line}</p>
+      <p class="award"><span aria-hidden="true" style={text.flip ? 'display: inline-block; rotate: 180deg' : undefined}>{text.emoji}</span> <b>{text.headline}</b> {text.line}</p>
     {/if}
     <button class="ghost more" onclick={onHistory}>History &amp; rivals ›</button>
   </section>

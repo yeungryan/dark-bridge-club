@@ -44,15 +44,13 @@
   {#if contract}
     <!-- The hero: the contract, and who declared it. Tap for the auction. -->
     {#key director.contractPulse}
-      <button class="ghost contract" onclick={onAuction} aria-label="Contract (tap for the bidding)">
+      <button class="ghost contract" onclick={onAuction} aria-label="Contract (tap for the auction)">
         <span class="bid"><CallText call={{ type: 'bid', level: contract.level, strain: contract.strain }} /></span>
         <span class="by">
           <!-- The declarer's animal as a silhouette the height of the name (Ryan), like the set icons. -->
           <AnimalIcon animal={avatarAtSeat(conn, contract.declarer)?.animal} silhouette={teamColor(conn, contract.declarer)} rim={rimOf(contract.declarer)} size="1.05em" />
           {nameAtSeat(view, profiles, contract.declarer)}
         </span>
-        <!-- Tap for the bidding, in order (round 10: say so, it wasn't findable). -->
-        <span class="bids" aria-hidden="true">bids ▾</span>
         {#if director.contractPulse > 0}<span class="sold" aria-hidden="true">Sold!</span>{/if}
       </button>
     {/key}
@@ -148,15 +146,6 @@
     font-size: 13px;
     line-height: 1;
     color: var(--ink-dim);
-  }
-  .bids {
-    font-size: 9px;
-    font-weight: 700;
-    letter-spacing: 0.08em;
-    text-transform: uppercase;
-    line-height: 1;
-    color: var(--ink-dim);
-    opacity: 0.8;
   }
   @keyframes stamp {
     from {

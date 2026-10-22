@@ -30,7 +30,8 @@ describe('S04 clinch', () => {
     });
 
     it(`level ${level}: a defeated contract clinches on trick ${defenderTarget(level)}`, () => {
-      let s = runAuction(newDealWithHands(hands, 3), [bid(level, 'NT'), PASS, PASS, PASS]);
+      // Clubs by seat 0: seat 3 holds every trump, so the defenders win every set.
+      let s = runAuction(newDealWithHands(hands, 3), [bid(level, 'C'), PASS, PASS, PASS]);
       s = playUntil(s, toChoice);
       expect(s.clinch).toMatchObject({ side: 'defenders', trickNumber: defenderTarget(level) });
     });
@@ -58,8 +59,9 @@ describe('S04 clinch', () => {
   });
 
   it('the result cannot change after the clinch, even when played out', () => {
-    // Declarers are defeated early in 4NT, then win nothing either way: result stays "defeated".
-    let s = runAuction(newDealWithHands(hands, 3), [bid(4, 'NT'), PASS, PASS, PASS]);
+    // Declarers are defeated early in 4♣ (seat 3 holds every club), then win nothing either way:
+    // result stays "defeated".
+    let s = runAuction(newDealWithHands(hands, 3), [bid(4, 'C'), PASS, PASS, PASS]);
     s = playUntil(s, toChoice);
     s = act(s, { type: 'playOn', seat: 0 });
     s = playUntil(s, toChoice);

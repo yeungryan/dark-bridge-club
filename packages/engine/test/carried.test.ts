@@ -19,6 +19,13 @@ function game(n: number, declarer: Seat, level: Level, strain: Strain, tricks: n
     result: { winner: made ? 'declarers' : 'defenders', reason: made ? 'made' : 'defeated', declarerTricks: tricks, defenderTricks: 13 - tricks, playedOut: true, overUnder: tricks - level - 6 },
     winningPair: made ? declarerPair : declarerPair === 'A' ? 'B' : 'A',
     replayable: true,
+    // Each side's sets split between its two players, the declarer (or first defender) taking more.
+    setsBySeat: {
+      [declarer]: Math.ceil(tricks / 2),
+      [(declarer + 2) % 4]: Math.floor(tricks / 2),
+      [(declarer + 1) % 4]: Math.ceil((13 - tricks) / 2),
+      [(declarer + 3) % 4]: Math.floor((13 - tricks) / 2),
+    } as SavedGame['setsBySeat'],
     ...extra,
   };
 }
@@ -102,6 +109,7 @@ describe('carrying deleted games forward (Ryan: keep 300 games, stats stack fore
   it('(control) without the carried totals the numbers really would drop', () => {
     const { kept } = prune(history, 6);
     expect(playerStats('ryan', P, kept)).not.toEqual(playerStats('ryan', P, history));
+    expect(playerStats('ryan', P, history).sets.won).toBeGreaterThan(0);
     expect(headToHead(P, kept)).not.toEqual(headToHead(P, history));
   });
 

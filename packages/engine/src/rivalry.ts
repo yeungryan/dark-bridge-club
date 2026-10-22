@@ -23,6 +23,9 @@ export interface SavedGame {
   readonly replayable: boolean;
   /** Who sat where for this game (seats swap every few games); absent: the night's seating. */
   readonly seating?: PerSeat<ProfileId> | null;
+  /** Sets won by each seat's own card (Ryan, round 10: a set counts for the player who won it,
+   *  not their partner). From the saved sets; absent when they weren't kept. */
+  readonly setsBySeat?: PerSeat<number> | null;
 }
 
 /** The night's top award, for the "Last time…" line (kind, who, its facts). */

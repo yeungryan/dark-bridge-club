@@ -67,6 +67,8 @@ const SUITS4 = suitHands({ 0: 'S', 1: 'H', 2: 'D', 3: 'C' });
 
 /** Darren (seat 0) makes 1♠ exactly at the clinch: no moments. Pair B wins. */
 const oneSpade = (n: number, opts = {}) => game(n, SUITS4, [bid(1, 'S'), PASS, PASS, PASS], opts);
+/** Darren bids 1♣ into seat 3's every club, and it's played out: the defenders win all 13 sets. */
+const clubSweep = (n: number) => game(n, SUITS4, [bid(1, 'C'), PASS, PASS, PASS], { playOn: true });
 /** Darren makes 6♠ (clinched on trick 12, led in trumps). Pair B wins. */
 const sixSpades = (n: number) => game(n, SUITS4, [bid(6, 'S'), PASS, PASS, PASS]);
 /** Adrian (seat 2) bids 7♥; Ryan leads ♣A, Kim ruffs with ♥A: clinched on trick 1. Pair A wins. */
@@ -422,6 +424,7 @@ describe('captions', () => {
     trumpOver(10),
     trumpOver(11),
     hope(12),
+    clubSweep(13),
   ]);
   const everyone = Object.values(SEATING);
   const others = (ids: readonly ProfileId[]) => everyone.filter((p) => !ids.includes(p)).map(name);
@@ -453,6 +456,16 @@ describe('captions', () => {
       expect(text.startsWith(name(c.profile))).toBe(true);
       for (const other of others([c.profile])) expect(text).not.toContain(other);
     }
+  });
+
+  it('a clean sweep (Ryan, round 10): all 13 sets, to the partner whose own cards won more of them', () => {
+    const by = Object.fromEntries(awardCandidates(rich).map((c) => [c.kind, c]));
+    // Game 13: the defenders (seats 1 and 3) won all 13; seat 3 held every club, so every set.
+    expect(by.engineerSanitation?.profile).toBe(SEATING[3]);
+    expect(AWARDS.engineerSanitation.caption(by.engineerSanitation!, name)).toBe(`${name(SEATING[3])} swept all 13 sets against 1♣. They bid it. We binned it.`);
+    // 7♠ made with all 13 (a game in this night): declarer's side swept.
+    expect(by.sanitationEngineer).toBeDefined();
+    expect(AWARDS.engineerSanitation.flip).toBe(true);
   });
 
   it("house awards keep Ryan's exact lines", () => {

@@ -22,7 +22,7 @@ export function momentCaption(m: Moment, profiles: readonly ProfileInfo[]): stri
 }
 
 /** An award card (Ryan: trim the fat): the joke (or the award's name) as the headline, then one plain line. */
-export function awardText(a: Award, profiles: readonly ProfileInfo[]): { headline: string; emoji: string; title: string; line: string } {
+export function awardText(a: Award, profiles: readonly ProfileInfo[]): { headline: string; emoji: string; flip: boolean; title: string; line: string } {
   const def = AWARDS[a.kind];
-  return { headline: def.headline ?? def.title, emoji: def.emoji, title: def.title, line: `${profileOf(profiles, a.profile).name} · ${def.detail(a)}` };
+  return { headline: def.headline ?? def.title, emoji: def.emoji, flip: !!def.flip, title: def.title, line: `${profileOf(profiles, a.profile).name} · ${def.detail(a)}` };
 }

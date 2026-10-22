@@ -80,7 +80,7 @@
         {@const text = awardText(award, profiles)}
         {@const p = profileOf(profiles, award.profile)}
         <article class="award" bind:this={cards[i]} style="--c: {p.color}; --tilt: {i ? 2 : -2}deg" aria-label={text.title}>
-          <span class="emoji" aria-hidden="true">{text.emoji}</span>
+          <span class="emoji" aria-hidden="true" style={text.flip ? 'display: inline-block; rotate: 180deg' : undefined}>{text.emoji}</span>
           <h4>{text.headline}</h4>
           <p class="who">{text.line}</p>
         </article>

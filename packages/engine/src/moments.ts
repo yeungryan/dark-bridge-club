@@ -59,6 +59,8 @@ export type AwardKind =
   | 'wall'
   | 'daredevil'
   | 'heist'
+  | 'sanitationEngineer'
+  | 'engineerSanitation'
   | 'heartbreakHotel'
   | 'epicAttic'
   | 'blogAboutIt'
@@ -345,6 +347,8 @@ export const AWARD_ORDER: readonly AwardKind[] = [
   'bannerMoment',
   'tenDollars',
   'heist',
+  'sanitationEngineer',
+  'engineerSanitation',
   'mvp',
   'heartbreakHotel',
   'wall',
@@ -361,6 +365,8 @@ export const STRONG_AT: Readonly<Record<AwardKind, number>> = {
   wall: 4, // contracts set
   daredevil: 5, // 8 − the declarer's HCP (3 or fewer is clearly earned)
   heist: 5, // 8 − the winner's HCP (3 or fewer is clearly earned)
+  sanitationEngineer: 13, // all 13 sets: always clearly earned
+  engineerSanitation: 13,
   heartbreakHotel: 2, // heartbreaks
   epicAttic: 4, // contract level (any made 4+ contract is clearly earned)
   blogAboutIt: 4, // drama points (e.g. a Decider that was also a Heartbreak)
@@ -436,6 +442,9 @@ class Tally {
  *   grandAmbition 1, robbery 1; ties → the later game), to whoever played its clinching card. Needs 2+.
  * - bannerMoment: 10 − 4 × tricks to spare − level, for a level ≤ 2 contract made with no
  *   moments at all and at most one trick to spare; the declarer earns it.
+ * - sanitationEngineer / engineerSanitation (Ryan, round 10): the declaring side / the defending
+ *   side won all 13 sets (sets won after playing on count). Partners tie by definition; the one
+ *   whose own cards won more of them gets it. Score 13.
  * - tenDollars: total thinking seconds. Needs 60 s+ and at least 20% more than the median player.
  * Remaining ties: the earlier achiever, then seat order.
  */
@@ -453,6 +462,7 @@ export function awardCandidates(night: NightHistory): Award[] {
   const attics: (Entry & { payload: Award['payload'] })[] = [];
   const blogs: (Entry & { payload: Award['payload'] })[] = [];
   const banners: (Entry & { payload: Award['payload'] })[] = [];
+  const sweeps: Record<Side, (Entry & { payload: Award['payload'] })[]> = { declarers: [], defenders: [] };
 
   night.deals.forEach((deal, i) => {
     const contract = deal.contract;
@@ -480,6 +490,11 @@ export function awardCandidates(night: NightHistory): Award[] {
       if (contract.level >= 4) attics.push({ profile: declarer, keys: [contract.level, -i], payload: facts });
       const h = hcpOf?.(contract.declarer);
       if (h !== undefined && h <= 7) daredevils.push({ profile: declarer, keys: [8 - h, contract.level, -i], payload: { hcp: h, ...facts } });
+    }
+    // A clean sweep: one side won all 13 sets.
+    const swept = deal.result?.declarerTricks === 13 ? 'declarers' : deal.result?.defenderTricks === 13 ? 'defenders' : null;
+    if (swept) {
+      for (const s of sideSeats(contract, swept)) sweeps[swept].push({ profile: who(s), keys: [13, r ? r.tricksBySeat[s] : 0, -i], payload: facts });
     }
     // Heist Master: anyone else on the winning side, on 7 or fewer HCP.
     if (winner && hcpOf) {
@@ -526,6 +541,8 @@ export function awardCandidates(night: NightHistory): Award[] {
   };
   pick('daredevil', daredevils);
   pick('heist', heists);
+  pick('sanitationEngineer', sweeps.declarers);
+  pick('engineerSanitation', sweeps.defenders);
 
   const hbBest = best(heartbreaks.entries(), night);
   push('heartbreakHotel', hbBest, (e) => ({ heartbreaks: e.keys[0]! }));

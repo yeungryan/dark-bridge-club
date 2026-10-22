@@ -53,3 +53,9 @@ History has three tabs: **Rivals · Players · Nights** (Ryan merged the separat
 - **A score set by hand** only takes in nights begun after it (as before); setting one drops what was carried for that matchup, since the new score includes it.
 - **"Start again from 0–0" resets everything** once all four approve: every matchup, every player card, the leaderboard and award counts. The night log and replays stay. Only nights begun after the reset count from then on.
 - Indexes on awards and moments by night, and on games by age, keep it quick.
+
+## Round 10 (Ryan)
+- **Sets won counts your own card only.** A set counts for the player whose card won it, not their partner. Worked out from each game's saved sets (`setsBySeat`); a conceded game's unplayed sets count for nobody. "Of N" on the player card is still every set played in your games.
+- **Two sweep awards**, after Heist Master in the award tracker (swipe left): **Sanitation Engineer** 🧹 ("Bid and swept all sets."): the declaring side won all 13 sets; **Engineer Sanitation** 🧹 upside down ("Stood by and still swept all sets."): the defending side did. Sets won after playing on count. One per night each, to whichever partner's own cards won more of the 13. Captions: "Spotless. Not one set left on the floor." and "They bid it. We binned it."
+- **Award tracker wording:** Epic Attic "Bid 4+ and won.", Daredevil "Bid with <8 HCP and won.", Heist Master "Stood by with <8 HCP and still won."
+- **The tiles line up:** every tile shares one set of rows, so the big numbers, leaders and runners-up align whatever the description's length. Three show at a time; swipe for the rest.
