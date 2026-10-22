@@ -45,7 +45,7 @@ describe('S16 intensity scale', () => {
     expect(intensityOf({ ...trick, trump: true, firstTrump: true })).toBe(4);
     expect(intensityOf({ kind: 'contractSet', declarer: 0 })).toBe(3);
     expect(intensityOf({ kind: 'decider' })).toBe(4);
-    expect(intensityOf({ kind: 'clinch', side: 'defenders', seat: 1, card: { suit: 'S', rank: 2 }, drama: 0 })).toBe(5);
+    expect(intensityOf({ kind: 'clinch', side: 'defenders', seat: 1, card: { suit: 'S', rank: 2 }, drama: 0, trumpOver: false })).toBe(5);
   });
 
   it('clinch drama adds one for a decider, a slam and a trump-over, capped at 3', () => {

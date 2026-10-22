@@ -108,8 +108,11 @@ test('a whole deal by dragging cards: every beat of the feel ladder fires', asyn
   await expect.poll(async () => soundCount(page, 'clinch'), { timeout: 3000 }).toBeGreaterThan(0);
   // (Counted since the page opened: a whole game plays more sounds than the recent-sounds list keeps.)
   for (const beat of ['card', 'pass', 'sold', 'sweep', 'pip', 'clinch']) expect(await soundCount(page, beat), `missing "${beat}"`).toBeGreaterThan(0);
-  // Somebody took the lead of a trick at some point in 13 tricks... unless every trick was won by its opening lead.
-  expect((await soundCount(page, 'lead')) + (await soundCount(page, 'trumpIn'))).toBeGreaterThan(0);
+  // Every set won plays the winner's element attack (S24): its sound at each impact on the losing cards.
+  const hits = ['fireHit', 'airCut', 'waterHole', 'earthHit', 'boltZap', 'crumple', 'iceTink', 'bladeSlash'];
+  let attacks = 0;
+  for (const name of hits) attacks += await soundCount(page, name);
+  expect(attacks, 'no set-won attack was heard').toBeGreaterThan(0);
 });
 
 test('Tap twice style: the second tap plays the raised card', async ({ page }) => {

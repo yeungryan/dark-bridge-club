@@ -15,7 +15,7 @@ Each night, each of you becomes a character: an **animal with a bending element*
 ## Where avatars appear
 - The **seat badge** (replaces the plain color dot), the **auction strip**, and the **4-hand reveal**.
 - **Pair names** on the score banner: *"Fire Tiger & Water Otter."* (These replace the generated pair names in S15.)
-- **Signature clinch effect** (S16): the deciding trick's level-5 effect takes on the **element of the player who played the clinching card**:
+- **Signature clinch effect** (S16; replaced in round 8, see "Set-win attacks" below): the deciding trick's level-5 effect takes on the **element of the player who played the clinching card**:
 
 | Element | Clinch effect | Colors |
 |---|---|---|
@@ -69,7 +69,7 @@ Tiger · Wolf · Bear · Fox · Lion · Panda · Koala · Boar · Dog · Raccoon
   - Cards left sit as a tiny card to the left of the name.
   - The dealer chip is gone; the header says who deals.
   - Your own seat uses the same badge as the other three.
-- **Winning a set shows the winner's element:**
+- **Winning a set shows the winner's element** (replaced in round 8, see "Set-win attacks" below):
 
   | Element | Normal win | Win by trumping a different suit |
   |---|---|---|
@@ -86,3 +86,24 @@ Tiger · Wolf · Bear · Fox · Lion · Panda · Koala · Boar · Dog · Raccoon
   - Anyone who doesn't pick within 30 s of the others being ready is still auto-picked by the server.
 
 **At the table, final (Ryan, option E + O3):** no circle behind the animal. It wears a thin aura in its element's colour (red fire, yellow air, blue water, green earth) that shows on any theme. The cards-left count is a 19 px solid circle on the animal's bottom-right, in the player's team colour with a thin white rim and a centred plain bold number. On a player's turn, the animal and badge pulse together and a faint ring ripples out (replacing the glow and the gold name). Waiting seats dim, but never their badge.
+
+## Set-win attacks (Ryan, round 8)
+Winning a set now aims the winner's element at the **three losing cards** (friendly fire included: the partner's card too). The losers stay on the table, wrecked, until the sweep. Every effect, particles included, is over in **0.80 s**, the hold before the sweep (was 0.65 s). The game-winning set takes 1.6 s, inside the ~3 s the game already waits before the results.
+
+| Element | Set won | Won by trumping another suit | Game-winning set's finisher |
+|---|---|---|---|
+| Fire | **Ignite:** sparks suck in, a white-hot pop, fireballs; the losers burn to char with eaten edges | **Lightning** (blue): one bolt jumps card to card, leaving a burnt lightning scar on each | Char crumbles to ash and blows away; a scorch mark is left. Trumped: a last bolt from the sky burns each card away |
+| Air | **Wind slash:** crescents fly in and cut each loser in two; the halves part and settle | **Sound:** a sonic boom; the cards crumple like paper | A gust blasts the halves off the table. Trumped: a bigger boom blows the crumpled cards away |
+| Water | **Splash crown:** ripples under the winning card, jets punch holes through the losers, which soak, crease, warp and drip | **Ice:** shards fly and stick fast in each card, frost round them | A wave washes the cards off, leaving a damp patch. Trumped: the cards freeze white and shatter |
+| Earth | **Boulder slam:** a giant boulder punches a big ragged hole through each loser, with cracks and dirt | **Metal:** spinning blades slash each card twice; the last sticks in | The holed cards crack into chunks that fall away, leaving a crater. Trumped: the blades shred the cards into falling strips |
+
+- **The game-winning set:** a gold power-up on the winning card, the attack, then the finisher wipes the losers off the table, then the finale: the clinch chord, a gold flash, a burst, the big shake and the vibration. Only the winning card is left.
+- **Sound:** each attack and finisher has its own sounds, fired at its impacts (S17). They replace the generic set-won chime and the trump-set brass; the first-trump fanfare and the combo chime stay.
+- **Effects settings:** Reduced and Off keep the old signatures (no card damage). Fast plays everything at 0.6×.
+- **Built:**
+  - `lib/juice/setWin.ts`, the director's one entry: `setWon`, `gameWon`.
+  - Attacks: `cardFx.ts` (elements) and `subFx.ts` (sub-elements). Finishers and finale: `finishFx*.ts`. Card damage uses the Web Animations API on the trick area's `.face`, so the sweep carries it.
+  - A felt layer under the cards holds ripples and marks. It's cleared when a new set goes live, and a new card on the table drops any beats still to come.
+  - Cut-up copies of a card are hidden from screen readers and tests.
+  - Particles now advance on the clock (a fixed 1/60 s step) so the timing holds at 30 fps and 120 Hz alike.
+- **Effects lab** (`fxlab.html`, dev only): every option Ryan saw, side by side, with sound.

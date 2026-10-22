@@ -39,3 +39,57 @@ describe('glow colours', () => {
     expect(hotter('#ff0000', 0)).toBe('rgb(255,0,0)');
   });
 });
+
+describe('effects run on the clock, not per screen frame', () => {
+  const { stepsFor, STEP_MS, MAX_STEPS } = fx;
+
+  it('takes one 1/60 s step per 16.7 ms of real time', () => {
+    expect(stepsFor(0, 16.7).steps).toBe(1);
+    // A 30 fps frame takes two steps.
+    expect(stepsFor(0, 33).steps).toBe(2);
+  });
+
+  it('carries leftover time to the next frame (120 Hz: a step every other frame)', () => {
+    const first = stepsFor(0, 8);
+    expect(first.steps).toBe(0);
+    const second = stepsFor(first.carry, 8);
+    expect(second.steps).toBe(1);
+  });
+
+  it('keeps 60 steps a second over a long run at any frame rate', () => {
+    for (const dt of [1000 / 120, 1000 / 60, 1000 / 45, 1000 / 30]) {
+      let carry = 0;
+      let total = 0;
+      for (let t = 0; t < 1000 - 1e-6; t += dt) {
+        const r = stepsFor(carry, dt);
+        carry = r.carry;
+        total += r.steps;
+      }
+      expect(Math.abs(total - 60)).toBeLessThanOrEqual(1);
+    }
+  });
+
+  it("doesn't stutter at 60 Hz when frames jitter a little under 16.7 ms", () => {
+    let carry = 0;
+    const steps: number[] = [];
+    for (const dt of [16.5, 16.6, 16.4, 16.8, 16.5, 16.6]) {
+      const r = stepsFor(carry, dt);
+      carry = r.carry;
+      steps.push(r.steps);
+    }
+    expect(steps).toEqual([1, 1, 1, 1, 1, 1]);
+  });
+
+  it('caps the steps in one frame and drops the backlog after a stall', () => {
+    const r = stepsFor(0, 100);
+    expect(r.steps).toBe(MAX_STEPS);
+    expect(r.carry).toBe(0);
+    expect(stepsFor(0, MAX_STEPS * STEP_MS).steps).toBe(MAX_STEPS);
+  });
+
+  it('throws frozen (hit-stop) time away instead of catching up', () => {
+    expect(stepsFor(10, 50, true)).toEqual({ steps: 0, carry: 0 });
+    // After the freeze, an ordinary frame is just one step.
+    expect(stepsFor(0, 16.7).steps).toBe(1);
+  });
+});
