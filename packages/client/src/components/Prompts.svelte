@@ -26,7 +26,7 @@
 
 {#if deal?.phase === 'awaitingPlayOn' && deal.clinch}
   <div class="prompt panel clinch-prompt" role="status">
-    <strong>{deal.clinch.side === 'declarers' ? 'Contract made!' : 'Contract defeated!'}</strong>
+    <strong>{deal.clinch.side === 'declarers' ? 'Contract WON!' : 'Contract LOST!'}</strong>
     <span>Play the rest out?</span>
     <div class="bar"><i style="width: {fraction(room.clinchDeadline, 5000) * 100}%"></i></div>
     <button class="primary" onclick={() => conn.intent({ type: 'deal', action: { type: 'playOn' } })}>

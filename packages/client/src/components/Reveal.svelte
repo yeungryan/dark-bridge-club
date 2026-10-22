@@ -21,7 +21,7 @@
   // Spec S14: the payoff for hidden hands. The result lands, the score ticks up, then the four
   // hands flip one by one (from declarer's right, in play order) with their HCP counting up.
   // Tap the panel to skip to the end. It then waits for all four to tap "Next game".
-  // Wording (Ryan): a trick is a "set", a deal is a "game", so a defeated contract is "Defeated".
+  // Wording (Ryan): a trick is a "set", a deal is a "game"; a contract is WON or LOST (round 11).
   let { conn }: { conn: Connection } = $props();
 
   const view = $derived(conn.view!);
@@ -34,7 +34,7 @@
     seatsFrom(contract.declarer).find((s) => sideOf(s, contract) === result.winner)!,
   );
   const winningPair = $derived(view.pairs!.A.includes(view.seating![winningSeat]) ? 'A' : 'B');
-  const verdict = $derived(result.reason === 'conceded' ? 'Conceded' : result.winner === 'declarers' ? 'Made' : 'Defeated');
+  const verdict = $derived(result.reason === 'conceded' ? 'Conceded' : result.winner === 'declarers' ? 'WON' : 'LOST');
   const ready = $derived(view.readyForNext.includes(view.me));
 
   // Hands flip in play order, starting from declarer's right.

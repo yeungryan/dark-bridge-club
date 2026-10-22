@@ -5,6 +5,7 @@
   import { buzz } from '../lib/juice/haptics';
   import { launch } from '../lib/juice/launch.svelte';
   import { director } from '../lib/juice/director.svelte';
+  import { leadHold } from '../lib/leadHold.svelte';
   import { bidPreview } from '../lib/bidPreview.svelte';
   import { settings } from '../lib/juice/settings.svelte';
   import { sound } from '../lib/juice/sound';
@@ -58,7 +59,8 @@
     bidPreview.strain !== null && (bidPreview.strain === 'NT' ? c.rank >= 11 : c.suit === bidPreview.strain);
   // Once the contract is set, your trumps carry a purple stripe for the rest of the game.
   const trumpSuit = $derived(deal.contract && deal.contract.strain !== 'NT' ? deal.contract.strain : null);
-  const isLegal = (c: CardT) => deal.legalPlays.some((l) => sameCard(l, c));
+  // Round 11: while the last set is still playing out, the next lead waits (cards stay asleep).
+  const isLegal = (c: CardT) => !leadHold.waiting && deal.legalPlays.some((l) => sameCard(l, c));
   const tapStyle = $derived(settings.playStyle === 'tap');
 
   function reject(card: CardT) {

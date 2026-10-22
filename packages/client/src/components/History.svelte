@@ -201,7 +201,7 @@
                       <span class="what"
                         ><CallText call={{ type: 'bid', level: g.contract.level, strain: g.contract.strain }} />
                         {#if g.seating ?? night.seating}by {name((g.seating ?? night.seating)![g.contract.declarer])}{/if}
-                        · {g.result?.winner === 'declarers' ? 'made' : 'defeated'}{#if g.result?.overUnder}
+                        · {g.result?.winner === 'declarers' ? 'won' : 'lost'}{#if g.result?.overUnder}
                           ({g.result.overUnder > 0 ? '+' : ''}{g.result.overUnder}){/if}</span
                       >
                     {:else}

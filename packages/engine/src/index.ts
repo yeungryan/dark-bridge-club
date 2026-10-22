@@ -20,3 +20,4 @@ export * from './playerStats';
 export * from './schedule';
 export * from './historyChanges';
 export * from './carried';
+export * from './pace';

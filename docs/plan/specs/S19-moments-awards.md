@@ -56,4 +56,4 @@ Each award goes to **whoever earns it** on the night, so the joke's namesake can
   - A player gets at most two awards, unless that's needed to reach three.
   - A kind given last night is skipped unless it's clearly earned again.
 - **Epic Attic, Daredevil, Heist Master (round 7, Ryan):** redefined as above. Their lines: "Threaded a 4+ needle", "Bid on 6 HCP worth of hope and won", "Robbed the table on 3 HCP". Each counts as clearly earned at level 4+ (Epic Attic) or on 3 HCP or fewer (the other two). Awards already saved keep their old wording.
-- **Award cards trimmed (Ryan):** no avatars. The house awards lead with their joke line as the headline, and the others with their name. One plain line follows: the player · the fact (e.g. "Darren · 2♠, made exactly").
+- **Award cards trimmed (Ryan):** no avatars. The house awards lead with their joke line as the headline, and the others with their name. One plain line follows: the player · the fact (e.g. "Darren · 2♠, won exactly").

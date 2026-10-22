@@ -1,4 +1,6 @@
 import {
+  isLead,
+  leadHoldAfter,
   applyAvatarAction,
   applySessionAction,
   avatarsOf,
@@ -32,7 +34,7 @@ import {
 } from '@dark/engine';
 import { botCall, botCard } from '@dark/engine/bots';
 import { Connection } from './connection.svelte';
-import { TURBO } from './juice/timing';
+import { TURBO, TURBO_SPEED } from './juice/timing';
 
 // The practice table: you against three bots, entirely in this browser. It runs the same
 // rules engine the server runs and plays the same table screens, but nothing is sent
@@ -60,6 +62,8 @@ export class PracticeTable extends Connection {
   private themeBag: ThemeBag = { remaining: [] };
   private version = 0;
   private clinchAt: number | null = null;
+  /** Round 11: when the next set may be led (ms). */
+  private leadOpensAt = 0;
   private concessionAt: number | null = null;
   private timers = new Set<ReturnType<typeof setTimeout>>();
   private botTimer: ReturnType<typeof setTimeout> | null = null;
@@ -124,12 +128,19 @@ export class PracticeTable extends Connection {
   }
 
   private apply(action: SessionAction): void {
+    // Round 11, like the server: the next lead waits until the last set has played out.
+    if (action.type === 'deal' && action.action.type === 'play' && isLead(this.session.deal) && Date.now() < this.leadOpensAt) {
+      if (action.by === this.me) this.receive({ type: 'error', code: 'TOO_SOON', message: 'One moment: the last set is still playing out.' });
+      return;
+    }
     const outcome = applySessionAction(this.session, action);
     if (!outcome.ok) {
       if ('by' in action && action.by === this.me) this.receive({ type: 'error', code: outcome.error.code, message: outcome.error.message });
       return;
     }
     this.session = outcome.state;
+    const hold = leadHoldAfter(outcome.events, outcome.state.deal);
+    if (hold !== null) this.leadOpensAt = Date.now() + (TURBO ? hold * TURBO_SPEED : hold);
     this.reconcileTimers(outcome.events);
     this.recordHistory(outcome.events);
     this.publish(outcome.events);
@@ -164,6 +175,7 @@ export class PracticeTable extends Connection {
         paused: false,
         autoCloseAt: null,
         clinchDeadline: this.clinchAt,
+        leadOpensAt: this.leadOpensAt > Date.now() ? this.leadOpensAt : null,
         concessionDeadline: this.concessionAt,
         serverTime: Date.now(),
         avatarReady: Object.fromEntries(IDS.map((id) => [id, !!this.avatars.picks[id]?.avatar])),
@@ -237,8 +249,10 @@ export class PracticeTable extends Connection {
           delay = think(700);
         } else if (s.deal.phase === 'play') {
           action = { type: 'deal', by, action: { type: 'play', card: botCard(view, seat) } };
-          // Leading to a fresh trick waits for the last one to be swept up.
+          // Leading to a fresh trick waits for the last one to be swept up (round 11: at least
+          // until the lead opens).
           delay = think(s.deal.currentTrick?.cards.length ? 650 : 1300);
+          if (isLead(s.deal)) delay = Math.max(delay, this.leadOpensAt - Date.now() + 50);
         }
       }
     }

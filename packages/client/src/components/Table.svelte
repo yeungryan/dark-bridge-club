@@ -17,6 +17,7 @@
   import History from './History.svelte';
   import { avatarOf, teamColor } from '../lib/avatars';
   import { director } from '../lib/juice/director.svelte';
+  import { leadHold } from '../lib/leadHold.svelte';
   import { settings } from '../lib/juice/settings.svelte';
   import { TIMING } from '../lib/juice/timing';
   import TrickArea from './TrickArea.svelte';
@@ -42,6 +43,8 @@
   // button would otherwise flash up and do nothing).
   const iDeal = $derived(view.phase === 'awaitingDeal' && view.dealer === me);
   const contract = $derived(deal?.contract ?? null);
+  // Round 11: the next lead waits until the last set has played out (the server says when).
+  $effect(() => leadHold.update(conn.room?.leadOpensAt ?? null, conn.now()));
   // Bid once your cards have landed.
   const myTurnToCall = $derived(deal?.phase === 'auction' && deal.turn === me && !conn.room!.paused && !director.dealing);
   let dealt = $state(false);
@@ -94,7 +97,7 @@
   });
 </script>
 
-<div class="table" class:decider data-turn={iDeal ? 'my-deal' : deal?.turn === me ? (deal.phase === 'auction' ? 'my-call' : deal.phase === 'play' ? 'my-play' : '') : ''}>
+<div class="table" class:decider data-turn={iDeal ? 'my-deal' : deal?.turn === me ? (deal.phase === 'auction' ? 'my-call' : deal.phase === 'play' && !leadHold.waiting ? 'my-play' : '') : ''}>
   <header>
     <button class="ghost menu" aria-label="Menu" onclick={() => (menuOpen = menuOpen ? null : 'menu')}><MenuIcon size={22} strokeWidth={2} /></button>
     <h1 class="game">Game {shuffling ? view.dealNumber + 1 : view.dealNumber}</h1>

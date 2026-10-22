@@ -72,8 +72,8 @@
 <div class="tiles">
   <div class="tile"><span class="k">Sets won</span><span class="v">{s.sets.won}</span><span class="s">of {s.sets.played} · {pct(s.sets.won, s.sets.played)}%</span></div>
   <div class="tile"><span class="k">Games won</span><span class="v">{s.games.won}</span><span class="s">of {s.games.played} · {pct(s.games.won, s.games.played)}%</span></div>
-  <div class="tile"><span class="k">Declaring</span><span class="v">{s.declaring.won}–{s.declaring.lost}</span><span class="s">made–down</span></div>
-  <div class="tile"><span class="k">Defending</span><span class="v">{s.defending.won}–{s.defending.lost}</span><span class="s">beaten–made</span></div>
+  <div class="tile"><span class="k">Declaring</span><span class="v">{s.declaring.won}–{s.declaring.lost}</span><span class="s">won–lost</span></div>
+  <div class="tile"><span class="k">Defending</span><span class="v">{s.defending.won}–{s.defending.lost}</span><span class="s">won–lost</span></div>
 </div>
 
 <div class="faves">
