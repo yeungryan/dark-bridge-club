@@ -33,3 +33,5 @@ A table you can read at a glance on a phone while faces are talking in a floatin
 - **Whose turn:** the active player's avatar ring breathes and their name lights in the accent colour, and the other seats dim slightly. On your own turn your seat lifts and the cards you can play glow. A hidden live region still announces the turn to screen readers.
 
 **No role tags (Ryan):** the seats no longer say Declarer / Partner / Defender under the names; the scoreboard shows who declared. Seat badges are 80px tall (was 96).
+
+**Team Red vs Team Black (Ryan):** partnership colour is red and black, like the cards' suits. Team Red is the pair Ryan sits in (Adrian & Ryan), the same on every phone; the other pair is Team Black. It shows on the cards-left badge, the bid tiles' bottom stripe, the scoreboard (initials and set animals) and the replay strip. Where Team Black sits on a dark panel it gets a thin light rim. **Gold means winning or leading only**, the same gold in every theme: the bid to beat, the card winning the set, the replay's winning card.

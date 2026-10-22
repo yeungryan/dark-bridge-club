@@ -107,6 +107,8 @@
   .tile.first::after {
     content: '1st';
     position: absolute;
+    /* Above any later call laid over this one; the tile itself stays under them. */
+    z-index: 3;
     top: -8px;
     left: -7px;
   }
@@ -165,15 +167,12 @@
       0 1px 3px rgba(0, 0, 0, 0.5);
     font-size: min(9.5px, 5.8cqw);
   }
-  .tile.first {
-    z-index: 2;
-  }
-  /* The bid to beat. */
+  /* The bid to beat, in gold (gold means leading or winning, in every theme). */
   .tile.top {
     z-index: 1;
     box-shadow:
-      0 0 0 2px var(--accent),
-      0 0 12px var(--accent-glow),
+      0 0 0 2px var(--win),
+      0 0 12px var(--win-glow),
       0 2px 4px rgba(0, 0, 0, 0.5);
   }
 </style>

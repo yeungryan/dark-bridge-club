@@ -39,7 +39,7 @@
     filter: brightness(0.55);
   }
   .card.highlight {
-    box-shadow: 0 0 0 3px var(--accent), 0 2px 6px rgba(0, 0, 0, 0.5);
+    box-shadow: 0 0 0 3px var(--win), 0 2px 6px rgba(0, 0, 0, 0.5);
   }
   /* A trump (Ryan; option D): a purple bar along the top and a faint purple tint. */
   .card.trump {

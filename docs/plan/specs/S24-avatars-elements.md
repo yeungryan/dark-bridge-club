@@ -84,3 +84,5 @@ Tiger · Wolf · Bear · Fox · Lion · Panda · Koala · Boar · Dog · Raccoon
   - Two animals on offer, not three.
   - The lobby picker has no words and no buttons: tapping an animal and an element locks you in, and tapping another changes it.
   - Anyone who doesn't pick within 30 s of the others being ready is still auto-picked by the server.
+
+**At the table, final (Ryan, option E + O3):** no circle behind the animal. It wears a thin aura in its element's colour (red fire, yellow air, blue water, green earth) that shows on any theme. The cards-left count is a 19 px solid circle on the animal's bottom-right, in the player's team colour with a thin white rim and a centred plain bold number. On a player's turn, the animal and badge pulse together and a faint ring ripples out (replacing the glow and the gold name). Waiting seats dim, but never their badge.

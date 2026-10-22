@@ -46,6 +46,8 @@
     flex-direction: column;
     align-items: center;
     border-bottom: 3px solid var(--c);
+    /* A hairline of light under it, so Team Black's underline shows on the dark panel. */
+    box-shadow: 0 1px 0 rgba(255, 255, 255, 0.35);
     padding: 2px 6px;
     background: var(--panel);
     border-radius: 6px 6px 0 0;
@@ -72,7 +74,7 @@
     animation-name: fade-in;
   }
   .call.top {
-    box-shadow: 0 0 0 1px var(--c);
+    box-shadow: 0 0 0 1.5px var(--win);
   }
   small {
     font-family: var(--font-name);

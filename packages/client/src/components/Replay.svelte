@@ -166,12 +166,13 @@
     >
       <button class="bids" class:on={at === 0} aria-label="The bidding" aria-current={at === 0 ? 'step' : undefined} onclick={() => go(0)}>Bids</button>
       {#each lanes as lane, l (lane.side)}
-        <span class="lane-name" style="--t: {game.color(lane.seats[0]!)}; grid-row: {l + 3}">{initials(lane.seats)}</span>
+        <span class="lane-name" data-team={game.team(lane.seats[0]!)} style="--t: {game.color(lane.seats[0]!)}; grid-row: {l + 3}">{initials(lane.seats)}</span>
       {/each}
       {#each steps.slice(1) as s, i (i)}
         {@const w = s.trick!.winner}
         <button
           class="set"
+          data-team={game.team(w)}
           class:on={i + 1 === at}
           class:decisive={s.decisive}
           data-step={i + 1}
@@ -270,7 +271,7 @@
     font-family: var(--font-name);
     font-weight: 700;
     font-size: 13px;
-    color: var(--c);
+    color: var(--ink);
     white-space: nowrap;
   }
   .tag {
@@ -354,7 +355,7 @@
   }
   .spot.winner {
     z-index: 1;
-    filter: drop-shadow(0 0 8px var(--accent-glow));
+    filter: drop-shadow(0 0 8px var(--win-glow));
   }
   @keyframes land {
     from {
@@ -426,6 +427,16 @@
     background: color-mix(in srgb, var(--accent) 30%, transparent);
     border-color: var(--accent);
     color: var(--ink);
+  }
+  /* Team Black on the dark strip: a thin light rim, or it would vanish. */
+  .lane-name[data-team='black'] {
+    text-shadow:
+      0 0 1px #fff,
+      0 0 1px #fff,
+      0 0 3px rgba(255, 255, 255, 0.5);
+  }
+  .set[data-team='black'] .slot {
+    filter: drop-shadow(0 0 0.7px #fff) drop-shadow(0 0 0.7px #fff);
   }
   .lane-name {
     grid-column: 1;

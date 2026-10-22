@@ -228,7 +228,7 @@
     }
   }
   .face.win {
-    box-shadow: 0 0 16px 2px var(--accent-glow);
+    box-shadow: 0 0 16px 2px var(--win-glow);
   }
   .face.trumpwin {
     box-shadow: 0 0 20px 4px rgba(197, 139, 255, 0.85);

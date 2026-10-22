@@ -1,7 +1,7 @@
 <script lang="ts">
   import { next, partner, type PairId, type Seat, type Side } from '@dark/engine';
   import type { Connection } from '../lib/connection.svelte';
-  import { avatarAtSeat, teamColor } from '../lib/avatars';
+  import { avatarAtSeat, teamColor, teamOf } from '../lib/avatars';
   import { nameAtSeat, profileOf } from '../lib/format';
   import { director } from '../lib/juice/director.svelte';
   import CallText from './CallText.svelte';
@@ -45,9 +45,9 @@
     {#key director.contractPulse}
       <button class="ghost contract" onclick={onAuction} aria-label="Contract (tap for the auction)">
         <span class="bid"><CallText call={{ type: 'bid', level: contract.level, strain: contract.strain }} /></span>
-        <span class="by">
+        <span class="by" data-team={teamOf(conn, contract.declarer)}>
           <!-- The declarer's animal as a silhouette the height of the name (Ryan), like the set icons. -->
-          <AnimalIcon animal={avatarAtSeat(conn, contract.declarer)?.animal} silhouette={teamColor(conn, contract.declarer)} size="1.05em" />
+          <span class="sil-wrap"><AnimalIcon animal={avatarAtSeat(conn, contract.declarer)?.animal} silhouette={teamColor(conn, contract.declarer)} size="1.05em" /></span>
           {nameAtSeat(view, profiles, contract.declarer)}
         </span>
         {#if director.contractPulse > 0}<span class="sold" aria-hidden="true">Sold!</span>{/if}
@@ -58,6 +58,7 @@
         <div
           class="row"
           data-side={row.side}
+          data-team={teamOf(conn, row.seat)}
           style="--t: {teamColor(conn, row.seat)}"
           class:close={!settledBy && row.count === row.need - 1}
           class:done={row.count >= row.need}
@@ -198,6 +199,23 @@
     gap: 6px;
     transition: opacity calc(300ms * var(--speed));
   }
+  /* Team Black on the dark panel: its initials and animals get a thin light rim, or they'd vanish. */
+  .row[data-team='black'] {
+    --t-ring: rgba(255, 255, 255, 0.75);
+  }
+  .row[data-team='black'] .team {
+    text-shadow:
+      0 0 1px #fff,
+      0 0 1px #fff,
+      0 0 3px rgba(255, 255, 255, 0.5);
+  }
+  .row[data-team='black'] .pip.on,
+  .by[data-team='black'] .sil-wrap {
+    filter: drop-shadow(0 0 0.7px #fff) drop-shadow(0 0 0.7px #fff);
+  }
+  .sil-wrap {
+    display: inline-flex;
+  }
   .team {
     font-family: var(--font-name);
     font-weight: 700;
@@ -254,7 +272,7 @@
     font-size: 16px;
     border-radius: 50%;
     box-shadow:
-      0 0 0 1.5px var(--t),
+      0 0 0 1.5px var(--t-ring, var(--t)),
       0 0 10px var(--accent-glow);
     cursor: pointer;
   }
@@ -267,7 +285,7 @@
   @keyframes latest {
     50% {
       box-shadow:
-        0 0 0 1.5px var(--t),
+        0 0 0 1.5px var(--t-ring, var(--t)),
         0 0 2px var(--accent-glow);
     }
   }
