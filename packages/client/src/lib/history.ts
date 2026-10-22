@@ -1,9 +1,10 @@
-import type { Award, ChangeAction, PairId, PendingChange, ProfileInfo, SavedGameDetail, SavedNight, ScoreOverride } from '@dark/engine';
+import type { Award, Carried, ChangeAction, PairId, PendingChange, ProfileInfo, SavedGameDetail, SavedNight, ScoreOverride } from '@dark/engine';
 import { profileOf } from './format';
 import { token } from './session';
 
 // Spec S20: history comes from the server for the four of you only (your login token), and
-// every number is worked out from the saved games in the engine (rivalry.ts).
+// every number is worked out from the saved games in the engine (rivalry.ts), plus the totals
+// carried forward from deleted ones (carried.ts).
 
 async function get<T>(path: string, params: Record<string, string> = {}): Promise<T> {
   const query = new URLSearchParams({ token: token() ?? '', ...params });
@@ -18,10 +19,22 @@ export interface HistoryData {
   readonly overrides: ScoreOverride[];
   /** New all-time scores waiting for everyone's approval. */
   readonly pending: PendingChange[];
+  /** The all-time totals from games old enough to have been deleted (the last 300 are kept). */
+  readonly carried: Carried;
+  /** When everything was last reset to 0–0: only nights begun since count toward the stats. */
+  readonly statsFrom: number | null;
 }
 
 /** Every night so far, newest first, the scores set by hand, and the changes waiting. */
 export const loadHistory = () => get<HistoryData>('/api/history');
+
+// The lobby's cards (the all-time score, Last time) share one request.
+let shared: { at: number; data: Promise<HistoryData> } | null = null;
+export function loadHistoryShared(): Promise<HistoryData> {
+  if (!shared || Date.now() - shared.at > 5000) shared = { at: Date.now(), data: loadHistory() };
+  shared.data.catch(() => (shared = null));
+  return shared.data;
+}
 export const loadNights = () => loadHistory().then((r) => r.nights);
 
 /** Propose, approve or turn down a new all-time score; resolves to the updated history. */

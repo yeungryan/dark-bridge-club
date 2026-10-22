@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { AWARDS, momentsWall, playerStats, shares, winRate, type AwardKind, type ProfileInfo, type SavedNight, type Strain, type Suit as SuitT } from '@dark/engine';
+  import { AWARDS, momentsWall, playerStats, shares, winRate, type AwardKind, type ProfileInfo, type SavedNight, type Strain, type Suit as SuitT, type Carried } from '@dark/engine';
   import { profileOf } from '../lib/format';
   import { shortDate } from '../lib/history';
   import AnimalIcon from './AnimalIcon.svelte';
@@ -13,18 +13,21 @@
     profile,
     profiles,
     nights,
+    carried,
     onWatch,
     loading,
   }: {
     profile: string;
     profiles: readonly ProfileInfo[];
     nights: readonly SavedNight[];
+    /** Totals carried forward from deleted games. */
+    carried?: Carried;
     onWatch: (night: SavedNight, game: number) => void;
     loading: string | null;
   } = $props();
 
   const ids = $derived(profiles.map((p) => p.id));
-  const s = $derived(playerStats(profile, ids, nights));
+  const s = $derived(playerStats(profile, ids, nights, carried));
   const name = (id: string) => profileOf(profiles, id).name;
   /** The animal someone picked most recently. */
   const animalOf = (id: string) => [...nights].sort((a, b) => b.startedAt - a.startedAt).find((n) => n.avatars?.[id])?.avatars?.[id]?.animal ?? null;

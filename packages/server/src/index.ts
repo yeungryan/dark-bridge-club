@@ -10,6 +10,8 @@ export interface Env {
   ADMIN_KEY: string;
   /** Tests only: start nights from a fixed seed so they're reproducible. Never set in production. */
   TEST_SEED?: string;
+  /** Local checks only: keep this many games instead of KEEP_GAMES. */
+  TEST_KEEP_GAMES?: string;
 }
 
 export default {

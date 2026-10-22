@@ -85,3 +85,21 @@ describe("setting the all-time score takes everyone's approval", () => {
     expect(matchupKey(['kim', 'darren'], ['ryan', 'adrian'])).toBe(matchupKey(['adrian', 'ryan'], ['darren', 'kim']));
   });
 });
+
+describe('resetting to 0–0 (Ryan: the whole scoreboard and every all-time stat)', () => {
+  const reset = { type: 'propose', change: { kind: 'reset' } } as ChangeAction;
+  it('needs all four, and once applied clears every hand-set score', () => {
+    let o = act(emptyChangeQueue(), 'darren', reset);
+    const id = o.queue.pending[0]!.id;
+    for (const by of ['adrian', 'ryan']) o = act(o.queue, by, { type: 'approve', id });
+    expect(o.applied).toBeNull();
+    o = act(o.queue, 'kim', { type: 'approve', id });
+    expect(o.applied?.change).toEqual({ kind: 'reset' });
+    expect(withOverride([{ sides, from: 1 }], o.applied!)).toEqual([]);
+  });
+  it('only one reset waits at a time, and anyone can turn it down', () => {
+    const o = act(emptyChangeQueue(), 'darren', reset);
+    expect(code(o.queue, 'kim', reset)).toBe('ALREADY');
+    expect(act(o.queue, 'kim', { type: 'reject', id: o.queue.pending[0]!.id }).queue.pending).toEqual([]);
+  });
+});
