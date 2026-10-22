@@ -44,6 +44,8 @@ interface Particle {
   points?: { x: number; y: number }[];
   /** An arc's span in radians (sound waves, a wave crest). */
   span?: [number, number];
+  /** Rings and arcs: flatten vertically (0–1), so they lie on the table. */
+  squash?: number;
   /** Drawn as additive light (true) or as matter (false). Defaults by shape. */
   light: boolean;
   /** Flash sprite style: 'soft' bloom (default) or 'hot' white core. */
@@ -128,7 +130,7 @@ export function attachParticleCanvas(el: HTMLCanvasElement, washLayer?: HTMLElem
 const rand = (a: number, b: number) => a + Math.random() * (b - a);
 const pick = <T>(xs: readonly T[], i: number) => xs[i % xs.length]!;
 
-type Spec = Partial<Omit<Particle, 'light' | 'trailLen' | 'hot'>> & { light?: boolean; trailLen?: number };
+export type Spec = Partial<Omit<Particle, 'light' | 'trailLen' | 'hot'>> & { light?: boolean; trailLen?: number };
 
 function add(list: Spec[]): void {
   if (!canvas || !settings.motion) return;
@@ -165,6 +167,16 @@ function add(list: Spec[]): void {
     });
   }
   start();
+}
+
+/** Raw particles, for trying out new effects (the effects lab). */
+export const spawn = (list: Spec[]): void => add(list);
+/** Clear everything at once (the effects lab, between takes). */
+export function clearEffects(): void {
+  particles = [];
+  comets = [];
+  wash = null;
+  frozenUntil = 0;
 }
 
 /** The original square burst (kept for small accents, e.g. an orb landing). */
@@ -678,10 +690,20 @@ function drawMatter(c: CanvasRenderingContext2D, p: Particle): void {
       const fade = Math.max(0, p.life / p.max);
       c.lineWidth = p.wobble * fade + 0.5;
       c.beginPath();
-      c.arc(p.x, p.y, p.size, 0, Math.PI * 2);
+      c.ellipse(p.x, p.y, p.size, p.size * (p.squash ?? 1), 0, 0, Math.PI * 2);
       c.stroke();
       break;
     }
+    case 'bolt':
+      // Matter lines: cracks in the ground.
+      if (!p.points) break;
+      c.lineJoin = 'round';
+      c.lineCap = 'round';
+      c.lineWidth = p.size;
+      c.beginPath();
+      p.points.forEach((q, i) => (i ? c.lineTo(q.x, q.y) : c.moveTo(q.x, q.y)));
+      c.stroke();
+      break;
     case 'glyph':
       c.save();
       c.translate(p.x, p.y);
@@ -818,7 +840,7 @@ function drawLight(c: CanvasRenderingContext2D, p: Particle): void {
       const [s0, s1] = p.shape === 'arc' ? p.span! : [0, Math.PI * 2];
       c.lineCap = 'round';
       c.beginPath();
-      c.arc(p.x, p.y, p.size, s0, s1);
+      c.ellipse(p.x, p.y, p.size, p.size * (p.squash ?? 1), 0, s0, s1);
       c.strokeStyle = p.color;
       c.globalAlpha = a * 0.22;
       c.lineWidth = w * 2.5 + 3;
