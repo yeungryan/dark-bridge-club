@@ -28,7 +28,7 @@ A table you can read at a glance on a phone while faces are talking in a floatin
 - [ ] Nothing important is hidden under Messenger's floating window on your real phone.
 
 ## Round 4 (Ryan)
-- The header holds the menu button (top-left), "Game N", and a Settings gear (top-right, Ryan); the theme's scene owns the rest of the top of the screen. Settings left the menu.
+- The header holds the menu button (top-left), "Game N" (with tonight's all-time score just under it, round 12, S15), and a Settings gear (top-right, Ryan); the theme's scene owns the rest of the top of the screen. Settings left the menu.
 - The contract and the race to each side's target moved to where "X to play" was, above your hand. The "X to play" line is gone.
 - **Whose turn:** the active player's avatar ring breathes and their name lights in the accent colour, and the other seats dim slightly. On your own turn your seat lifts and the cards you can play glow. A hidden live region still announces the turn to screen readers.
 

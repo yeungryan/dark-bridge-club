@@ -10,7 +10,7 @@ Each night, each of you becomes a character: an **animal with a bending element*
 3. When all 4 have locked in, the **avatars flip over together** in the four seats. Each element plays a short entrance: an ember burst, a swirl of wind, a splash, or a stone slam.
 4. **No duplicate animals in the same session.** Each player's 3 offered animals never overlap with another player's. Elements **can** repeat.
 5. The same animal can't be offered to the same player two sessions in a row.
-6. **Takes about 20 seconds** (a 30 s limit is optional). A player who idles gets "Surprise me" picked for them only after the other three are done and 30 s have passed.
+6. **Takes about 20 seconds** (a 30 s limit is optional). ~~A player who idles gets "Surprise me" picked for them only after the other three are done and 30 s have passed.~~ **Revised (Ryan, round 12):** nobody is picked for automatically; the night waits for the last player to choose, so they have time to be sure they are ready.
 
 ## Where avatars appear
 - The **seat badge** (replaces the plain color dot), the **auction strip**, and the **4-hand reveal**.
@@ -56,7 +56,7 @@ Tiger · Wolf · Bear · Fox · Otter · Owl · Eagle · Hawk · Badgermole · R
 Tiger · Wolf · Bear · Fox · Lion · Panda · Koala · Boar · Dog · Raccoon · Chicken · Hamster · Gorilla · Frog · Polar bear · Monkey · Cow · Deer · Eagle · Rhino · Dragon · Shark · Koi · Octopus
 - Old ids saved in past nights map to their replacements (`RENAMED_ANIMALS`), and last night's animal is still not offered again under its new id.
 - Set icons (scoreboard, replay, the declarer under the contract) are the same art as a solid silhouette in the team colour.
-- *Lobby:* picking happens **in the lobby while waiting for everyone**, instead of as a separate step after the night starts, so it doesn't add 20 s to the start. The night starts once all four are here **and** locked in. A player who hasn't picked 30 s after the other three are ready gets "Surprise me".
+- *Lobby:* picking happens **in the lobby while waiting for everyone**, instead of as a separate step after the night starts, so it doesn't add 20 s to the start. The night starts once all four are here **and** locked in. Nobody is auto-picked (round 12).
 
 ## Clean-up before launch (Ryan, 2026-10-20)
 - **No rerolls.** Three animals on offer, pick one.
@@ -83,7 +83,7 @@ Tiger · Wolf · Bear · Fox · Lion · Panda · Koala · Boar · Dog · Raccoon
   - Element backdrops take a primary colour: red fire, yellow air, blue water, green earth.
   - Two animals on offer, not three.
   - The lobby picker has no words and no buttons: tapping an animal and an element locks you in, and tapping another changes it.
-  - Anyone who doesn't pick within 30 s of the others being ready is still auto-picked by the server.
+  - ~~Anyone who doesn't pick within 30 s of the others being ready is still auto-picked by the server.~~ Removed in round 12: the server no longer auto-picks, and the lobby shows no countdown.
 
 **At the table, final (Ryan, option E + O3):** no circle behind the animal. It wears a thin aura in its element's colour (red fire, yellow air, blue water, green earth) that shows on any theme. The cards-left count is a 19 px solid circle on the animal's bottom-right, in the player's team colour with a thin white rim and a centred plain bold number. On a player's turn, the animal and badge pulse together and a faint ring ripples out (replacing the glow and the gold name). Waiting seats dim, but never their badge.
 

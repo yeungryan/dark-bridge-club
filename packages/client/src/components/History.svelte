@@ -1,7 +1,8 @@
 <script lang="ts">
-  import { AWARDS, countedNights, emptyCarried, headToHead, momentsWall, partnershipRecords, winRate, type PendingChange, type ProfileInfo, type SavedNight, type ScoreOverride, type ThemeId, type Carried } from '@dark/engine';
+  import { AWARDS, countedNights, pairKey, type MatchupRecord, emptyCarried, headToHead, momentsWall, partnershipRecords, winRate, type PendingChange, type ProfileInfo, type SavedNight, type ScoreOverride, type ThemeId, type Carried } from '@dark/engine';
   import { onMount } from 'svelte';
   import { profileOf } from '../lib/format';
+  import { MAIN_PAIR } from '../lib/avatars';
   import { loadGame, loadHistory, nightLine, pairName, shortDate, type HistoryData } from '../lib/history';
   import { sound } from '../lib/juice/sound';
   import { savedReplay, type ReplayGame } from '../lib/replayGame';
@@ -56,11 +57,27 @@
   // The all-time numbers: nights since the last reset to 0–0, plus what was carried forward from
   // deleted games. The night log still lists every night kept.
   const counted = $derived(nights ? countedNights(nights, statsFrom) : []);
-  const board = $derived(nights ? headToHead(ids, counted, overrides, carried) : []);
+  // The usual pairing first, Darren & Kim on the left (Ryan, round 12).
+  const board = $derived(nights ? mainFirst(headToHead(ids, counted, overrides, carried)) : []);
   const name = (id: string) => profileOf(profiles, id).name;
 
+  function mainFirst(records: MatchupRecord[]): MatchupRecord[] {
+    const isMain = (m: MatchupRecord) => m.sides.some((s) => pairKey(s.players) === pairKey(MAIN_PAIR));
+    const oriented = records.map((m) =>
+      isMain(m) && pairKey(m.sides[1].players) === pairKey(MAIN_PAIR) ? { ...m, sides: [m.sides[1], m.sides[0]] as const } : m,
+    );
+    return [...oriented.filter(isMain), ...oriented.filter((m) => !isMain(m))];
+  }
+
   // Every partnership (six of them): nights and games together.
-  const partnerships = $derived(nights ? partnershipRecords(ids, counted, overrides, carried) : []);
+  // Best win rate at the top (Ryan, round 12); those without enough games for a rate go last.
+  const partnerships = $derived(
+    nights
+      ? partnershipRecords(ids, counted, overrides, carried).sort(
+          (a, b) => (winRate(b.gamesWon, b.games) ?? -1) - (winRate(a.gamesWon, a.games) ?? -1) || b.games - a.games,
+        )
+      : [],
+  );
 
   const rate = (won: number, played: number) => {
     const r = winRate(won, played);

@@ -1,17 +1,26 @@
 <script lang="ts">
-  import { countedNights, headToHead, type MatchupRecord, type ProfileInfo } from '@dark/engine';
+  import { countedNights, headToHead, pairKey, type MatchupRecord, type ProfileId, type ProfileInfo } from '@dark/engine';
   import { RED_ANCHOR } from '../lib/avatars';
-  import { onMount } from 'svelte';
   import { profileOf } from '../lib/format';
   import { loadHistoryShared, pairName } from '../lib/history';
 
   // Ryan (S1): one line under "Bridge Club", the all-time games won by the usual pairing (the
   // matchup played most), both numbers in white. Team black on the left, team red on the right.
   // Nothing shows before the first game.
-  let { profiles }: { profiles: readonly ProfileInfo[] } = $props();
+  // Ryan (round 12): the same line, smaller, under "Game N" while you play (`small`). There it's
+  // tonight's pairing (`pairs`), and it loads again whenever `refresh` changes, so the last game
+  // counts once the next one starts.
+  let {
+    profiles,
+    small = false,
+    pairs = null,
+    refresh = 0,
+  }: { profiles: readonly ProfileInfo[]; small?: boolean; pairs?: readonly (readonly ProfileId[])[] | null; refresh?: unknown } = $props();
 
   let match = $state<MatchupRecord | null>(null);
-  onMount(() => {
+  $effect(() => {
+    void refresh;
+    const tonight = pairs?.map((p) => pairKey(p));
     loadHistoryShared()
       .then((h) => {
         const board = headToHead(
@@ -20,7 +29,9 @@
           h.overrides,
           h.carried,
         );
-        const top = [...board].sort((a, b) => b.games - a.games || (b.lastPlayed ?? 0) - (a.lastPlayed ?? 0))[0];
+        const top = tonight
+          ? board.find((m) => m.sides.every((s) => tonight.includes(pairKey(s.players))))
+          : [...board].sort((a, b) => b.games - a.games || (b.lastPlayed ?? 0) - (a.lastPlayed ?? 0))[0];
         match = top && top.games > 0 ? top : null;
       })
       .catch(() => {});
@@ -36,6 +47,7 @@
   {@const [black, red] = sides}
   <p
     class="score"
+    class:small
     aria-label="All-time games won: {pairName(profiles, black!.players)} {black!.gamesWon}, {pairName(profiles, red!.players)} {red!.gamesWon}"
   >
     <span class="pair" aria-hidden="true">
@@ -88,5 +100,23 @@
   .dash {
     color: var(--ink-dim);
     font-size: 12px;
+  }
+  /* Under "Game N" (1.05rem): the same line, a size down from the title. */
+  .small {
+    gap: 5px;
+    margin: 1px 0 0;
+    line-height: 1;
+  }
+  .small .tile {
+    width: 12px;
+    height: 13px;
+    border-radius: 3px;
+    font-size: 7.5px;
+  }
+  .small strong {
+    font-size: 12px;
+  }
+  .small .dash {
+    font-size: 9px;
   }
 </style>

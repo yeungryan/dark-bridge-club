@@ -194,6 +194,8 @@ test.describe.serial('a night at the DARK table', () => {
     const page = ryan().page;
     const darren = players[0]!;
     await reachMyTurnToPlay(ryan());
+    // Round 12: tonight's all-time score sits just under "Game N" while you play.
+    await expect(page.locator('header').getByLabel(/^All-time games won: /)).toBeVisible();
     const before = await page.locator('.hand .slot').count();
     const playable = page.locator('.hand .slot').filter({ has: page.locator('.card:not(.dim)') }).first();
     await playable.click({ position: { x: 10, y: 30 } });
