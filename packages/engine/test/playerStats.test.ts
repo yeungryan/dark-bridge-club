@@ -44,6 +44,17 @@ function night(id: string, startedAt: number, games: SavedGame[], extra: Partial
   };
 }
 
+describe('seat swaps (Ryan: his pair trades seats every five games)', () => {
+  it('credits each game to whoever sat in the declaring seat for that game', () => {
+    // Game 2: Ryan and Darren have traded seats, so seat 0 is Ryan's.
+    const swapped = { 0: 'ryan', 1: 'adrian', 2: 'darren', 3: 'kim' } as const;
+    const nights = [night('1', 100, [game(1, 0, 2, 'S', 8), { ...game(2, 0, 3, 'NT', 9), seating: swapped }])];
+    expect(playerStats('darren', P, nights).declaring).toEqual({ won: 1, lost: 0 });
+    expect(playerStats('ryan', P, nights).declaring).toEqual({ won: 1, lost: 0 });
+    expect(playerStats('ryan', P, nights).levels[3]).toBe(1);
+  });
+});
+
 describe('S20 player cards and the leaderboard', () => {
   const nights = [
     night('1', 100, [

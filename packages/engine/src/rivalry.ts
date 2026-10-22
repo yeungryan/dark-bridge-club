@@ -19,6 +19,8 @@ export interface SavedGame {
   readonly winningPair: PairId | null;
   /** Whether the hands and sets were kept, so it can be replayed (not for a pass-out). */
   readonly replayable: boolean;
+  /** Who sat where for this game (seats swap every few games); absent: the night's seating. */
+  readonly seating?: PerSeat<ProfileId> | null;
 }
 
 /** The night's top award, for the "Last time…" line (kind, who, its facts). */

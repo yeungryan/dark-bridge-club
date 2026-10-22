@@ -1,6 +1,6 @@
 import type { Element } from './avatars';
 import type { AwardKind } from './moments';
-import type { SavedAward, SavedNight } from './rivalry';
+import type { SavedAward, SavedGame, SavedNight } from './rivalry';
 import { MIN_SAMPLE } from './rivalry';
 import type { PairId, ProfileId } from './session';
 import type { Level, Seat, Strain } from './types';
@@ -39,8 +39,8 @@ export interface PlayerStats {
 const STRAIN_KEYS: Strain[] = ['C', 'D', 'H', 'S', 'NT'];
 const LEVEL_KEYS: Level[] = [1, 2, 3, 4, 5, 6, 7];
 
-const seatOf = (night: SavedNight, profile: ProfileId): Seat | null => {
-  const seating = night.seating;
+const seatOf = (night: SavedNight, game: SavedGame, profile: ProfileId): Seat | null => {
+  const seating = game.seating ?? night.seating;
   if (!seating) return null;
   return (([0, 1, 2, 3] as Seat[]).find((s) => seating[s] === profile) ?? null) as Seat | null;
 };
@@ -72,9 +72,9 @@ export function playerStats(profile: ProfileId, profiles: readonly ProfileId[], 
       since = Math.min(since ?? night.startedAt, night.startedAt);
     }
     for (const a of night.awards ?? []) if (a.profile === profile) awards[a.kind as AwardKind] = (awards[a.kind as AwardKind] ?? 0) + 1;
-    const seat = seatOf(night, profile);
     const partner = partnerIn(night, profile);
     for (const g of night.games) {
+      const seat = seatOf(night, g, profile);
       if (!g.winningPair) continue;
       const won = g.winningPair === pair;
       games.played++;

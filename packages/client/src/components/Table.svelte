@@ -128,7 +128,8 @@
       <!-- All four seats sit the same distance from the table in the middle (Ryan's rule). -->
       <div class="cluster">
         <div class="seat-top"><SeatBadge {conn} seat={seatAt('top', me)} /></div>
-        <div class="seat-left"><SeatBadge {conn} seat={seatAt('left', me)} /></div>
+        <!-- After a seat swap the opponents cross sides, so each slides in from the other side. -->
+        <div class="seat-left" class:cross={director.seatSwap && settings.motion}><SeatBadge {conn} seat={seatAt('left', me)} /></div>
         <!-- The same square table while bidding and playing, so nobody's seat moves. -->
         <div class="center">
           <!-- The table itself, in tonight's theme (felt and wood, an infinity pool, neon...). -->
@@ -136,6 +137,15 @@
           {#if shuffling || !deal || director.dealing}
             <!-- The deck stays put until the last card has flown. -->
             <Deck riffleSound={iDeal && shuffling} />
+            {#if director.seatSwap}
+              {#key director.seatSwap.id}
+                <div class="going swapnote" role="status">
+                  <small>Seats swapped</small><b
+                    >{profileOf(profiles, director.seatSwap.players[0]).name} ⇄ {profileOf(profiles, director.seatSwap.players[1]).name}</b
+                  >
+                </div>
+              {/key}
+            {/if}
           {:else if deal.phase === 'auction'}
             <!-- Each call lands in front of its player, like a played card (Ryan). -->
             <SeatCalls calls={deal.calls} {me} color={(seat) => teamColor(conn, seat)} fly />
@@ -151,7 +161,7 @@
             <TrickArea {conn} />
           {/if}
         </div>
-        <div class="seat-right"><SeatBadge {conn} seat={seatAt('right', me)} /></div>
+        <div class="seat-right" class:cross={director.seatSwap && settings.motion}><SeatBadge {conn} seat={seatAt('right', me)} /></div>
         <div class="seat-me"><SeatBadge {conn} seat={me} /></div>
       </div>
     </section>
@@ -402,6 +412,23 @@
     font-size: min(15px, 9cqw);
     font-weight: 850;
     letter-spacing: 0.02em;
+  }
+  .swapnote b {
+    text-transform: none;
+  }
+  .seat-left.cross {
+    animation: cross-in calc(700ms * var(--speed)) cubic-bezier(0.3, 1.3, 0.5, 1) backwards;
+    --from: 240px;
+  }
+  .seat-right.cross {
+    animation: cross-in calc(700ms * var(--speed)) cubic-bezier(0.3, 1.3, 0.5, 1) backwards;
+    --from: -240px;
+  }
+  @keyframes cross-in {
+    from {
+      translate: var(--from) 0;
+      opacity: 0.2;
+    }
   }
   @keyframes going-in {
     from {

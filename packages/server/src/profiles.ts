@@ -17,6 +17,9 @@ export const USUAL_PARTNER: Record<string, string> = {
   ryan: 'adrian',
 };
 
+/** Ryan: his pair trades seats every five games of a night (whoever his partner is). */
+export const SWAP_ANCHOR = 'ryan';
+
 export function isProfile(id: unknown): id is string {
   return typeof id === 'string' && PROFILE_IDS.includes(id);
 }

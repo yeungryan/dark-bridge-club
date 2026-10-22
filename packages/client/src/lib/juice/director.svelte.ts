@@ -68,6 +68,9 @@ class Director {
   /** A game just dealt: the cards are flying (DealFlight); the hand fans open when it ends. */
   dealing = $state<{ id: number; dealer: Seat } | null>(null);
   private dealSafety: ReturnType<typeof setTimeout> | undefined;
+  /** Two partners just traded seats (Ryan: every five games), so the opponents cross sides. */
+  seatSwap = $state<{ id: number; players: readonly [string, string] } | null>(null);
+  private swapTimer: ReturnType<typeof setTimeout> | undefined;
   /** True during a hit-stop: the table's freeze-frame on a big impact. */
   frozen = $state(false);
   /** Sets won in a row by one side (shown as "×n" once its orb lands); n ≥ 2 is a combo. */
@@ -93,6 +96,13 @@ class Director {
         this.revealHold = true;
         const fly = settings.animated ? settings.ms(TIMING.cardFly + RESPONSES[5].hitPauseMs) : 0;
         setTimeout(() => (this.revealHold = false), fly + settings.ms(TIMING.resultsDelay));
+      }
+      const swapped = events.find((e) => e.type === 'seatsSwapped');
+      if (swapped?.type === 'seatsSwapped') {
+        this.seatSwap = { id: ++this.fxId, players: swapped.players };
+        sound.whoosh();
+        clearTimeout(this.swapTimer);
+        this.swapTimer = setTimeout(() => (this.seatSwap = null), settings.ms(2800));
       }
       const dealt = events.find((e) => e.type === 'dealStarted');
       if (dealt) {

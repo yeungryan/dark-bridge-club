@@ -51,7 +51,7 @@ import {
   withOverride,
 } from '@dark/engine';
 import type { Env } from './index';
-import { isProfile, PROFILE_IDS, PROFILES, USUAL_PARTNER } from './profiles';
+import { isProfile, PROFILE_IDS, PROFILES, SWAP_ANCHOR, USUAL_PARTNER } from './profiles';
 
 // Specs S06–S09: the one trusted referee for the table.
 // Runs the engine, holds every hand, sends each player only their own view,
@@ -191,7 +191,7 @@ export class TableRoom extends DurableObject<Env> {
   }
 
   private freshSession(): SessionState {
-    return newSession({ profiles: PROFILE_IDS, usualPartner: USUAL_PARTNER, seed: this.env.TEST_SEED || randomSeed() });
+    return newSession({ profiles: PROFILE_IDS, usualPartner: USUAL_PARTNER, seed: this.env.TEST_SEED || randomSeed(), swapAnchor: SWAP_ANCHOR });
   }
 
   private save(): void {
@@ -444,6 +444,7 @@ export class TableRoom extends DurableObject<Env> {
           result: record.result,
           winningPair: record.winningPair,
           replayable: g.replayable === 1,
+          seating: record.seating ?? null,
         };
       });
     const avatarRows = this.sql
@@ -791,7 +792,8 @@ export class TableRoom extends DurableObject<Env> {
         tricks: r.tricks_json ? JSON.parse(r.tricks_json) : null,
       };
     });
-    return { seating: session.seating, pairs: session.pairs, deals };
+    // The night's starting seating (the first game's), as saved for history; each game carries its own.
+    return { seating: deals[0]?.seating ?? session.seating, pairs: session.pairs, deals };
   }
 
   private saveMoments(sessionId: string, moments: readonly Moment[]): void {
