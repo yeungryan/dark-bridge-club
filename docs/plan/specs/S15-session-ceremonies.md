@@ -38,7 +38,7 @@ Make each night feel like an **event** (promise B), spending the big ceremonies 
 
 **Crest colour (Ryan):** all four DARK letters share one colour, the theme's accent (dim until the player arrives, lit when here, solid once they've picked), as does "DARK" on the sign-in screen: the name reads as the title.
 
-**The DARK crest, revised (Ryan, L1 faint):** each letter is a tile in its team colour: D and K Team Black, A and R Team Red, each with its suit small and faint in the top-left corner (♠ D, ♥ A, ♦ R, ♣ K). Not here: a dim outline; here: the letter and edge lit in the team colour (black letters with a light rim); picked: filled, with the ✓. The login title is the same crest, all four filled, with BRIDGE CLUB beneath.
+**The DARK crest, revised (Ryan, L1 faint):** each letter is a tile in its team colour: D and K Team Black, A and R Team Red, each with its suit small and faint in the top-left corner (♣ D, ♦ A, ♥ R, ♠ K: the bidding order, lowest first; round 11, was ♠ ♥ ♦ ♣). Not here: a dim outline; here: the letter and edge lit in the team colour (black letters with a light rim); picked: filled, with the ✓. The login title is the same crest, all four filled, with BRIDGE CLUB beneath.
 
 ## The all-time score (Ryan, round 9, option S1)
 One line under "Bridge Club" in the lobby: the usual pairing's all-time **games won** (the matchup played most), team black's tiles on the left and team red's on the right, both numbers in white. It counts the carried-forward totals too (S20), so it keeps stacking after old games are deleted, and goes back to 0–0 only when all four approve a reset. Nothing shows before the first game; the practice table has none.
