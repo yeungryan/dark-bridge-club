@@ -41,3 +41,6 @@ Replaces the level and suit rows.
 **"1st", revised (Ryan):** smaller, lowercase "1st", in a neutral stone colour (white on black belongs to Team Black), on the top-right corner of the tile or card so it never covers the call or the rank.
 
 **"1st", final (Ryan, B4):** no text: a stone-coloured folded corner at the top-left of the opening bid's tile and of the card that leads each set, so the next call laid over it never hides it and it never covers a call or rank.
+
+## The bidding during play (Ryan, round 10)
+Tap the contract on the scoreboard (it now says "BIDS ▾" under the declarer) for this game's whole bidding as a table: one column per player in bidding order, the dealer marked D, one row per round, every Pass included, the winning bid ringed. Tap again to close.

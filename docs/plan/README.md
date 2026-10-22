@@ -96,8 +96,8 @@ Where a principle comes from our own playtests rather than a video, it says so. 
 ### Rules: your house variant
 - **R1** Fixed partners for the whole session, seated opposite. At the start a random **captain** is drawn and chooses a partner. **Their usual partner (Darren ↔ Kim, Adrian ↔ Ryan) is pre-selected**, and the captain can override it. Seats are then randomized, with partners always opposite.
 - **R2** The first dealer is random. **The deal passes counter-clockwise** each deal, including after a pass-out.
-- **R3** **Bidding is counter-clockwise starting with the dealer.** Calls are `1♣…7NT` and `Pass` only, with **no double or redouble**. Each bid must outrank the last. Three passes after a bid end the auction. Four opening passes mean a redeal.
-- **R4** **Declarer = whoever made the final bid.** The opening lead comes from **declarer's right**, which is the next seat counter-clockwise. **Play is counter-clockwise.** You must follow suit if you can. The trick goes to the highest trump, otherwise the highest card of the suit led. The trick winner leads next.
+- **R3** **Bidding is counter-clockwise starting with the player on the dealer's right** (the next seat; Ryan, round 10, was the dealer). Calls are `1♣…7NT` and `Pass` only, with **no double or redouble**. Each bid must outrank the last. Three passes after a bid end the auction. Four opening passes mean a redeal.
+- **R4** **Declarer = whoever made the final bid.** The opening lead comes from **declarer's right**, which is the next seat counter-clockwise, **except in a no-trump contract, where the dealer leads** (Ryan, round 10), whoever declared. **Play is counter-clockwise.** You must follow suit if you can. The trick goes to the highest trump, otherwise the highest card of the suit led. The trick winner leads next.
 - **R5** **No dummy.** All four hands stay hidden, and each player plays their own.
 - **R6** Declarers need at least `6 + level` tricks. **Making it scores +1 win for declarers. Failing scores +1 win for defenders.** The level never matters.
 - **R7** **No claims.** A player may propose **conceding** the rest of the deal, and **their partner must accept**.

@@ -33,14 +33,14 @@ const name = (id: ProfileId) => NAMES[id]!;
 const cards = (suit: Suit, ranks: readonly number[]): Card[] => ranks.map((rank) => ({ suit, rank }) as Card);
 const range = (lo: number, hi: number) => RANKS.filter((r) => r >= lo && r <= hi);
 
-/** Play a whole game through the real reducer (dealer 0, so calls start with seat 0). */
+/** Play a whole game through the real reducer (dealer 3, so calls start with seat 0, on their right). */
 function game(
   dealNumber: number,
   hands: PerSeat<Card[]>,
   calls: Call[],
   opts: { playOn?: boolean; thinkMs?: PerSeat<number> } = {},
 ): DealHistory {
-  let s: DealState = runAuction(newDealWithHands(hands, 0), calls);
+  let s: DealState = runAuction(newDealWithHands(hands, 3), calls);
   if (s.phase !== 'passedOut') {
     s = playUntil(s, (x) => x.phase !== 'play', highestLegal);
     if (s.phase === 'awaitingPlayOn') {

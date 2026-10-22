@@ -48,7 +48,7 @@ describe('S03 golden deals', () => {
   const hands = suitHands({ 0: 'S', 1: 'H', 2: 'D', 3: 'C' });
 
   it('1♠ by seat 0: trumps win every trick; clinch on trick 7; play on to +6', () => {
-    let s = runAuction(newDealWithHands(hands, 0), [bid(1, 'S'), PASS, PASS, PASS]);
+    let s = runAuction(newDealWithHands(hands, 3), [bid(1, 'S'), PASS, PASS, PASS]);
     expect(s.currentTrick!.leader).toBe(next(0)); // opening lead from declarer's right
 
     // Trick 1: hearts led, diamonds and clubs discarded, declarer ruffs last.
@@ -70,7 +70,7 @@ describe('S03 golden deals', () => {
   });
 
   it('1NT by seat 0: the heart holder wins every trick; defenders clinch on trick 7', () => {
-    let s = runAuction(newDealWithHands(hands, 0), [bid(1, 'NT'), PASS, PASS, PASS]);
+    let s = runAuction(newDealWithHands(hands, 1), [PASS, PASS, bid(1, 'NT'), PASS, PASS, PASS]);
     s = playUntil(s, (x) => x.phase !== 'play');
     expect(s.clinch).toMatchObject({ side: 'defenders', trickNumber: 7, seat: 1 });
     s = act(s, { type: 'endAtClinch' });
@@ -78,7 +78,7 @@ describe('S03 golden deals', () => {
   });
 
   it('playing out of turn, a card you do not hold, or revoking is rejected', () => {
-    const s = runAuction(newDealWithHands(hands, 0), [bid(1, 'NT'), PASS, PASS, PASS]);
+    const s = runAuction(newDealWithHands(hands, 1), [PASS, PASS, bid(1, 'NT'), PASS, PASS, PASS]);
     const outOfTurn = applyDealAction(s, { type: 'play', seat: 0, card: c('SA') });
     expect(!outOfTurn.ok && outOfTurn.error.code).toBe('NOT_YOUR_TURN');
     const notHeld = applyDealAction(s, { type: 'play', seat: 1, card: c('SA') });
@@ -92,7 +92,7 @@ describe('S03 golden deals', () => {
       2: [...'DA DK DQ DJ D10 D9 D8 D7 D6 D5 D4 D3 D2'.split(' ').map(c)],
       3: [...'CA CK CQ CJ C10 C9 C8 C7 C6 C5 C4 C3 C2'.split(' ').map(c)],
     };
-    let s = runAuction(newDealWithHands(mixed, 0), [bid(1, 'NT'), PASS, PASS, PASS]);
+    let s = runAuction(newDealWithHands(mixed, 1), [PASS, PASS, bid(1, 'NT'), PASS, PASS, PASS]);
     s = act(s, { type: 'play', seat: 1, card: c('HA') });
     s = act(s, { type: 'play', seat: 2, card: c('D2') });
     s = act(s, { type: 'play', seat: 3, card: c('C2') });

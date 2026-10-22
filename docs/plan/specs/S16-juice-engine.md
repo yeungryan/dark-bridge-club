@@ -75,3 +75,7 @@ Each moment now has its own shape, not just more or fewer of the same squares (`
 - **Sound** is layered (transient + body + sparkle), runs through a gentle limiter and a short, quiet room reverb per theme, and keeps everything in the phone-speaker band. Repeated sounds vary slightly so they never machine-gun.
 
 **Settings, trimmed (Ryan):** the menu, settings and header use monochrome Lucide icons. The Vibrate setting is gone (it couldn't be changed on most phones); vibration stays on where the phone supports it.
+
+## Round 10 timing (Ryan)
+- **A beat to look first.** After a set's last card lands, 0.4 s with the cards (and the winning card's highlight) still before the effects start, so the effects reinforce what you've already seen. The same before the deciding set's clinch. The 0.80 s effects cap is unchanged (tabled).
+- **The last set of a game stays up.** Whether it's the deciding set or the 13th set of a game played out after it was decided, the results wait until that set's effects have finished (the attack, the sweep, the orb and any streak stamp reaching the scoreboard, or the finisher), then 3 s more. A game ended by the clinch window, with no card just played, goes straight to the results.

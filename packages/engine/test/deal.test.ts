@@ -24,33 +24,33 @@ const toChoice = (s: DealState) => s.phase !== 'play';
 describe('S04 clinch', () => {
   for (const level of LEVELS) {
     it(`level ${level}: a made contract clinches on trick ${declarerTarget(level)}`, () => {
-      let s = runAuction(newDealWithHands(hands, 0), [bid(level, 'S'), PASS, PASS, PASS]);
+      let s = runAuction(newDealWithHands(hands, 3), [bid(level, 'S'), PASS, PASS, PASS]);
       s = playUntil(s, toChoice);
       expect(s.clinch).toMatchObject({ side: 'declarers', trickNumber: declarerTarget(level) });
     });
 
     it(`level ${level}: a defeated contract clinches on trick ${defenderTarget(level)}`, () => {
-      let s = runAuction(newDealWithHands(hands, 0), [bid(level, 'NT'), PASS, PASS, PASS]);
+      let s = runAuction(newDealWithHands(hands, 3), [bid(level, 'NT'), PASS, PASS, PASS]);
       s = playUntil(s, toChoice);
       expect(s.clinch).toMatchObject({ side: 'defenders', trickNumber: defenderTarget(level) });
     });
   }
 
   it('7♠ clinches on the last trick, so the deal completes as played out', () => {
-    let s = runAuction(newDealWithHands(hands, 0), [bid(7, 'S'), PASS, PASS, PASS]);
+    let s = runAuction(newDealWithHands(hands, 3), [bid(7, 'S'), PASS, PASS, PASS]);
     s = playUntil(s, toChoice);
     expect(s.phase).toBe('complete');
     expect(s.result).toMatchObject({ winner: 'declarers', playedOut: true, overUnder: 0 });
   });
 
   it('without Play on, over/undertricks are not recorded', () => {
-    let s = runAuction(newDealWithHands(hands, 0), [bid(1, 'S'), PASS, PASS, PASS]);
+    let s = runAuction(newDealWithHands(hands, 3), [bid(1, 'S'), PASS, PASS, PASS]);
     s = act(playUntil(s, toChoice), { type: 'endAtClinch' });
     expect(s.result).toMatchObject({ winner: 'declarers', reason: 'made', playedOut: false, overUnder: null });
   });
 
   it('any seat may choose Play on, and the trick winner leads the next trick', () => {
-    let s = runAuction(newDealWithHands(hands, 0), [bid(1, 'S'), PASS, PASS, PASS]);
+    let s = runAuction(newDealWithHands(hands, 3), [bid(1, 'S'), PASS, PASS, PASS]);
     s = playUntil(s, toChoice);
     s = act(s, { type: 'playOn', seat: 3 });
     expect(s.phase).toBe('play');
@@ -59,7 +59,7 @@ describe('S04 clinch', () => {
 
   it('the result cannot change after the clinch, even when played out', () => {
     // Declarers are defeated early in 4NT, then win nothing either way: result stays "defeated".
-    let s = runAuction(newDealWithHands(hands, 0), [bid(4, 'NT'), PASS, PASS, PASS]);
+    let s = runAuction(newDealWithHands(hands, 3), [bid(4, 'NT'), PASS, PASS, PASS]);
     s = playUntil(s, toChoice);
     s = act(s, { type: 'playOn', seat: 0 });
     s = playUntil(s, toChoice);
@@ -67,7 +67,7 @@ describe('S04 clinch', () => {
   });
 
   it('the clinch choice only accepts Play on or the timer', () => {
-    let s = runAuction(newDealWithHands(hands, 0), [bid(1, 'S'), PASS, PASS, PASS]);
+    let s = runAuction(newDealWithHands(hands, 3), [bid(1, 'S'), PASS, PASS, PASS]);
     s = playUntil(s, toChoice);
     expect(seatToAct(s)).toBeNull();
     expect(applyDealAction(s, { type: 'play', seat: 0, card: s.hands[0][0]! }).ok).toBe(false);
@@ -75,7 +75,7 @@ describe('S04 clinch', () => {
 });
 
 describe('S04 concession', () => {
-  const started = () => runAuction(newDealWithHands(hands, 0), [bid(3, 'S'), PASS, PASS, PASS]);
+  const started = () => runAuction(newDealWithHands(hands, 3), [bid(3, 'S'), PASS, PASS, PASS]);
 
   it('needs the partner to accept; then the other side wins', () => {
     let s = act(started(), { type: 'proposeConcession', seat: 1 }); // a defender
@@ -109,7 +109,7 @@ describe('S04 concession', () => {
   });
 
   it('cannot concede during the auction or after the clinch', () => {
-    expect(applyDealAction(newDealWithHands(hands, 0), { type: 'proposeConcession', seat: 0 }).ok).toBe(false);
+    expect(applyDealAction(newDealWithHands(hands, 3), { type: 'proposeConcession', seat: 0 }).ok).toBe(false);
     const clinched = playUntil(started(), toChoice);
     expect(applyDealAction(clinched, { type: 'proposeConcession', seat: 1 }).ok).toBe(false);
   });
