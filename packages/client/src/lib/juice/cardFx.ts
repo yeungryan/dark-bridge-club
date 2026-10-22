@@ -1,4 +1,5 @@
 import { freeze, spawn, type Spec } from './particles';
+import { sound } from './sound';
 
 // Ryan's round 8 mockups: the winning card's element attacks the three losing cards of the set.
 // The whole thing is over in 1.0 s (Ryan's cap), and the losers stay on the table, wrecked:
@@ -105,6 +106,7 @@ export function ragged(w: number, h: number, n: number, bite: number): string {
 export function fireAttack(win: HTMLElement, losers: HTMLElement[]): void {
   const w = center(win);
   implode(w, FIRE);
+  sound.fireIgnite();
   at(100, () => {
     fx([
       { shape: 'flash', x: w.x, y: w.y, size: 60, max: 16, alpha: 0.45, color: '#ff8a3a' },
@@ -112,20 +114,22 @@ export function fireAttack(win: HTMLElement, losers: HTMLElement[]): void {
       { shape: 'ring', x: w.x, y: w.y, size: 8, grow: 3.4, max: 14, color: '#ff7a2f', wobble: 3 },
     ]);
     // A fireball at each loser, with a tail of embers.
-    for (const l of losers) {
+    losers.forEach((l, k) => {
       const t = center(l);
+      const d = k * 2;
       const v = toward(w, t, 13);
       fx([
-        { shape: 'flash', x: w.x, y: w.y, ...v, size: 16, max: 13, alpha: 1, color: '#ffb347', glow: 'hot' },
-        { shape: 'streak', x: w.x, y: w.y, ...v, size: 4, max: 13, color: '#ff7a2f', trailLen: 10 },
-        ...many(6, (i) => ({ shape: 'dot', x: w.x, y: w.y, vx: v.vx * 0.9, vy: v.vy * 0.9, drag: 0.97, max: 14, delay: i, size: rand(1.5, 2.6), color: pick(FIRE, i), wobble: 1 })),
+        { shape: 'flash', x: w.x, y: w.y, ...v, size: 16, max: 13, delay: d, alpha: 1, color: '#ffb347', glow: 'hot' },
+        { shape: 'streak', x: w.x, y: w.y, ...v, size: 4, max: 13, delay: d, color: '#ff7a2f', trailLen: 10 },
+        ...many(6, (i) => ({ shape: 'dot', x: w.x, y: w.y, vx: v.vx * 0.9, vy: v.vy * 0.9, drag: 0.97, max: 14, delay: d + i, size: rand(1.5, 2.6), color: pick(FIRE, i), wobble: 1 })),
       ]);
-      at(13 * F, () => burn(l, w));
-    }
+      at((13 + d) * F, () => burn(l, w));
+    });
   });
 }
 
 function burn(card: HTMLElement, from: Pt): void {
+  sound.fireHit();
   const r = card.getBoundingClientRect();
   const c = center(card);
   // Where it was hit: the side facing the winner.
@@ -168,6 +172,7 @@ function burn(card: HTMLElement, from: Pt): void {
 
 export function airAttack(win: HTMLElement, losers: HTMLElement[]): void {
   const w = center(win);
+  sound.airGust();
   fx([{ shape: 'flash', x: w.x, y: w.y, size: 26, max: 10, alpha: 0.8, color: AIR[2]!, glow: 'hot' }]);
   losers.forEach((l, k) => {
     const t = center(l);
@@ -188,6 +193,7 @@ export function airAttack(win: HTMLElement, losers: HTMLElement[]): void {
 }
 
 function slice(card: HTMLElement, th: number): void {
+  sound.airCut();
   const r = card.getBoundingClientRect();
   const c = center(card);
   // The cut runs across the card, roughly square to the way the wind came in.
@@ -245,7 +251,10 @@ export function waterAttack(win: HTMLElement, losers: HTMLElement[], under: HTML
     under.appendChild(ring);
     ring.animate([{ transform: 'scale(0.4)', opacity: 0.95 }, { transform: 'scale(3)', opacity: 0 }], T({ duration: 700, delay: k * 100, easing: 'cubic-bezier(.2,.6,.4,1)', fill: 'both' }));
   }
-  // The splash crown.
+  // The splash crown, the jets firing, and later the drips.
+  sound.waterSplash();
+  at(4 * F, () => sound.waterJet());
+  at(560, () => sound.waterDrip());
   fx([
     { shape: 'flash', x: w.x, y: w.y, size: 40, max: 14, alpha: 0.4, color: WATER[0]! },
     ...many(16, (i) => {
@@ -296,6 +305,7 @@ function pierce(card: HTMLElement, th: number): void {
       const hy = rand(0.18, 0.82) * r.height;
       const hr = rand(3.5, 5.5);
       holes.push({ x: hx, y: hy, r: hr });
+      sound.waterHole();
       // Punch it: the hole shows the felt through (a mask), grown in two steps.
       const set = (scale: number) => {
         const m = holes.map((h, j) => `radial-gradient(circle at ${h.x.toFixed(1)}px ${h.y.toFixed(1)}px, transparent ${(j === holes.length - 1 ? h.r * scale : h.r).toFixed(1)}px, #000 ${((j === holes.length - 1 ? h.r * scale : h.r) + 0.8).toFixed(1)}px)`).join(',');
@@ -346,6 +356,7 @@ export function earthAttack(win: HTMLElement, losers: HTMLElement[], shake: (px:
     ...many(6, (i) => ({ shape: 'puff', x: w.x + (i % 2 ? 1 : -1) * rand(18, 26), y: w.y + 22, vx: (i % 2 ? 1 : -1) * rand(1, 2.4), drag: 0.94, max: rand(26, 34), size: rand(3.5, 6), grow: 0.35, alpha: 0.3, color: pick([EARTH[1]!, EARTH[2]!], i) })),
   ]);
   shake(3);
+  sound.earthSlam();
   // A giant boulder lobbed at each loser, a couple of stones with it.
   const N = 16;
   const g = 0.45;
@@ -375,6 +386,7 @@ export function jagged(cx: number, cy: number, radius: number, n: number, bite: 
 export const svgUrl = (svg: string) => `url("data:image/svg+xml,${encodeURIComponent(svg)}")`;
 
 function smash(card: HTMLElement, th: number): void {
+  sound.earthHit();
   const box = card.getBoundingClientRect();
   const W = box.width;
   const H = box.height;

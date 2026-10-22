@@ -1,5 +1,6 @@
 import { at, center, F, fx, many, overlay, pick, ragged, rand, svgUrl, T, toward, type Pt } from './cardFx';
 import { elementStrike } from './particles';
+import { sound } from './sound';
 
 // Ryan's picks (round 8): Lightning A (chain), Sound A (sonic boom), Ice B (shards), Metal A
 // (blade storm). Batch 1: Fire Ignite → burnt, Air Wind slash → sliced, Water Splash crown →
@@ -92,6 +93,7 @@ const chain: Attack = (win, losers, { shake }) => {
     const to = center(l);
     const a = from;
     at(i * 120, () => {
+      sound.boltZap(i);
       bolt(a, to, { size: 3, max: 14 });
       fx([
         { shape: 'flash', x: to.x, y: to.y, size: 30, max: 10, alpha: 1, color: BOLT[0]!, glow: 'hot' },
@@ -191,11 +193,13 @@ const sonicBoom: Attack = (win, losers, { shake }) => {
     ...many(3, (k) => ({ shape: 'ring', x: w.x, y: w.y, size: 10, grow: 9, max: 16, delay: k * 3, color: pick(SOUND, k + 1), wobble: 4 - k })),
   ]);
   shake(3);
+  sound.soundBoom();
   for (const l of losers) {
     const t = center(l);
     const d = Math.hypot(t.x - w.x, t.y - w.y);
     // The ring's front reaches it after d / 9 frames.
     at((d / 9) * F, () => {
+      sound.crumple();
       const box = l.getBoundingClientRect();
       const th = angle(w, t);
       l.animate(
@@ -324,6 +328,7 @@ const deepFreeze: Attack = (win, losers) => {
 const iceShards: Attack = (win, losers, { shake }) => {
   const w = center(win);
   fx([{ shape: 'flash', x: w.x, y: w.y, size: 30, max: 10, alpha: 0.9, color: ICE[1]!, glow: 'hot' }]);
+  sound.iceWhistle();
   losers.forEach((l, li) => {
     const t = center(l);
     for (let k = 0; k < 3; k++) {
@@ -341,6 +346,7 @@ const iceShards: Attack = (win, losers, { shake }) => {
       ]);
       at((N + delay) * F, () => {
         const p = local(l, aim);
+        sound.iceTink(k + li * 3);
         // The shard stuck in the card: its point buried past the hit, pointing the way it flew,
         // its base trailing back toward the winner. A faceted crystal (light face over dark).
         const s = document.createElement('div');
@@ -363,6 +369,7 @@ const iceShards: Attack = (win, losers, { shake }) => {
         fade(frost, 120);
         fx(many(3, (j) => ({ shape: 'flash', x: t.x + p.x - p.w / 2 + rand(-8, 8), y: t.y + p.y - p.h / 2 + rand(-8, 8), max: rand(8, 12), size: rand(3, 5), alpha: 1, color: '#ffffff', glow: 'star', delay: j * 2 })));
         if (k === 2) {
+          sound.iceFrost();
           jolt(l, th, 4);
           shake(2);
           l.animate([{ filter: 'none' }, { filter: 'saturate(0.7) brightness(1.03) hue-rotate(-8deg)' }], T({ duration: 240, fill: 'forwards' }));
@@ -432,6 +439,7 @@ const iceShatter: Attack = (win, losers, { shake }) => {
 const bladeStorm: Attack = (win, losers, { shake }) => {
   const w = center(win);
   fx([{ shape: 'ring', x: w.x, y: w.y, size: 8, grow: 4, max: 12, color: '#ffffff', wobble: 3 }]);
+  sound.bladeWhirr();
   losers.forEach((l, li) => {
     const t = center(l);
     for (let k = 0; k < 3; k++) {
@@ -448,12 +456,14 @@ const bladeStorm: Attack = (win, losers, { shake }) => {
           return { shape: 'streak', x: aim.x, y: aim.y, vx: Math.cos(a) * rand(3, 6), vy: Math.sin(a) * rand(3, 6), gravity: 0.25, drag: 0.9, max: rand(10, 16), size: 1.3, color: pick(['#ffcf8a', '#ffffff', '#ffb347'], j), trailLen: 4 };
         }));
         if (k < 2) {
+          sound.bladeSlash();
           // A slash: a dark cut with a bright edge, across the card.
           const a = th + Math.PI / 2 + rand(-0.4, 0.4);
           const L = 26;
           const d = `M${(p.x - Math.cos(a) * L).toFixed(1)} ${(p.y - Math.sin(a) * L).toFixed(1)}L${(p.x + Math.cos(a) * L).toFixed(1)} ${(p.y + Math.sin(a) * L).toFixed(1)}`;
           fade(overlay(l, `background: ${svg(p.w, p.h, `<path d='${d}' stroke='#3a3f47' stroke-width='2.2' stroke-linecap='round'/><path d='${d}' stroke='#ffffff' stroke-width='.7' transform='translate(.9 .9)'/>`)} center/100% 100%;`), 40);
         } else {
+          sound.bladeStick();
           const s = document.createElement('div');
           s.style.cssText = `position:absolute;left:${(p.x - 9).toFixed(1)}px;top:${(p.y - 9).toFixed(1)}px;width:18px;height:18px;transform:rotate(${(th * 180) / Math.PI + 45}deg);background:conic-gradient(from 0deg,#f2f4f7,#8a929e,#c3c9d2,#f2f4f7,#8a929e,#c3c9d2,#f2f4f7);clip-path:polygon(50% 0,60% 40%,100% 50%,60% 60%,50% 100%,40% 60%,0 50%,40% 40%);filter:drop-shadow(0 1px 1px rgba(0,0,0,.6));z-index:2;pointer-events:none;`;
           l.appendChild(s);

@@ -717,6 +717,167 @@ export const sound = {
       bell(e, 12, 0.3, 0.025, 0.22, 0.45, 0.3, v);
     });
   },
+  // ── Set won: the winner's element attacks the three losing cards (Ryan, round 8) ──────────
+  // Each attack calls these at its own impacts, so sound and picture stay together. Every one
+  // keeps its body in the phone band (300 Hz–5 kHz) like the rest.
+
+  /** Fire: sparks sucked into the card, then the "whoomp" as it ignites. */
+  fireIgnite() {
+    play('fireIgnite', (e) => {
+      noise(e, 0.08, 0.16, { band: 700, sweepTo: 2600, q: 1.1, shape: 'swell', peak: 0.95, wet: 0.04 });
+      noise(e, 0.2, 0.42, { band: 900, sweepTo: 420, q: 0.8, delay: 0.08, attack: 0.008, wet: 0.08 });
+      tone(e, 420, 0.16, 0.2, { type: 'triangle', glideTo: 320, delay: 0.08, attack: 0.004, wet: 0.06 });
+      noise(e, 0.12, 0.08, { highpass: 4200, delay: 0.085, wet: 0.1 });
+    });
+  },
+  /** Fire: a fireball lands and the card catches; it crackles as it burns. */
+  fireHit() {
+    play('fireHit', (e) => {
+      const b = vary(0.06);
+      noise(e, 0.12, 0.3, { band: 1100 * b, sweepTo: 520, q: 0.9, attack: 0.004, wet: 0.06 });
+      tone(e, 520 * b, 0.08, 0.1, { type: 'triangle', glideTo: 400, wet: 0.04 });
+      const list: Tick[] = Array.from({ length: 9 }, (_, k) => ({ at: 0.06 + k * 0.034 + Math.random() * 0.02, gain: 0.22 * vary(0.4), freq: 2400 + Math.random() * 2600, dur: 0.004 + Math.random() * 0.004 }));
+      ticks(e, list, 2.6, 0.06);
+      noise(e, 0.35, 0.05, { band: 1800, q: 0.6, shape: 'swell', peak: 0.3, delay: 0.04, wet: 0.08 });
+    });
+  },
+  /** Air: the wind gathers. */
+  airGust() {
+    play('airGust', (e) => whooshBody(e, 0.15, 0.3, 0.05));
+  },
+  /** Air: a card sliced in two, a sharp "shing". */
+  airCut() {
+    play('airCut', (e) => {
+      const b = vary(0.05);
+      noise(e, 0.05, 0.2, { band: 2200 * b, sweepTo: 5200, q: 1.4, shape: 'swell', peak: 0.7 });
+      snap(e, 0.14, 0.04, 4200);
+      tone(e, 3300 * b, 0.13, 0.05, { glideTo: 2500, delay: 0.04, attack: 0.002, wet: 0.12 });
+      tone(e, 4700 * b, 0.07, 0.02, { delay: 0.04, attack: 0.001, wet: 0.12 });
+    });
+  },
+  /** Water: the splash crown off the winning card. */
+  waterSplash() {
+    play('waterSplash', (e) => {
+      noise(e, 0.16, 0.34, { band: 1300, sweepTo: 650, q: 0.8, attack: 0.004, wet: 0.08 });
+      noise(e, 0.1, 0.1, { highpass: 4000, wet: 0.1 });
+      for (let k = 0; k < 4; k++) tone(e, 700 + Math.random() * 300, 0.045, 0.06, { glideTo: 1300 + Math.random() * 400, delay: 0.05 + k * 0.035, attack: 0.002, wet: 0.08 });
+    });
+  },
+  /** Water: a jet fires (one per losing card). */
+  waterJet() {
+    play('waterJet', (e) => noise(e, 0.09, 0.2, { band: 1400 * vary(0.08), sweepTo: 3800, q: 2, shape: 'swell', peak: 0.6, wet: 0.04, pan: [-0.2, 0.2] }));
+  },
+  /** Water: the jet punches a hole through the card, a wet "plop". */
+  waterHole() {
+    play('waterHole', (e) => {
+      const b = vary(0.12);
+      snap(e, 0.06, 0, 3800);
+      tone(e, 820 * b, 0.05, 0.12, { glideTo: 1500 * b, attack: 0.002, wet: 0.08 });
+      noise(e, 0.05, 0.08, { band: 2600 * b, q: 1.6, delay: 0.01, wet: 0.06 });
+    });
+  },
+  /** Water: the soaked card drips. */
+  waterDrip() {
+    play('waterDrip', (e) => {
+      for (let k = 0; k < 3; k++) tone(e, 1300 * vary(0.1), 0.035, 0.05, { glideTo: 2100, delay: k * (0.08 + Math.random() * 0.06), attack: 0.002, wet: 0.2 });
+    });
+  },
+  /** Earth: the slam that launches the boulders, and the whistle of them in the air. */
+  earthSlam() {
+    play('earthSlam', (e) => {
+      impactBody(e, 1);
+      knock(e, 360, 0.4, 0, 0.08);
+      tone(e, 1500, 0.2, 0.025, { glideTo: 900, delay: 0.03, attack: 0.05, wet: 0.08 });
+    });
+  },
+  /** Earth: a boulder smashes through a card: a heavy crunch and gravel. */
+  earthHit() {
+    play('earthHit', (e) => {
+      const b = vary(0.06);
+      noise(e, 0.12, 0.5, { band: 820 * b, sweepTo: 480, q: 0.7, attack: 0.002, wet: 0.08 });
+      knock(e, 380 * b, 0.42, 0, 0.06);
+      snap(e, 0.16, 0, 2600);
+      const list: Tick[] = Array.from({ length: 12 }, (_, k) => ({ at: 0.03 + k * 0.014 + Math.random() * 0.01, gain: 0.2 * vary(0.4), freq: 1200 + Math.random() * 2400, dur: 0.005 }));
+      ticks(e, list, 1.8, 0.04);
+    });
+  },
+  /** Lightning: the bolt jumps to the next card (`n` = 0, 1, 2), higher each time. */
+  boltZap(n: number) {
+    play('boltZap', (e) => {
+      const k = Math.max(0, Math.min(3, n || 0));
+      snap(e, 0.24, 0, 3000);
+      noise(e, 0.09, 0.32, { highpass: 2400, attack: 0.001, wet: 0.12 });
+      tone(e, 560 * 2 ** (k * 0.25), 0.12, 0.07, { type: 'sawtooth', glideTo: 360, lowpass: 3800, attack: 0.002, wet: 0.08 });
+      const list: Tick[] = Array.from({ length: 8 }, (_, i) => ({ at: 0.02 + i * 0.018 + Math.random() * 0.01, gain: 0.18 * vary(0.4), freq: 3000 + Math.random() * 2500, dur: 0.003 }));
+      ticks(e, list, 3, 0.08);
+    });
+  },
+  /** Sound: the sonic boom. */
+  soundBoom() {
+    play('soundBoom', (e) => {
+      impactBody(e, 1.5);
+      noise(e, 0.3, 0.3, { band: 600, sweepTo: 360, q: 0.9, attack: 0.003, wet: 0.2 });
+      tone(e, 430, 0.32, 0.18, { type: 'triangle', glideTo: 310, attack: 0.002, wet: 0.2 });
+    });
+  },
+  /** Sound: a card crumpled like paper. */
+  crumple() {
+    play('crumple', (e) => {
+      const n = 16;
+      const list: Tick[] = Array.from({ length: n }, (_, k) => ({ at: (k / n) * 0.26 + Math.random() * 0.012, gain: 0.26 * vary(0.45), freq: 1900 + Math.random() * 2800, dur: 0.004 + Math.random() * 0.005 }));
+      ticks(e, list, 1.6, 0.03);
+      noise(e, 0.28, 0.1, { band: 2600, q: 0.8, shape: 'swell', peak: 0.35, wet: 0.03 });
+    });
+  },
+  /** Ice: the shards fly, a thin cold whistle. */
+  iceWhistle() {
+    play('iceWhistle', (e) => {
+      noise(e, 0.13, 0.1, { band: 2800, sweepTo: 5200, q: 3, shape: 'swell', peak: 0.8, wet: 0.1 });
+      tone(e, 2600, 0.13, 0.03, { glideTo: 3500, attack: 0.06, wet: 0.15 });
+    });
+  },
+  /** Ice: a shard sticks fast, a glassy "tink" (`n` steps the pitch about). */
+  iceTink(n: number) {
+    play('iceTink', (e) => {
+      const f = [2637, 3136, 2794, 3520, 2960][Math.abs(Math.round(n || 0)) % 5]! * vary(0.01);
+      snap(e, 0.1, 0, 4500);
+      tone(e, f, 0.16, 0.06, { attack: 0.001, wet: 0.25 });
+      tone(e, f * 2.76, 0.06, 0.015, { attack: 0.001, wet: 0.25 });
+    });
+  },
+  /** Ice: frost creeping over a card, a fine crackle. */
+  iceFrost() {
+    play('iceFrost', (e) => {
+      const list: Tick[] = Array.from({ length: 14 }, (_, k) => ({ at: k * 0.016 + Math.random() * 0.008, gain: 0.08 * vary(0.4), freq: 4200 + Math.random() * 1600, dur: 0.003 }));
+      ticks(e, list, 3, 0.2);
+    });
+  },
+  /** Metal: the blades spinning out, a fast whirr. */
+  bladeWhirr() {
+    play('bladeWhirr', (e) => {
+      const list: Tick[] = Array.from({ length: 11 }, (_, k) => ({ at: k * 0.016, gain: 0.12 + k * 0.012, freq: 2200 + k * 120, dur: 0.008 }));
+      ticks(e, list, 2.2, 0.05);
+      noise(e, 0.18, 0.08, { band: 1800, sweepTo: 3200, q: 1.4, shape: 'swell', peak: 0.7, wet: 0.05, pan: [-0.3, 0.3] });
+    });
+  },
+  /** Metal: a blade slashes a card. */
+  bladeSlash() {
+    play('bladeSlash', (e) => {
+      const b = vary(0.05);
+      noise(e, 0.06, 0.24, { highpass: 3400, attack: 0.002, wet: 0.06 });
+      snap(e, 0.14, 0, 4000);
+      tone(e, 2500 * b, 0.09, 0.05, { glideTo: 1900, attack: 0.001, wet: 0.1 });
+    });
+  },
+  /** Metal: the last blade sticks in with a "thunk" and a ringing twang. */
+  bladeStick() {
+    play('bladeStick', (e) => {
+      knock(e, 520, 0.4, 0, 0.06);
+      snap(e, 0.12, 0, 3500);
+      tone(e, 1480, 0.28, 0.05, { attack: 0.001, wet: 0.2, glideTo: 1440 });
+      tone(e, 2310, 0.16, 0.025, { attack: 0.001, wet: 0.2 });
+    });
+  },
   /** The Deal button: the deck slapped on the table, a "thock" with a crisp snap on top. */
   dealButton() {
     play('dealButton', (e) => {

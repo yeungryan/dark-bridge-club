@@ -3,6 +3,7 @@
   import { airAttack, earthAttack, fireAttack, holdStill, waterAttack } from '../lib/juice/cardFx';
   import { clearEffects } from '../lib/juice/particles';
   import { SUB_SETS } from '../lib/juice/subFx';
+  import { sound, __renderSequenceForTest } from '../lib/juice/sound';
   import Card from './Card.svelte';
   import Particles from './Particles.svelte';
 
@@ -19,11 +20,24 @@
   const params = new URLSearchParams(location.search);
   const sub = SUB_SETS[params.get('set') ?? ''];
   const one = params.get('only');
-  const rows: { id: string; title: string; note: string; i?: number }[] = sub
-    ? sub.options.map((o, i) => ({ id: `sub${i}`, title: `${o.label} · ${o.name}`, note: o.note, i }))
-    : one
-      ? ROWS.filter((r) => r.id === one)
-      : [...ROWS];
+  // ?set=picks: Ryan's eight picks together (batch 1's four, then batch 2's chosen options).
+  const PICKS: [string, number][] = [
+    ['lightning', 1],
+    ['sound', 1],
+    ['ice', 2],
+    ['metal', 1],
+  ];
+  const picks = params.get('set') === 'picks';
+  const rows: { id: string; title: string; note: string; i?: number; sub?: string }[] = picks
+    ? [
+        ...ROWS,
+        ...PICKS.map(([k, i]) => ({ id: `${k}${i}`, title: `${SUB_SETS[k]!.title.split(' (')[0]} · ${SUB_SETS[k]!.options[i]!.name}`, note: SUB_SETS[k]!.options[i]!.note, i, sub: k })),
+      ]
+    : sub
+      ? sub.options.map((o, i) => ({ id: `sub${i}`, title: `${o.label} · ${o.name}`, note: o.note, i }))
+      : one
+        ? ROWS.filter((r) => r.id === one)
+        : [...ROWS];
   const SPOTS: { spot: string; card: CardT }[] = [
     { spot: 'bottom', card: { suit: 'S', rank: 14 } },
     { spot: 'left', card: { suit: 'S', rank: 9 } },
@@ -39,7 +53,9 @@
     const [win, ...losers] = cards;
     const shake = (px: number) => cell.animate([0, 1, 2, 3, 4].map((k) => ({ transform: `translate(${k % 2 ? px : -px}px, ${(k % 3) - 1}px)` })).concat([{ transform: 'none' }]), { duration: 160 });
     const id = rows[i]!.id;
-    if (sub) sub.options[rows[i]!.i!]!.play(win!, losers, { under: cell.querySelector<HTMLElement>('.under')!, shake });
+    const ctx = { under: cell.querySelector<HTMLElement>('.under')!, shake };
+    if (rows[i]!.sub) SUB_SETS[rows[i]!.sub!]!.options[rows[i]!.i!]!.play(win!, losers, ctx);
+    else if (sub) sub.options[rows[i]!.i!]!.play(win!, losers, ctx);
     else if (id === 'fire') fireAttack(win!, losers);
     else if (id === 'air') airAttack(win!, losers);
     else if (id === 'water') waterAttack(win!, losers, cell.querySelector<HTMLElement>('.under')!);
@@ -59,7 +75,68 @@
       await wait(1700);
     }
   }
+  // For the videos: log every sound with when it played, then render the log offline (the same
+  // chain as live) into a WAV to lay under the screen recording. A white flash marks time zero.
+  const log: [string, unknown[], number][] = [];
+  let rendering = false;
+  const S = sound as unknown as Record<string, (...a: unknown[]) => void>;
+  for (const name of Object.keys(S)) {
+    const orig = S[name]!;
+    S[name] = (...a: unknown[]) => {
+      if (!rendering) log.push([name, a, performance.now()]);
+      orig(...a);
+    };
+  }
+  let flash = $state(false);
+  async function syncFlash(): Promise<number> {
+    flash = true;
+    const t0 = performance.now();
+    await wait(120);
+    flash = false;
+    return t0;
+  }
+  function wav(ch: Float32Array[], rate: number): string {
+    const n = ch[0]!.length;
+    const buf = new DataView(new ArrayBuffer(44 + n * 4));
+    const str = (o: number, s: string) => [...s].forEach((c, i) => buf.setUint8(o + i, c.charCodeAt(0)));
+    str(0, 'RIFF');
+    buf.setUint32(4, 36 + n * 4, true);
+    str(8, 'WAVEfmt ');
+    buf.setUint32(16, 16, true);
+    buf.setUint16(20, 1, true);
+    buf.setUint16(22, 2, true);
+    buf.setUint32(24, rate, true);
+    buf.setUint32(28, rate * 4, true);
+    buf.setUint16(32, 4, true);
+    buf.setUint16(34, 16, true);
+    str(36, 'data');
+    buf.setUint32(40, n * 4, true);
+    for (let i = 0; i < n; i++)
+      for (let c = 0; c < 2; c++) buf.setInt16(44 + i * 4 + c * 2, Math.max(-1, Math.min(1, ch[c]![i]!)) * 32767, true);
+    let bin = '';
+    const bytes = new Uint8Array(buf.buffer);
+    for (let i = 0; i < bytes.length; i += 0x8000) bin += String.fromCharCode(...bytes.subarray(i, i + 0x8000));
+    return btoa(bin);
+  }
   (window as unknown as { fx: object }).fx = {
+    /** Play everything once (or `rounds` times), after a white flash; return each sound and
+     *  when it played, in seconds from the flash. */
+    async record(rounds = 1) {
+      log.length = 0;
+      const t0 = await syncFlash();
+      await wait(400);
+      for (let r = 0; r < rounds; r++) await playAll();
+      return log.map(([n, a, t]) => [n, a, (t - t0) / 1000]);
+    },
+    /** Render timed sounds offline into a WAV (base64). */
+    async render(steps: [string, unknown[], number][], seconds: number) {
+      rendering = true;
+      try {
+        return wav(await __renderSequenceForTest(steps, seconds, 44100), 44100);
+      } finally {
+        rendering = false;
+      }
+    },
     count: rows.length,
     async still(i: number, ms: number) {
       await reset();
@@ -72,9 +149,10 @@
 </script>
 
 <Particles />
+{#if flash}<div class="sync"></div>{/if}
 <main>
   <header>
-    <h1>{sub ? sub.title : 'Set won · the element attacks the losing cards'}</h1>
+    <h1>{sub ? sub.title : picks ? 'Your picks · set won, with sound' : 'Set won · the element attacks the losing cards'}</h1>
     <button onclick={playAll}>Play all</button>
     <button onclick={reset}>Reset</button>
   </header>
@@ -118,6 +196,7 @@
   .grid {
     display: grid;
     grid-template-columns: repeat(4, 300px);
+    row-gap: 10px;
     gap: 10px;
   }
   .cell {
@@ -143,6 +222,12 @@
     width: 190px;
     height: 190px;
     transform: translate(-50%, -50%);
+  }
+  .sync {
+    position: fixed;
+    inset: 0;
+    z-index: 100;
+    background: #fff;
   }
   .under {
     position: absolute;
