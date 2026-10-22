@@ -370,7 +370,7 @@
     aspect-ratio: 1 / 1;
     container-type: inline-size;
   }
-  /* "Going once / twice": a small stamp in the middle of the table, narrow enough to sit between
+  /* "Going once / twice": counting down the leading bid, so it's gold in every theme. A small stamp in the middle of the table, narrow enough to sit between
      the side seats' calls. */
   .going {
     position: absolute;
@@ -383,14 +383,14 @@
     gap: 1px;
     padding: min(5px, 3cqw) min(8px, 4.5cqw) min(6px, 3.5cqw);
     border-radius: min(12px, 7cqw);
-    background: var(--accent);
-    color: var(--accent-ink);
+    background: var(--win);
+    color: #1d1a10;
     line-height: 1;
     text-transform: uppercase;
     white-space: nowrap;
     box-shadow:
       0 4px 14px rgba(0, 0, 0, 0.45),
-      0 0 18px var(--accent-glow);
+      0 0 18px var(--win-glow);
     animation: going-in calc(var(--spring-pop-ms, 380ms) * var(--speed)) var(--spring-pop, cubic-bezier(0.3, 1.6, 0.6, 1)) backwards;
   }
   .going small {
