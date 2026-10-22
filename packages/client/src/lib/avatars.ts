@@ -55,11 +55,12 @@ export const ELEMENT_RING: Record<Element, string> = {
   earth: '#43a047',
 };
 
-/** The DARK crest (Ryan): each friend's letter, suit and team, fixed (♠ D, ♥ A, ♦ R, ♣ K). */
+/** The DARK crest (Ryan): each friend's letter, suit and team, fixed. The suits run in bidding
+ *  order, lowest first (round 11): ♣ D, ♦ A, ♥ R, ♠ K. */
 export const CREST: Record<ProfileId, { suit: 'S' | 'H' | 'D' | 'C'; team: Team }> = {
-  darren: { suit: 'S', team: 'black' },
-  adrian: { suit: 'H', team: 'red' },
-  ryan: { suit: 'D', team: 'red' },
-  kim: { suit: 'C', team: 'black' },
+  darren: { suit: 'C', team: 'black' },
+  adrian: { suit: 'D', team: 'red' },
+  ryan: { suit: 'H', team: 'red' },
+  kim: { suit: 'S', team: 'black' },
 };
-export const crestOf = (id: ProfileId, index: number) => CREST[id] ?? { suit: (['S', 'H', 'D', 'C'] as const)[index % 4]!, team: index % 3 === 0 ? 'black' : 'red' };
+export const crestOf = (id: ProfileId, index: number) => CREST[id] ?? { suit: (['C', 'D', 'H', 'S'] as const)[index % 4]!, team: index % 3 === 0 ? 'black' : 'red' };

@@ -5,7 +5,7 @@
   import Suit from './Suit.svelte';
 
   // One letter of the DARK crest (Ryan's pick, L1 revised): Team Red's A and R, Team Black's D
-  // and K, each with its suit faint in the top-left corner (♠ D, ♥ A, ♦ R, ♣ K). Not here: a dim
+  // and K, each with its suit faint in the top-left corner (♣ D, ♦ A, ♥ R, ♠ K: bidding order). Not here: a dim
   // outline. Here: lit in the team colour. Picked: filled. The login title is the crest, all filled.
   let {
     letter,
