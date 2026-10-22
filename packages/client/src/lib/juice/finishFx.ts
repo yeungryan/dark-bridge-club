@@ -19,6 +19,7 @@ const GOLD = '#e8c25a';
 
 /** The power-up as the attack starts: a gold charge on the winning card. */
 export function powerUp(win: HTMLElement): void {
+  sound.powerUp();
   const w = center(win);
   fx([
     { shape: 'flash', x: w.x, y: w.y, size: 70, max: 18, alpha: 0.5, color: GOLD },

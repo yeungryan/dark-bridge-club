@@ -878,6 +878,93 @@ export const sound = {
       tone(e, 2310, 0.16, 0.025, { attack: 0.001, wet: 0.2 });
     });
   },
+  // ── The game-winning set: the power-up and each element's finisher (Ryan, round 8) ─────────
+  // The finale itself is clinch() (today's chord), so these lead into it and don't fight it.
+
+  /** The winning card charging up gold as the attack starts: a quick bright rise. */
+  powerUp() {
+    play('powerUp', (e) => {
+      noise(e, 0.16, 0.12, { band: 900, sweepTo: 4200, q: 1.4, shape: 'swell', peak: 0.95, wet: 0.15 });
+      tone(e, 784, 0.16, 0.05, { glideTo: 1568, attack: 0.12, wet: 0.2 });
+      bell(e, 12, 0.25, 0.04, 0.14, 0.3, 0.3);
+    });
+  },
+  /** Fire: the char flares and crumbles to ash: a roar of flame, then a dry crackling hiss. */
+  fireCrumble() {
+    play('fireCrumble', (e) => {
+      noise(e, 0.3, 0.32, { band: 700, sweepTo: 1800, q: 0.8, shape: 'swell', peak: 0.3, wet: 0.1 });
+      const list: Tick[] = Array.from({ length: 18 }, (_, k) => ({ at: 0.05 + k * 0.022 + Math.random() * 0.012, gain: 0.2 * vary(0.45), freq: 2200 + Math.random() * 3000, dur: 0.004 + Math.random() * 0.004 }));
+      ticks(e, list, 2.4, 0.08);
+      noise(e, 0.45, 0.07, { highpass: 4500, delay: 0.1, shape: 'swell', peak: 0.3, wet: 0.2, pan: [-0.3, 0.4] });
+    });
+  },
+  /** Air: the last gust that blasts the halves away. */
+  airBlast() {
+    play('airBlast', (e) => {
+      whooshBody(e, 0.4, 0.42, 0.12);
+      noise(e, 0.3, 0.1, { band: 3000, sweepTo: 5500, q: 2.5, shape: 'swell', peak: 0.4, delay: 0.05, wet: 0.15, pan: [0.4, -0.4] });
+    });
+  },
+  /** Water: the wave rolling out and washing the cards away. */
+  waterWash() {
+    play('waterWash', (e) => {
+      noise(e, 0.45, 0.36, { band: 600, sweepTo: 1600, q: 0.7, shape: 'swell', peak: 0.45, wet: 0.15, pan: [-0.3, 0.3] });
+      noise(e, 0.35, 0.12, { highpass: 3500, delay: 0.12, shape: 'swell', peak: 0.3, wet: 0.2 });
+      for (let k = 0; k < 5; k++) tone(e, 650 + Math.random() * 400, 0.05, 0.05, { glideTo: 1400 + Math.random() * 500, delay: 0.18 + k * 0.04, attack: 0.002, wet: 0.12 });
+    });
+  },
+  /** Earth: the holed cards cracking apart and the chunks clattering down. */
+  earthCrumble() {
+    play('earthCrumble', (e) => {
+      snap(e, 0.22, 0, 2400);
+      noise(e, 0.1, 0.42, { band: 900, sweepTo: 500, q: 0.8, attack: 0.002, wet: 0.08 });
+      knock(e, 420, 0.32, 0.02, 0.08);
+      const list: Tick[] = Array.from({ length: 22 }, (_, k) => ({ at: 0.06 + k * 0.018 + Math.random() * 0.012, gain: 0.22 * vary(0.45) * (1 - k / 30), freq: 900 + Math.random() * 2400, dur: 0.006 }));
+      ticks(e, list, 1.6, 0.06);
+    });
+  },
+  /** Lightning: the last strike from the sky, a big thunder crack, then the cards sizzle away. */
+  boltStrike() {
+    play('boltStrike', (e) => {
+      snap(e, 0.3, 0, 2600);
+      noise(e, 0.14, 0.45, { highpass: 1800, attack: 0.001, wet: 0.2 });
+      impactBody(e, 1.5);
+      tone(e, 520, 0.18, 0.08, { type: 'sawtooth', glideTo: 300, lowpass: 3500, attack: 0.002, wet: 0.15 });
+      const list: Tick[] = Array.from({ length: 16 }, (_, k) => ({ at: 0.08 + k * 0.022 + Math.random() * 0.01, gain: 0.14 * vary(0.4) * (1 - k / 20), freq: 3200 + Math.random() * 2400, dur: 0.003 }));
+      ticks(e, list, 3, 0.12);
+    });
+  },
+  /** Sound: the second, bigger boom that blows the crumpled cards off, paper fluttering. */
+  boomBlast() {
+    play('boomBlast', (e) => {
+      impactBody(e, 2.2);
+      noise(e, 0.4, 0.34, { band: 560, sweepTo: 340, q: 0.9, attack: 0.003, wet: 0.25 });
+      tone(e, 420, 0.4, 0.2, { type: 'triangle', glideTo: 300, attack: 0.002, wet: 0.25 });
+      const list: Tick[] = Array.from({ length: 12 }, (_, k) => ({ at: 0.12 + k * 0.03 + Math.random() * 0.015, gain: 0.12 * vary(0.4), freq: 2000 + Math.random() * 2500, dur: 0.006 }));
+      ticks(e, list, 1.6, 0.05);
+    });
+  },
+  /** Ice: the frozen cards shattering like glass. */
+  iceShatter() {
+    play('iceShatter', (e) => {
+      snap(e, 0.26, 0, 4000);
+      noise(e, 0.12, 0.3, { highpass: 3000, attack: 0.001, wet: 0.2 });
+      for (let k = 0; k < 7; k++) tone(e, 2400 + Math.random() * 1800, 0.12 + Math.random() * 0.1, 0.035, { delay: k * 0.022 + Math.random() * 0.02, attack: 0.001, wet: 0.3 });
+      const list: Tick[] = Array.from({ length: 14 }, (_, k) => ({ at: 0.04 + k * 0.02 + Math.random() * 0.01, gain: 0.14 * vary(0.4), freq: 3600 + Math.random() * 2000, dur: 0.003 }));
+      ticks(e, list, 3, 0.15);
+    });
+  },
+  /** Metal: the blades whirl back and shred the cards into strips. */
+  metalShred() {
+    play('metalShred', (e) => {
+      for (let k = 0; k < 4; k++) {
+        noise(e, 0.05, 0.2, { highpass: 3400, delay: k * 0.045, attack: 0.002, wet: 0.06 });
+        tone(e, 2600 - k * 150, 0.07, 0.04, { glideTo: 1900 - k * 120, delay: k * 0.045, attack: 0.001, wet: 0.1 });
+      }
+      knock(e, 560, 0.24, 0.2, 0.08);
+      tone(e, 1480, 0.3, 0.04, { delay: 0.2, attack: 0.001, wet: 0.25, glideTo: 1430 });
+    });
+  },
   /** The Deal button: the deck slapped on the table, a "thock" with a crisp snap on top. */
   dealButton() {
     play('dealButton', (e) => {

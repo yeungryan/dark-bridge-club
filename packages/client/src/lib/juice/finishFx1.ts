@@ -1,5 +1,6 @@
 import { at, center, F, fx, many, overlay, pick, ragged, rand, T, type Pt } from './cardFx';
 import { finale, type Finish } from './finishFx';
+import { sound } from './sound';
 
 // Batch 1 finishers (fire, air, water, earth): the game-winning set wipes the wrecked losing
 // cards off the table, each element its own way, and the finale lands at the climax. Timed for
@@ -25,6 +26,7 @@ function feltMark(under: HTMLElement, card: HTMLElement, style: string): HTMLEle
 /** Fire: the char flares up once more, and each card crumbles to ash that blows away. */
 const fire: Finish = (win, losers, ctx) => {
   const w = center(win);
+  sound.fireCrumble();
   losers.forEach((l, k) => {
     const c = center(l);
     const th = angle(w, c);
@@ -71,6 +73,7 @@ const fire: Finish = (win, losers, ctx) => {
 /** Air: a last gust blasts the parted halves off the table, spinning away. */
 const air: Finish = (win, losers, ctx) => {
   const w = center(win);
+  sound.airBlast();
   fx(
     many(18, (i) => {
       const a = rand(0, Math.PI * 2);
@@ -107,6 +110,7 @@ const air: Finish = (win, losers, ctx) => {
 /** Water: a wave rolls out from the winner and washes the soaked cards away. */
 const water: Finish = (win, losers, ctx) => {
   const w = center(win);
+  sound.waterWash();
   for (const l of losers) {
     const c = center(l);
     const th = angle(w, c);
@@ -181,6 +185,7 @@ const earth: Finish = (win, losers, ctx) => {
       });
       l.style.visibility = 'hidden';
       ctx.shake(3);
+      if (k === 0) sound.earthCrumble();
       fx([
         ...many(12, (i) => {
           const a = rand(0, Math.PI * 2);

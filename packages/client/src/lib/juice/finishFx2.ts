@@ -1,5 +1,6 @@
 import { at, center, F, fx, many, overlay, pick, ragged, rand, T, toward, type Pt } from './cardFx';
 import { finale, type Finish } from './finishFx';
+import { sound } from './sound';
 import { angle, bolt, BOLT, frostBg } from './subFx';
 
 // Batch 2 finishers (lightning, sound, ice, metal): see finishFx.ts. Each starts once the
@@ -33,6 +34,7 @@ function pieces(card: HTMLElement, clips: string[]): HTMLElement[] {
 // ── Lightning: a last strike from the sky, and each card burns away to ash ───────────────────
 
 const lightning: Finish = (win, losers, ctx) => {
+  sound.boltStrike();
   losers.forEach((l, k) => {
     at(k * 30, () => {
       const t = center(l);
@@ -77,6 +79,7 @@ const lightning: Finish = (win, losers, ctx) => {
 
 const sonic: Finish = (win, losers, ctx) => {
   const w = center(win);
+  sound.boomBlast();
   fx([
     { shape: 'flash', x: w.x, y: w.y, size: 40, max: 10, alpha: 1, color: '#ffffff', glow: 'hot' },
     ...many(3, (k) => ({ shape: 'ring', x: w.x, y: w.y, size: 12, grow: 12, max: 18, delay: k * 3, color: pick(['#ffffff', '#f4d27a', '#fff6cf'], k), wobble: 6 - k * 1.5 })),
@@ -126,6 +129,7 @@ const ice: Finish = (win, losers, ctx) => {
     l.animate([{ filter: 'none', transform }, { filter: 'brightness(1.5) saturate(0.2)', transform }], T({ duration: 160, delay: 260 + li * 30, fill: 'forwards' }));
     at(460 + li * 30, () => {
       ctx.shake(3);
+      if (li === 0) sound.iceShatter();
       const box = l.getBoundingClientRect();
       const W = box.width;
       const H = box.height;
@@ -178,6 +182,7 @@ const metal: Finish = (win, losers, ctx) => {
     }
     at((N + d + 2) * F, () => {
       ctx.shake(3);
+      if (li === 0) sound.metalShred();
       const box = l.getBoundingClientRect();
       const W = box.width;
       const strips = 5;
