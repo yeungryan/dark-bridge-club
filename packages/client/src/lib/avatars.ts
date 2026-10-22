@@ -43,6 +43,9 @@ export const TEAM_COLOR: Record<Team, string> = { red: 'var(--team-red)', black:
 
 export const teamColor = (conn: Link, seat: Seat): string => TEAM_COLOR[teamOf(conn, seat)];
 
+/** The outline Team Black's shapes wear on dark panels, so they don't vanish (none for red). */
+export const rimFor = (team: Team): string | null => (team === 'black' ? 'rgba(255, 255, 255, 0.9)' : null);
+
 /** Element ring colours for badges and cards. */
 /** Each element's primary colour (Ryan): red fire, yellow air, blue water, green earth. */
 export const ELEMENT_RING: Record<Element, string> = {

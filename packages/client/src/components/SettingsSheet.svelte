@@ -1,5 +1,9 @@
 <script lang="ts">
-  import { buzz } from '../lib/juice/haptics';
+  import Sparkles from '@lucide/svelte/icons/sparkles';
+  import Gauge from '@lucide/svelte/icons/gauge';
+  import Hand from '@lucide/svelte/icons/hand';
+  import Volume2 from '@lucide/svelte/icons/volume-2';
+  import VolumeX from '@lucide/svelte/icons/volume-x';
   import { settings, type EffectsMode, type PlayStyle, type SpeedMode } from '../lib/juice/settings.svelte';
   import { sound } from '../lib/juice/sound';
 
@@ -16,7 +20,6 @@
     { value: 'drag', label: 'Drag up' },
     { value: 'tap', label: 'Tap twice' },
   ];
-  const canVibrate = typeof navigator !== 'undefined' && 'vibrate' in navigator;
   const speeds: { value: SpeedMode; label: string }[] = [
     { value: 'normal', label: 'Normal' },
     { value: 'fast', label: 'Fast' },
@@ -25,7 +28,7 @@
 
 <div class="sheet panel" role="dialog" aria-label="Settings">
   <div class="row">
-    <span>Effects</span>
+    <span class="label"><Sparkles size={18} strokeWidth={1.75} aria-hidden="true" /> Effects</span>
     <div class="seg">
       {#each effects as e (e.value)}
         <button class:on={settings.effects === e.value} onclick={() => (settings.effects = e.value)}>{e.label}</button>
@@ -33,7 +36,7 @@
     </div>
   </div>
   <div class="row">
-    <span>Speed</span>
+    <span class="label"><Gauge size={18} strokeWidth={1.75} aria-hidden="true" /> Speed</span>
     <div class="seg">
       {#each speeds as s (s.value)}
         <button class:on={settings.speed === s.value} onclick={() => (settings.speed = s.value)}>{s.label}</button>
@@ -41,7 +44,7 @@
     </div>
   </div>
   <div class="row">
-    <span>Play cards</span>
+    <span class="label"><Hand size={18} strokeWidth={1.75} aria-hidden="true" /> Play cards</span>
     <div class="seg">
       {#each styles as p (p.value)}
         <button class:on={settings.playStyle === p.value} onclick={() => (settings.playStyle = p.value)}>{p.label}</button>
@@ -49,21 +52,7 @@
     </div>
   </div>
   <div class="row">
-    <span>Vibrate</span>
-    <div class="seg">
-      <button
-        class:on={settings.haptics}
-        disabled={!canVibrate}
-        onclick={() => {
-          settings.haptics = true;
-          buzz('sold');
-        }}>On</button
-      >
-      <button class:on={!settings.haptics} disabled={!canVibrate} onclick={() => (settings.haptics = false)}>Off</button>
-    </div>
-  </div>
-  <div class="row">
-    <span>Sound</span>
+    <span class="label">{#if settings.muted}<VolumeX size={18} strokeWidth={1.75} aria-hidden="true" />{:else}<Volume2 size={18} strokeWidth={1.75} aria-hidden="true" />{/if} Sound</span>
     <div class="sound">
       <input
         type="range"
@@ -79,7 +68,7 @@
     </div>
   </div>
   <p class="muted">
-    Calm keeps fades but no shaking or bursts.{#if !canVibrate} This browser can't vibrate (iPhones can't).{/if} On an iPhone,
+    Calm keeps fades but no shaking or bursts. On an iPhone,
     the silent switch also mutes game sounds. These settings are only for this device.
   </p>
   <button class="ghost" onclick={onClose}>Close</button>
@@ -107,9 +96,14 @@
     border: 0;
     padding: 4px 0;
   }
+  .label {
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+  }
   .row {
     display: grid;
-    grid-template-columns: 5.5em 1fr;
+    grid-template-columns: 7.2em 1fr;
     align-items: center;
     gap: 8px;
   }

@@ -1,7 +1,7 @@
 <script lang="ts">
   import { next, partner, type PairId, type Seat, type Side } from '@dark/engine';
   import type { Connection } from '../lib/connection.svelte';
-  import { avatarAtSeat, teamColor, teamOf } from '../lib/avatars';
+  import { avatarAtSeat, rimFor, teamColor, teamOf } from '../lib/avatars';
   import { nameAtSeat, profileOf } from '../lib/format';
   import { director } from '../lib/juice/director.svelte';
   import CallText from './CallText.svelte';
@@ -19,6 +19,7 @@
   const contract = $derived(deal.contract);
 
   const pairOfSeat = (seat: Seat): PairId => (view.pairs?.A.includes(view.seating![seat]) ? 'A' : 'B');
+  const rimOf = (seat: Seat) => rimFor(teamOf(conn, seat));
   const initials = (pair: PairId) => (view.pairs?.[pair] ?? []).map((id) => profileOf(profiles, id).name[0]).join('·');
   const sideOfSeat = (seat: Seat): Side => (contract && (seat === contract.declarer || seat === partner(contract.declarer)) ? 'declarers' : 'defenders');
 
@@ -45,9 +46,9 @@
     {#key director.contractPulse}
       <button class="ghost contract" onclick={onAuction} aria-label="Contract (tap for the auction)">
         <span class="bid"><CallText call={{ type: 'bid', level: contract.level, strain: contract.strain }} /></span>
-        <span class="by" data-team={teamOf(conn, contract.declarer)}>
+        <span class="by">
           <!-- The declarer's animal as a silhouette the height of the name (Ryan), like the set icons. -->
-          <span class="sil-wrap"><AnimalIcon animal={avatarAtSeat(conn, contract.declarer)?.animal} silhouette={teamColor(conn, contract.declarer)} size="1.05em" /></span>
+          <AnimalIcon animal={avatarAtSeat(conn, contract.declarer)?.animal} silhouette={teamColor(conn, contract.declarer)} rim={rimOf(contract.declarer)} size="1.05em" />
           {nameAtSeat(view, profiles, contract.declarer)}
         </span>
         {#if director.contractPulse > 0}<span class="sold" aria-hidden="true">Sold!</span>{/if}
@@ -71,10 +72,10 @@
               {@const set = row.won[i]}
               {#if set && set.i === lastIndex}
                 <button class="pip on latest" style="--i: {i}" aria-label="Last set (tap to see it)" onclick={onPeek}
-                  ><AnimalIcon animal={avatarAtSeat(conn, set.w)?.animal} silhouette="var(--t)" /></button
+                  ><AnimalIcon animal={avatarAtSeat(conn, set.w)?.animal} silhouette="var(--t)" rim={rimOf(row.seat)} /></button
                 >
               {:else if set}
-                <i class="pip on" style="--i: {i}"><AnimalIcon animal={avatarAtSeat(conn, set.w)?.animal} silhouette="var(--t)" /></i>
+                <i class="pip on" style="--i: {i}"><AnimalIcon animal={avatarAtSeat(conn, set.w)?.animal} silhouette="var(--t)" rim={rimOf(row.seat)} /></i>
               {:else}
                 <i class="pip" style="--i: {i}"></i>
               {/if}
@@ -208,13 +209,6 @@
       0 0 1px #fff,
       0 0 1px #fff,
       0 0 3px rgba(255, 255, 255, 0.5);
-  }
-  .row[data-team='black'] .pip.on,
-  .by[data-team='black'] .sil-wrap {
-    filter: drop-shadow(0 0 0.7px #fff) drop-shadow(0 0 0.7px #fff);
-  }
-  .sil-wrap {
-    display: inline-flex;
   }
   .team {
     font-family: var(--font-name);

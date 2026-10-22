@@ -191,8 +191,8 @@
   .lead {
     position: absolute;
     z-index: 2;
-    top: -7px;
-    left: -7px;
+    top: -5px;
+    right: -5px;
   }
   /* The hit-stop's freeze-frame: the table holds, overexposed, for a beat (lib/juice/director). */
   .area.frozen {

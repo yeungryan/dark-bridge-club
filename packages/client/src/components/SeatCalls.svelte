@@ -109,18 +109,15 @@
     position: absolute;
     /* Above any later call laid over this one; the tile itself stays under them. */
     z-index: 3;
-    top: -8px;
-    left: -7px;
-  }
-  .tile.first::after {
-    padding: 1px 4px;
-    border-radius: 6px;
-    background: #141414;
-    color: #fff;
-    font: 800 8.5px/1.2 system-ui, sans-serif;
-    letter-spacing: 0.04em;
-    text-transform: uppercase;
-    box-shadow: 0 0 0 1.2px #fff;
+    top: -6px;
+    right: -5px;
+    padding: 0 3px;
+    border-radius: 5px;
+    background: #d9d4c7;
+    color: #2d2a26;
+    font: 750 7.5px/11px system-ui, -apple-system, sans-serif;
+    letter-spacing: 0.02em;
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.45);
     pointer-events: none;
   }
   /* A bidding card: card-white, its player's team colour along the bottom. */
