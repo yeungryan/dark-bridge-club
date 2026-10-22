@@ -19,3 +19,4 @@ export * from './rivalry';
 export * from './playerStats';
 export * from './schedule';
 export * from './historyChanges';
+export * from './carried';

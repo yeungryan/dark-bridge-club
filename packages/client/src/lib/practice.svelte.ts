@@ -90,7 +90,7 @@ export class PracticeTable extends Connection {
 
   private newNight(): void {
     this.clearTimers();
-    this.session = newSession({ profiles: IDS, usualPartner: USUAL_PARTNER, seed: randomSeed() });
+    this.session = newSession({ profiles: IDS, usualPartner: USUAL_PARTNER, seed: randomSeed(), swapAnchor: 'ryan' });
     this.clock = newThinkClock();
     this.history = [];
     this.gameMoments = [];
@@ -141,7 +141,8 @@ export class PracticeTable extends Connection {
     const s = this.session;
     this.clock = tickThinkClock(this.clock, s, false, Date.now());
     if (!s.seating || !s.pairs) return;
-    const night = { seating: s.seating, pairs: s.pairs, deals: this.history };
+    // The night's starting seating; each game carries its own (seats swap every five games).
+    const night = { seating: this.history[0]?.seating ?? s.seating, pairs: s.pairs, deals: this.history };
     for (const record of s.records.slice(this.history.length)) {
       const full = s.deal && s.deal.phase === 'complete' && record.dealNumber === s.dealNumber ? s.deal : null;
       const game = dealHistory(record, full, this.clock.dealNumber === record.dealNumber ? this.clock.totals : null);

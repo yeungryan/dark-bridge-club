@@ -9,6 +9,7 @@ import {
   seatOf,
   seatToAct,
   type Call,
+  type Seat,
   type SessionAction,
   type SessionConfig,
   type SessionState,
@@ -179,6 +180,55 @@ describe('S05 session', () => {
     expect(s.final!.discardedDeal).toBe(true);
     expect(s.final!.wins.A + s.final!.wins.B).toBe(1);
     expect(applySessionAction(s, { type: 'start' }).ok).toBe(false);
+  });
+
+  it("Ryan's pair trades seats after every fifth game; partners stay opposite, opponents swap sides", () => {
+    const anchored = { ...config, swapAnchor: 'ryan' };
+    let s = apply(newSession(anchored), { type: 'start' });
+    s = apply(s, { type: 'pickPartner', by: s.captain!, partner: s.suggestedPartner! });
+    const start = s.seating!;
+    const ryan = seatOf(s, 'ryan')!;
+    const across = ((ryan + 2) % 4) as Seat;
+    const mate = start[across];
+    const nextAfterRyan = () => s.seating![next(seatOf(s, 'ryan')!)];
+    const before = nextAfterRyan();
+    for (let game = 1; game <= 5; game++) {
+      s = playDeal(s);
+      expect(s.records.at(-1)!.seating).toEqual(start);
+      if (game < 5) s = allReady(s);
+    }
+    const out = config.profiles.reduce<{ s: SessionState; swapped: boolean }>(
+      (acc, by) => {
+        const r = applySessionAction(acc.s, { type: 'readyForNext', by });
+        if (!r.ok) throw new Error(r.error.code);
+        return { s: r.state, swapped: acc.swapped || r.events.some((e) => e.type === 'seatsSwapped') };
+      },
+      { s, swapped: false },
+    );
+    expect(out.swapped).toBe(true);
+    s = out.s;
+    // Ryan and his partner traded seats; the other two stayed put.
+    expect(s.seating![ryan]).toBe(mate);
+    expect(s.seating![across]).toBe('ryan');
+    for (const seat of [(ryan + 1) % 4, (ryan + 3) % 4] as Seat[]) expect(s.seating![seat]).toBe(start[seat]);
+    // So the player after Ryan is now the other opponent.
+    expect(nextAfterRyan()).not.toBe(before);
+    expect(nextAfterRyan()).not.toBe(mate);
+    if (s.phase === 'awaitingDeal') s = apply(s, { type: 'dealCards', by: s.seating![s.dealer!] });
+    for (let game = 6; game <= 10; game++) {
+      s = playDeal(s);
+      expect(s.records.at(-1)!.seating![across]).toBe('ryan');
+      s = allReady(s);
+    }
+    // After game 10 they trade back.
+    expect(s.seating).toEqual(start);
+  });
+
+  it('without an anchor, nobody moves all night', () => {
+    let s = seated();
+    const start = s.seating;
+    for (let game = 1; game <= 5; game++) s = allReady(playDeal(s));
+    expect(s.seating).toEqual(start);
   });
 
   it('the same session seed replays identically', () => {

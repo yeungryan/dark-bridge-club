@@ -13,7 +13,8 @@ export interface ScoreSide {
   readonly gamesWon: number;
 }
 
-export type HistoryChange = { readonly kind: 'score'; readonly sides: readonly [ScoreSide, ScoreSide] };
+/** New numbers for one matchup, or (Ryan) a reset of every matchup and every all-time stat to zero. */
+export type HistoryChange = { readonly kind: 'score'; readonly sides: readonly [ScoreSide, ScoreSide] } | { readonly kind: 'reset' };
 
 /** An approved score: the matchup's numbers as of `from` (nights started from then on count on top). */
 export interface ScoreOverride {
@@ -78,12 +79,19 @@ export function applyChangeAction(
   switch (action?.type) {
     case 'propose': {
       const change = action.change;
+      if (change?.kind === 'reset') {
+        if (queue.pending.length >= MAX_PENDING_CHANGES) return fail('TOO_MANY', 'Settle the changes already waiting first.');
+        if (queue.pending.some((p) => p.change.kind === 'reset')) return fail('ALREADY', 'A reset is already waiting.');
+        const seq = queue.seq + 1;
+        const pending: PendingChange = { id: `c${seq}`, change: { kind: 'reset' }, proposedBy: by, approvals: [by], at: now };
+        return settle({ pending: [...queue.pending, pending], seq }, pending.id, players, done);
+      }
       if (change?.kind !== 'score') return fail('BAD_CHANGE', 'Unknown change.');
       const problem = checkScoreChange(change.sides, players);
       if (problem) return fail('BAD_SCORE', problem);
       if (queue.pending.length >= MAX_PENDING_CHANGES) return fail('TOO_MANY', 'Settle the changes already waiting first.');
       const key = matchupKey(change.sides[0].players, change.sides[1].players);
-      if (queue.pending.some((p) => matchupKey(p.change.sides[0].players, p.change.sides[1].players) === key)) {
+      if (queue.pending.some((p) => p.change.kind === 'score' && matchupKey(p.change.sides[0].players, p.change.sides[1].players) === key)) {
         return fail('ALREADY', 'A change to this matchup is already waiting.');
       }
       const seq = queue.seq + 1;
@@ -119,8 +127,9 @@ function settle(
   return done({ ...queue, pending: queue.pending.filter((x) => x.id !== id) }, p);
 }
 
-/** The overrides after an approved change: it replaces any earlier one for the same matchup. */
+/** The overrides after an approved change: it replaces any earlier one for the same matchup (a reset clears them all). */
 export function withOverride(overrides: readonly ScoreOverride[], applied: PendingChange): ScoreOverride[] {
+  if (applied.change.kind === 'reset') return [];
   const sides = applied.change.sides;
   const key = matchupKey(sides[0].players, sides[1].players);
   return [...overrides.filter((o) => matchupKey(o.sides[0].players, o.sides[1].players) !== key), { sides, from: applied.at }];

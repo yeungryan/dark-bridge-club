@@ -44,14 +44,19 @@ import {
   type Schedule,
   type ScheduleAction,
   applyChangeAction,
+  carryForward,
+  emptyCarried,
   emptyChangeQueue,
+  KEEP_GAMES,
+  withoutMatchup,
+  type Carried,
   type ChangeAction,
   type ChangeQueue,
   type ScoreOverride,
   withOverride,
 } from '@dark/engine';
 import type { Env } from './index';
-import { isProfile, PROFILE_IDS, PROFILES, USUAL_PARTNER } from './profiles';
+import { isProfile, PROFILE_IDS, PROFILES, SWAP_ANCHOR, USUAL_PARTNER } from './profiles';
 
 // Specs S06–S09: the one trusted referee for the table.
 // Runs the engine, holds every hand, sends each player only their own view,
@@ -155,6 +160,9 @@ export class TableRoom extends DurableObject<Env> {
       CREATE TABLE IF NOT EXISTS awards (
         session_id TEXT NOT NULL, kind TEXT NOT NULL, profile_id TEXT NOT NULL, score REAL NOT NULL,
         payload_json TEXT NOT NULL, created_at INTEGER NOT NULL);
+      CREATE INDEX IF NOT EXISTS awards_by_night ON awards (session_id);
+      CREATE INDEX IF NOT EXISTS moments_by_game ON moments (session_id, deal_number);
+      CREATE INDEX IF NOT EXISTS deals_by_age ON deals (completed_at);
     `);
   }
 
@@ -191,7 +199,7 @@ export class TableRoom extends DurableObject<Env> {
   }
 
   private freshSession(): SessionState {
-    return newSession({ profiles: PROFILE_IDS, usualPartner: USUAL_PARTNER, seed: this.env.TEST_SEED || randomSeed() });
+    return newSession({ profiles: PROFILE_IDS, usualPartner: USUAL_PARTNER, seed: this.env.TEST_SEED || randomSeed(), swapAnchor: SWAP_ANCHOR });
   }
 
   private save(): void {
@@ -368,8 +376,14 @@ export class TableRoom extends DurableObject<Env> {
   }
 
   /** Every night, newest first, with the all-time scores set by hand and the changes awaiting approval. */
-  private historyPayload(nights: SavedNight[]): { nights: SavedNight[]; overrides: ScoreOverride[]; pending: ChangeQueue['pending'] } {
-    return { nights, overrides: this.loadOverrides(), pending: this.loadChanges().pending };
+  private historyPayload(nights: SavedNight[]): {
+    nights: SavedNight[];
+    overrides: ScoreOverride[];
+    pending: ChangeQueue['pending'];
+    carried: Carried;
+    statsFrom: number | null;
+  } {
+    return { nights, overrides: this.loadOverrides(), pending: this.loadChanges().pending, carried: this.loadCarried(), statsFrom: this.loadStatsFrom() };
   }
 
   private loadOverrides(): ScoreOverride[] {
@@ -391,7 +405,19 @@ export class TableRoom extends DurableObject<Env> {
     const out = applyChangeAction(this.loadChanges(), profile, body?.action as ChangeAction, Date.now(), PROFILE_IDS);
     if (!out.ok) return json({ error: out.error.code, message: out.error.message }, 400);
     const { queue, applied } = out.state;
-    if (applied) this.sql.exec('INSERT OR REPLACE INTO kv (k, v) VALUES (?, ?)', 'scoreOverrides', JSON.stringify(withOverride(this.loadOverrides(), applied)));
+    if (applied) {
+      const overrides = withOverride(this.loadOverrides(), applied);
+      this.sql.exec('INSERT OR REPLACE INTO kv (k, v) VALUES (?, ?)', 'scoreOverrides', JSON.stringify(overrides));
+      if (applied.change.kind === 'reset') {
+        // Ryan: back to 0–0 means every matchup and every all-time stat; the night log and replays stay.
+        this.sql.exec('INSERT OR REPLACE INTO kv (k, v) VALUES (?, ?)', 'carried', JSON.stringify(emptyCarried()));
+        this.sql.exec('INSERT OR REPLACE INTO kv (k, v) VALUES (?, ?)', 'statsFrom', String(Date.now()));
+      } else {
+        // The new score already includes whatever was carried for that matchup.
+        const set = overrides.find((o) => o.from === applied.at)!;
+        this.sql.exec('INSERT OR REPLACE INTO kv (k, v) VALUES (?, ?)', 'carried', JSON.stringify(withoutMatchup(this.loadCarried(), set)));
+      }
+    }
     this.sql.exec('INSERT OR REPLACE INTO kv (k, v) VALUES (?, ?)', 'historyChanges', JSON.stringify(queue));
     const rows = this.sql
       .exec<SessionRow>(`SELECT rowid AS rid, ${SESSION_COLUMNS} FROM sessions WHERE pairs_json IS NOT NULL ORDER BY started_at DESC`)
@@ -444,6 +470,7 @@ export class TableRoom extends DurableObject<Env> {
           result: record.result,
           winningPair: record.winningPair,
           replayable: g.replayable === 1,
+          seating: record.seating ?? null,
         };
       });
     const avatarRows = this.sql
@@ -771,6 +798,85 @@ export class TableRoom extends DurableObject<Env> {
         );
       }
     }
+    this.pruneHistory();
+  }
+
+  /**
+   * Ryan: history keeps the last KEEP_GAMES games. Older ones are carried forward into the
+   * all-time totals and deleted, oldest first, in one step (carried.ts), so every stat keeps
+   * stacking. A night goes once its last game has; tonight's games are never touched.
+   */
+  private pruneHistory(): void {
+    const keep = Number(this.env.TEST_KEEP_GAMES) || KEEP_GAMES;
+    const total = this.sql.exec<{ n: number }>('SELECT COUNT(*) AS n FROM deals').one().n;
+    if (total <= keep) return;
+    const live = this.data.session.config.seed;
+    const old = this.sql
+      .exec<{ session_id: string; deal_number: number }>(
+        'SELECT session_id, deal_number FROM deals WHERE session_id != ? ORDER BY completed_at, deal_number LIMIT ?',
+        live,
+        total - keep,
+      )
+      .toArray();
+    const overrides = this.loadOverrides();
+    const statsFrom = this.loadStatsFrom();
+    this.ctx.storage.transactionSync(() => {
+      let carried = this.loadCarried();
+      const counts = (night: SavedNight) => statsFrom === null || night.startedAt >= statsFrom;
+      for (const sessionId of new Set(old.map((r) => r.session_id))) {
+        const numbers = new Set(old.filter((r) => r.session_id === sessionId).map((r) => r.deal_number));
+        const row = this.sql.exec<SessionRow>(`SELECT rowid AS rid, ${SESSION_COLUMNS} FROM sessions WHERE id = ?`, sessionId).toArray()[0];
+        let whole = false;
+        if (row?.pairs_json) {
+          const night = this.savedNight(row);
+          const games = night.games.filter((g) => numbers.has(g.dealNumber));
+          whole = games.length === night.games.length && row.ended_at !== null;
+          if (counts(night)) {
+            carried = carryForward(carried, PROFILE_IDS, night, games, false, overrides);
+            if (whole) carried = carryForward(carried, PROFILE_IDS, night, [], true, overrides);
+          }
+        }
+        for (const n of numbers) {
+          this.sql.exec('DELETE FROM deals WHERE session_id = ? AND deal_number = ?', sessionId, n);
+          this.sql.exec('DELETE FROM moments WHERE session_id = ? AND deal_number = ?', sessionId, n);
+        }
+        if (whole) this.deleteNight(sessionId);
+      }
+      // Finished nights with no games at all, older than every game still kept, go too.
+      const empty = this.sql
+        .exec<SessionRow>(
+          `SELECT rowid AS rid, ${SESSION_COLUMNS} FROM sessions WHERE id != ? AND ended_at IS NOT NULL
+             AND id NOT IN (SELECT DISTINCT session_id FROM deals)
+             AND started_at < (SELECT MIN(s.started_at) FROM sessions s JOIN deals d ON d.session_id = s.id)`,
+          live,
+        )
+        .toArray();
+      for (const row of empty) {
+        if (row.pairs_json) {
+          const night = this.savedNight(row);
+          if (counts(night)) carried = carryForward(carried, PROFILE_IDS, night, [], true, overrides);
+        }
+        this.deleteNight(row.id);
+      }
+      this.sql.exec('INSERT OR REPLACE INTO kv (k, v) VALUES (?, ?)', 'carried', JSON.stringify(carried));
+    });
+  }
+
+  private deleteNight(sessionId: string): void {
+    for (const table of ['sessions', 'session_avatars', 'awards', 'moments', 'deals']) {
+      this.sql.exec(`DELETE FROM ${table} WHERE ${table === 'sessions' ? 'id' : 'session_id'} = ?`, sessionId);
+    }
+  }
+
+  private loadCarried(): Carried {
+    const row = this.sql.exec<{ v: string }>("SELECT v FROM kv WHERE k = 'carried'").toArray()[0];
+    return row ? (JSON.parse(row.v) as Carried) : emptyCarried();
+  }
+
+  /** When the four of you last reset everything to 0–0: only nights begun since count. */
+  private loadStatsFrom(): number | null {
+    const row = this.sql.exec<{ v: string }>("SELECT v FROM kv WHERE k = 'statsFrom'").toArray()[0];
+    return row ? Number(row.v) : null;
   }
 
   /** Tonight's history so far, from the saved games (null before the pairs are set). */
@@ -791,7 +897,8 @@ export class TableRoom extends DurableObject<Env> {
         tricks: r.tricks_json ? JSON.parse(r.tricks_json) : null,
       };
     });
-    return { seating: session.seating, pairs: session.pairs, deals };
+    // The night's starting seating (the first game's), as saved for history; each game carries its own.
+    return { seating: deals[0]?.seating ?? session.seating, pairs: session.pairs, deals };
   }
 
   private saveMoments(sessionId: string, moments: readonly Moment[]): void {

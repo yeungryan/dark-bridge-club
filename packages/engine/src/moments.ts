@@ -22,9 +22,11 @@ export interface DealHistory {
   readonly tricks: readonly CompletedTrick[] | null;
   /** Total thinking time per seat in this game, in ms (M3+); null for older games. */
   readonly thinkMs: PerSeat<number> | null;
+  /** Who sat where for this game (seats swap every few games); absent: the night's seating. */
+  readonly seating?: PerSeat<ProfileId> | null;
 }
 
-/** A whole night: who sat where, the pairs, and its games in order. */
+/** A whole night: who sat where at the start, the pairs, and its games in order. */
 export interface NightHistory {
   readonly seating: PerSeat<ProfileId>;
   readonly pairs: Readonly<Record<PairId, readonly [ProfileId, ProfileId]>>;
@@ -163,9 +165,14 @@ function pairOfProfile(night: NightHistory, profile: ProfileId): PairId | null {
   return null;
 }
 
-function pairOfSeat(night: NightHistory, seat: Seat): PairId {
+/** Who sat where for one game: its own seating, or the night's for games saved before seat swaps. */
+export function seatingOf(deal: DealHistory, night: NightHistory): PerSeat<ProfileId> {
+  return deal.seating ?? night.seating;
+}
+
+function pairOfSeat(night: NightHistory, deal: DealHistory, seat: Seat): PairId {
   // Fallback by parity only if the saved pairs don't name the occupant (should not happen).
-  return pairOfProfile(night, night.seating[seat]) ?? (seat % 2 === 0 ? 'A' : 'B');
+  return pairOfProfile(night, seatingOf(deal, night)[seat]) ?? (seat % 2 === 0 ? 'A' : 'B');
 }
 
 /** The pair that won each game, in order; null for pass-outs and unfinished games. */
@@ -175,7 +182,7 @@ function gameWinners(night: NightHistory): { dealNumber: number; pair: PairId }[
     if (!deal.contract || !deal.result) continue;
     const side = winningSide(deal, replay(deal));
     if (!side) continue;
-    const declarerPair = pairOfSeat(night, deal.contract.declarer);
+    const declarerPair = pairOfSeat(night, deal, deal.contract.declarer);
     out.push({ dealNumber: deal.dealNumber, pair: side === 'declarers' ? declarerPair : otherPair(declarerPair) });
   }
   return out;
@@ -198,7 +205,7 @@ function contractPayload(c: Contract): { level: number; strain: string } {
  * player the caption is mainly about.
  */
 export function dealMoments(deal: DealHistory, night: NightHistory): Moment[] {
-  const who = (s: Seat): ProfileId => night.seating[s];
+  const who = (s: Seat): ProfileId => seatingOf(deal, night)[s];
   const out: Moment[] = [];
   const add = (kind: MomentKind, seats: readonly Seat[], payload: Moment['payload'] = {}) =>
     out.push({ kind, dealNumber: deal.dealNumber, players: seats.map(who), payload });
@@ -433,7 +440,6 @@ class Tally {
  * Remaining ties: the earlier achiever, then seat order.
  */
 export function awardCandidates(night: NightHistory): Award[] {
-  const who = (s: Seat): ProfileId => night.seating[s];
   const out: Award[] = [];
   const push = (kind: AwardKind, e: Entry | null, payload: (e: Entry) => Award['payload']) => {
     if (e) out.push({ kind, profile: e.profile, score: e.keys[0]!, payload: payload(e) });
@@ -453,6 +459,7 @@ export function awardCandidates(night: NightHistory): Award[] {
     if (!contract) return;
     const r = replay(deal);
     const moments = dealMoments(deal, night);
+    const who = (s: Seat): ProfileId => seatingOf(deal, night)[s];
     const declarer = who(contract.declarer);
     const winner = deal.result || r?.clinch ? winningSide(deal, r) : null;
     const hcpOf = deal.hands ? (s: Seat) => hcp(deal.hands![s]) : null;
@@ -531,8 +538,12 @@ export function awardCandidates(night: NightHistory): Award[] {
   const withTiming = night.deals.filter((d) => d.thinkMs);
   if (withTiming.length > 0) {
     const totals = new Map<ProfileId, number>();
-    for (const s of [0, 1, 2, 3] as const) totals.set(who(s), 0);
-    for (const d of withTiming) for (const s of [0, 1, 2, 3] as const) totals.set(who(s), totals.get(who(s))! + d.thinkMs![s]);
+    for (const s of [0, 1, 2, 3] as const) totals.set(night.seating[s], 0);
+    for (const d of withTiming)
+      for (const s of [0, 1, 2, 3] as const) {
+        const p = seatingOf(d, night)[s];
+        totals.set(p, totals.get(p)! + d.thinkMs![s]);
+      }
     const sorted = [...totals.values()].sort((a, b) => a - b);
     const mid = sorted.length / 2;
     const median = sorted.length % 2 ? sorted[Math.floor(mid)]! : (sorted[mid - 1]! + sorted[mid]!) / 2;

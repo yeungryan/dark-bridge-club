@@ -1,15 +1,15 @@
 <script lang="ts">
-  import { animalRecords, awardCounts, AWARDS, elementRecords, leaderboard, playerStats, type AwardKind, type Element, type LeaderStat, type ProfileInfo, type SavedNight } from '@dark/engine';
+  import { animalRecords, awardCounts, AWARDS, elementRecords, leaderboard, playerStats, type AwardKind, type Element, type LeaderStat, type ProfileInfo, type SavedNight, type Carried } from '@dark/engine';
   import { elementArt } from '../lib/animalArt';
   import { profileOf } from '../lib/format';
   import AnimalIcon from './AnimalIcon.svelte';
 
   // Spec S20, "All" (Ryan's design): the leaderboard as four champion cards (LB2), the award
   // tracker as big-number tiles (T5), then animals and elements.
-  let { profiles, nights }: { profiles: readonly ProfileInfo[]; nights: readonly SavedNight[] } = $props();
+  let { profiles, nights, carried }: { profiles: readonly ProfileInfo[]; nights: readonly SavedNight[]; carried?: Carried } = $props();
 
   const ids = $derived(profiles.map((p) => p.id));
-  const all = $derived(ids.map((id) => playerStats(id, ids, nights)));
+  const all = $derived(ids.map((id) => playerStats(id, ids, nights, carried)));
   const board = $derived(leaderboard(all));
   const name = (id: string) => profileOf(profiles, id).name;
   const animalOf = (id: string) => [...nights].sort((a, b) => b.startedAt - a.startedAt).find((n) => n.avatars?.[id])?.avatars?.[id]?.animal ?? null;
@@ -28,9 +28,9 @@
     { kind: 'heist', means: 'Stole a win on standby with <8 HCP.' },
   ];
 
-  const animals = $derived(animalRecords(ids, nights));
+  const animals = $derived(animalRecords(ids, nights, carried));
   const ELEMENTS: Element[] = ['fire', 'water', 'air', 'earth'];
-  const elements = $derived(elementRecords(ids, nights));
+  const elements = $derived(elementRecords(ids, nights, carried));
   const bestOf = (pct: Record<Element, number | null>) => Math.max(-1, ...ELEMENTS.map((e) => pct[e] ?? -1));
 </script>
 

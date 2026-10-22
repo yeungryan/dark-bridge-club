@@ -1,5 +1,5 @@
 import { suitSymbol, trumpSuit, type Card, type Seat, type Side, type Suit } from '@dark/engine';
-import { elementAtSeat, teamOf } from '../avatars';
+import { elementAtSeat, teamOf, type Team } from '../avatars';
 import { cssColor } from '../themes';
 import type { Connection } from '../connection.svelte';
 import { cancelBeats } from './cardFx';
@@ -9,6 +9,7 @@ import { comet, elementBurst, elementStrike, elementWin, flash, freeze, glyphs, 
 import { settings } from './settings.svelte';
 import { sound } from './sound';
 import { gameWon, setWon } from './setWin';
+import { streakName } from './streak';
 import type { Ctx } from './subFx';
 import { DRAMA_BOOST, RESPONSES, TIMING, type Level } from './timing';
 
@@ -37,6 +38,8 @@ type Link = Pick<Connection, 'view' | 'room' | 'onEvents'>;
 
 /** Trump moments share one colour, so "that was a trump" reads at a glance. */
 const TRUMP_COLOR = '#c58bff';
+/** How long after the attack hits that a streak stamp lands (ms, before the speed setting). */
+const STAMP_DELAY = 200;
 /** The theme's accent (gold in the Clubhouse). */
 const gold = () => cssColor('--accent', '#e8c25a');
 
@@ -68,10 +71,15 @@ class Director {
   /** A game just dealt: the cards are flying (DealFlight); the hand fans open when it ends. */
   dealing = $state<{ id: number; dealer: Seat } | null>(null);
   private dealSafety: ReturnType<typeof setTimeout> | undefined;
+  /** Two partners just traded seats (Ryan: every five games), so the opponents cross sides. */
+  seatSwap = $state<{ id: number; players: readonly [string, string] } | null>(null);
+  private swapTimer: ReturnType<typeof setTimeout> | undefined;
   /** True during a hit-stop: the table's freeze-frame on a big impact. */
   frozen = $state(false);
   /** Sets won in a row by one side (shown as "×n" once its orb lands); n ≥ 2 is a combo. */
   combo = $state<{ side: Side; n: number; id: number } | null>(null);
+  /** A streak stamp on the table (three or more sets in a row), on its way to the scoreboard. */
+  stamp = $state<{ id: number; n: number; name: string; team: Team; dx: number; dy: number; holdMs: number; flyMs: number } | null>(null);
 
   /** Trick sequences; a newer trick cancels an older one's remaining beats. */
   private seq = 0;
@@ -93,6 +101,13 @@ class Director {
         this.revealHold = true;
         const fly = settings.animated ? settings.ms(TIMING.cardFly + RESPONSES[5].hitPauseMs) : 0;
         setTimeout(() => (this.revealHold = false), fly + settings.ms(TIMING.resultsDelay));
+      }
+      const swapped = events.find((e) => e.type === 'seatsSwapped');
+      if (swapped?.type === 'seatsSwapped') {
+        this.seatSwap = { id: ++this.fxId, players: swapped.players };
+        sound.whoosh();
+        clearTimeout(this.swapTimer);
+        this.swapTimer = setTimeout(() => (this.seatSwap = null), settings.ms(2800));
       }
       const dealt = events.find((e) => e.type === 'dealStarted');
       if (dealt) {
@@ -126,6 +141,7 @@ class Director {
     this.flash = null;
     this.pipHold = { declarers: null, defenders: null };
     this.combo = null;
+    this.stamp = null;
   }
 
   /**
@@ -311,6 +327,12 @@ class Director {
         setTimeout(() => sound.combo(run - 1), 90);
         if (at) lightBurst(at.x, at.y, [this.colorOf(conn, m.winner), gold(), '#fff6d8'], Math.min(3, run - 2));
       }
+      // Three or more: the streak's stamp slams down just after the attack hits (Ryan, round 9).
+      const name = streakName(run);
+      if (name) {
+        const delay = settings.ms(STAMP_DELAY);
+        setTimeout(() => alive() && this.slamStamp(conn, m.winner, side, run, name, mineWon, hold - delay + sweep), delay);
+      }
     }, fly + pause);
 
     setTimeout(() => {
@@ -323,6 +345,24 @@ class Director {
       if (this.seq === id && this.trickFx) this.trickFx = { ...this.trickFx, phase: 'done' };
       this.sendOrb(conn, m.winner, side, m.pip, kind, run);
     }, fly + pause + hold + sweep);
+  }
+
+  /**
+   * A streak stamp: it lands on the table, holds until the trick sweeps, then flies into the
+   * side's score row, arriving as the orb does (when the "×n" there pops in).
+   */
+  private slamStamp(conn: Link, winner: Seat, side: Side, n: number, name: string, mine: boolean, holdMs: number): void {
+    const from = this.centerOf('.area');
+    const to = this.centerOf(`.meters [data-side="${side}"] .count`);
+    const flyMs = settings.ms(TIMING.orbFly);
+    const id = ++this.fxId;
+    const [dx, dy] = from && to ? [to.x - from.x, to.y - from.y] : [0, 0];
+    this.stamp = { id, n, name, team: teamOf(conn, winner), dx, dy, holdMs: Math.max(0, holdMs), flyMs };
+    sound.stamp(Math.min(7, n - 1), mine);
+    if (mine) buzz('trick');
+    setTimeout(() => {
+      if (this.stamp?.id === id) this.stamp = null;
+    }, holdMs + flyMs + 80);
   }
 
   /** The orb from the winner's name to their side's next score pip. */

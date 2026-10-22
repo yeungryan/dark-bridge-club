@@ -326,6 +326,8 @@ test.describe.serial('a night at the DARK table', () => {
     await expect(page.getByRole('button', { name: 'Next night' })).toContainText(/Next night · (in|now)/, { timeout: 15_000 });
     const last = page.getByRole('region', { name: 'Last time' });
     await expect(last).toBeVisible({ timeout: 15_000 });
+    // Round 9 (S1): the all-time games won, under "Bridge Club".
+    await expect(page.getByLabel(/^All-time games won: /)).toBeVisible();
     await expect(last).toContainText(/won \d+–\d+|A dead heat/);
     await last.getByRole('button', { name: /History/ }).click();
     const history = page.getByRole('dialog', { name: 'History' });
@@ -381,6 +383,31 @@ test.describe.serial('a night at the DARK table', () => {
     await expect(first.locator('.big').first()).toHaveText(String(before + 3));
     await expect(first).toContainText('Score agreed by all four');
     await expect(history.getByRole('region', { name: 'Changes waiting for approval' })).toHaveCount(0);
+    await history.getByRole('button', { name: 'Close the history' }).click();
+  });
+
+  test('"Start again from 0–0" resets every matchup once all four approve (round 9)', async ({ request }) => {
+    const page = ryan().page;
+    await page.getByRole('region', { name: 'Last time' }).getByRole('button', { name: /History/ }).click();
+    const history = page.getByRole('dialog', { name: 'History' });
+    const first = history.locator('.match').first();
+    await first.getByRole('button', { name: /^Change the score/ }).click();
+    const editor = first.getByRole('region', { name: 'Change the score' });
+    await editor.getByRole('button', { name: 'Start again from 0–0' }).click();
+    await expect(editor).toContainText('Everything goes back to 0–0');
+    await editor.getByRole('button', { name: 'Send reset for approval' }).click();
+    await expect(history.getByRole('region', { name: 'Changes waiting for approval' })).toContainText('Start again from 0–0');
+    const id = (await (await request.get(`/api/history?token=${await tokenOf(page)}`)).json()).pending[0].id;
+    for (const seat of SEATS.filter((s) => s.id !== 'ryan')) {
+      const login = await (await request.post('/api/login', { data: { k: 'dev', profile: seat.id, pin: seat.pin } })).json();
+      expect((await request.post('/api/history/change', { data: { token: login.token, action: { type: 'approve', id } } })).ok()).toBe(true);
+    }
+    await history.getByRole('button', { name: 'Close the history' }).click();
+    await page.getByRole('region', { name: 'Last time' }).getByRole('button', { name: /History/ }).click();
+    for (const big of await history.locator('.match .big').all()) await expect(big).toHaveText('0');
+    // The night log stays.
+    await history.getByRole('tab', { name: 'Nights' }).click();
+    await expect(history.locator('.night-head').first()).toBeVisible();
     await history.getByRole('button', { name: 'Close the history' }).click();
   });
 
