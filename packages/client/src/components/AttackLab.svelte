@@ -2,6 +2,7 @@
   import type { Card as CardT } from '@dark/engine';
   import { airAttack, earthAttack, fireAttack, holdStill, waterAttack } from '../lib/juice/cardFx';
   import { clearEffects } from '../lib/juice/particles';
+  import { SUB_SETS } from '../lib/juice/subFx';
   import Card from './Card.svelte';
   import Particles from './Particles.svelte';
 
@@ -13,8 +14,16 @@
     { id: 'water', title: 'Water · Splash crown → pierced', note: 'Ripples under the card; jets punch holes, the cards wither' },
     { id: 'earth', title: 'Earth · Boulder slam → holed', note: 'A giant boulder punches a hole through each loser' },
   ] as const;
-  const one = new URLSearchParams(location.search).get('only');
-  const rows = one ? ROWS.filter((r) => r.id === one) : ROWS;
+  // ?set=attack: batch 1 (the four elements). ?set=lightning, sound, ice, metal: batch 2, each
+  // now beside its three options.
+  const params = new URLSearchParams(location.search);
+  const sub = SUB_SETS[params.get('set') ?? ''];
+  const one = params.get('only');
+  const rows: { id: string; title: string; note: string; i?: number }[] = sub
+    ? sub.options.map((o, i) => ({ id: `sub${i}`, title: `${o.label} · ${o.name}`, note: o.note, i }))
+    : one
+      ? ROWS.filter((r) => r.id === one)
+      : [...ROWS];
   const SPOTS: { spot: string; card: CardT }[] = [
     { spot: 'bottom', card: { suit: 'S', rank: 14 } },
     { spot: 'left', card: { suit: 'S', rank: 9 } },
@@ -30,7 +39,8 @@
     const [win, ...losers] = cards;
     const shake = (px: number) => cell.animate([0, 1, 2, 3, 4].map((k) => ({ transform: `translate(${k % 2 ? px : -px}px, ${(k % 3) - 1}px)` })).concat([{ transform: 'none' }]), { duration: 160 });
     const id = rows[i]!.id;
-    if (id === 'fire') fireAttack(win!, losers);
+    if (sub) sub.options[rows[i]!.i!]!.play(win!, losers, { under: cell.querySelector<HTMLElement>('.under')!, shake });
+    else if (id === 'fire') fireAttack(win!, losers);
     else if (id === 'air') airAttack(win!, losers);
     else if (id === 'water') waterAttack(win!, losers, cell.querySelector<HTMLElement>('.under')!);
     else earthAttack(win!, losers, shake);
@@ -64,7 +74,7 @@
 <Particles />
 <main>
   <header>
-    <h1>Set won · the element attacks the losing cards</h1>
+    <h1>{sub ? sub.title : 'Set won · the element attacks the losing cards'}</h1>
     <button onclick={playAll}>Play all</button>
     <button onclick={reset}>Reset</button>
   </header>
