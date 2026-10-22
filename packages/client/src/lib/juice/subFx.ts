@@ -1,6 +1,10 @@
 import { at, center, F, fx, many, overlay, pick, ragged, rand, svgUrl, T, toward, type Pt } from './cardFx';
 import { elementStrike } from './particles';
 
+// Ryan's picks (round 8): Lightning A (chain), Sound A (sonic boom), Ice B (shards), Metal A
+// (blade storm). Batch 1: Fire Ignite → burnt, Air Wind slash → sliced, Water Splash crown →
+// pierced, Earth Boulder slam → holed. Friendly fire is fine.
+//
 // Ryan's round 8, batch 2: the sub-elements (a set won by trumping a different suit). Like
 // batch 1, the winner attacks the three losing cards (friendly fire included), which stay on the
 // table wrecked, and it's all over in 0.80 s (timed here for 1.0 s, played at K = 0.8 by the
@@ -323,26 +327,45 @@ const iceShards: Attack = (win, losers, { shake }) => {
   losers.forEach((l, li) => {
     const t = center(l);
     for (let k = 0; k < 3; k++) {
-      const aim = { x: t.x + rand(-12, 12), y: t.y + rand(-20, 20) };
+      const th0 = angle(w, t);
+      // Aim past the middle, so each shard lands well inside the card.
+      const aim = { x: t.x + Math.cos(th0) * 6 + rand(-8, 8), y: t.y + Math.sin(th0) * 8 + rand(-14, 14) };
       const th = angle(w, aim);
       const N = 10;
       const v = toward(w, aim, N);
       const delay = k * 3 + li;
-      fx([{ shape: 'shard', x: w.x, y: w.y, ...v, max: N, delay, size: 6, color: pick(ICE, k), rot: th + Math.PI / 2 }]);
+      // In flight: a bigger crystal with a cold trail behind it.
+      fx([
+        { shape: 'shard', x: w.x, y: w.y, ...v, max: N, delay, size: 8, color: pick(ICE, k), rot: th + Math.PI / 2 },
+        { shape: 'streak', x: w.x, y: w.y, ...v, max: N, delay, size: 1.6, color: ICE[1]!, trailLen: 6 },
+      ]);
       at((N + delay) * F, () => {
         const p = local(l, aim);
-        // The shard stuck in the card, pointing the way it flew, half buried.
+        // The shard stuck in the card: its point buried past the hit, pointing the way it flew,
+        // its base trailing back toward the winner. A faceted crystal (light face over dark).
         const s = document.createElement('div');
-        const len = 18;
-        s.style.cssText = `position:absolute;left:${(p.x - Math.cos(th) * len * 0.8).toFixed(1)}px;top:${(p.y - Math.sin(th) * len * 0.8 - 3).toFixed(1)}px;width:${len}px;height:6px;transform-origin:100% 50%;transform:rotate(${th}rad);background:linear-gradient(180deg,#ffffff,#a8e6ff 45%,#6cc7f0);clip-path:polygon(0 50%,25% 0,100% 40%,100% 60%,25% 100%);filter:drop-shadow(0 1px 1px rgba(0,40,80,.6));pointer-events:none;z-index:2;`;
+        const len = 26;
+        const ht = 9;
+        s.style.cssText = `position:absolute;left:${(p.x + Math.cos(th) * len * 0.45).toFixed(1)}px;top:${(p.y + Math.sin(th) * len * 0.45 - ht / 2).toFixed(1)}px;width:${len}px;height:${ht}px;transform-origin:0 50%;transform:rotate(${th + Math.PI}rad);background:linear-gradient(180deg,#ffffff 0 30%,#cdeeff 30% 50%,#7fcaf0 50% 78%,#4fa9dc 78%);clip-path:polygon(0 50%,30% 0,100% 38%,100% 62%,30% 100%);filter:drop-shadow(0 1.5px 1px rgba(0,40,80,.55));pointer-events:none;z-index:2;`;
         l.appendChild(s);
-        s.animate([{ opacity: 0 }, { opacity: 1 }], T({ duration: 40, fill: 'both' }));
-        const frost = overlay(l, `background: radial-gradient(circle at ${p.x.toFixed(0)}px ${p.y.toFixed(0)}px, rgba(255,255,255,.9) 0 3px, rgba(168,230,255,.6) 6px, rgba(168,230,255,.2) 12px, transparent 16px);`);
+        s.animate([{ opacity: 0, transform: `rotate(${th + Math.PI}rad) translateX(6px)` }, { opacity: 1, transform: `rotate(${th + Math.PI}rad)` }], T({ duration: 50, fill: 'both' }));
+        // Frost where it went in: short crystal spikes and a cold bloom, not a glow.
+        const spikes = Array.from({ length: 8 }, (_, i) => {
+          const a = (i / 8) * Math.PI * 2 + rand(-0.2, 0.2);
+          const r1 = 3;
+          const r2 = rand(7, 12);
+          return `M${(p.x + Math.cos(a) * r1).toFixed(1)} ${(p.y + Math.sin(a) * r1).toFixed(1)}L${(p.x + Math.cos(a) * r2).toFixed(1)} ${(p.y + Math.sin(a) * r2).toFixed(1)}`;
+        }).join('');
+        const frost = overlay(
+          l,
+          `background: ${svg(p.w, p.h, `<path d='${spikes}' stroke='#ffffff' stroke-width='1.2' stroke-linecap='round'/><path d='${spikes}' stroke='#6cc7f0' stroke-width='.6' transform='translate(.6 .6)'/>`)} center/100% 100%, radial-gradient(circle at ${p.x.toFixed(0)}px ${p.y.toFixed(0)}px, rgba(168,230,255,.55) 0 5px, rgba(168,230,255,.18) 10px, transparent 14px);`,
+        );
         fade(frost, 120);
-        fx(many(5, (j) => ({ shape: 'flash', x: t.x + p.x - p.w / 2 + rand(-6, 6), y: t.y + p.y - p.h / 2 + rand(-6, 6), max: rand(8, 14), size: rand(4, 7), alpha: 1, color: '#ffffff', glow: 'star', delay: j })));
+        fx(many(3, (j) => ({ shape: 'flash', x: t.x + p.x - p.w / 2 + rand(-8, 8), y: t.y + p.y - p.h / 2 + rand(-8, 8), max: rand(8, 12), size: rand(3, 5), alpha: 1, color: '#ffffff', glow: 'star', delay: j * 2 })));
         if (k === 2) {
           jolt(l, th, 4);
           shake(2);
+          l.animate([{ filter: 'none' }, { filter: 'saturate(0.7) brightness(1.03) hue-rotate(-8deg)' }], T({ duration: 240, fill: 'forwards' }));
         }
       });
     }
