@@ -2,11 +2,14 @@ import { suitSymbol, trumpSuit, type Card, type Seat, type Side, type Suit } fro
 import { elementAtSeat, teamOf } from '../avatars';
 import { cssColor } from '../themes';
 import type { Connection } from '../connection.svelte';
+import { cancelBeats } from './cardFx';
 import { buzz } from './haptics';
 import { intensityOf, momentsFrom, streak, type Moment } from './moments';
 import { comet, elementBurst, elementStrike, elementWin, flash, freeze, glyphs, lightBurst, pop, puff, ring, screenFlash, sparks } from './particles';
 import { settings } from './settings.svelte';
 import { sound } from './sound';
+import { gameWon, setWon } from './setWin';
+import type { Ctx } from './subFx';
 import { DRAMA_BOOST, RESPONSES, TIMING, type Level } from './timing';
 
 // Spec S16: the one place that decides how big each moment feels, and when.
@@ -116,6 +119,7 @@ class Director {
   }
 
   private reset(): void {
+    cancelBeats();
     this.going = 0;
     this.trickFx = null;
     this.banner = null;
@@ -128,9 +132,11 @@ class Director {
    * A hit-stop (Balatro): on a big impact everything holds for a beat on the brightest frame,
    * with a punchy thump, then bursts on. `power` 0–3. Input is never frozen.
    */
-  private impact(power: number, color?: string, at?: { x: number; y: number } | null): void {
+  private impact(power: number, color?: string, at?: { x: number; y: number } | null, hold = true): void {
     sound.impact(power);
-    if (!settings.motion) return;
+    // An element attack on the cards skips the freeze: it would hold the particles but not the
+    // damage to the cards, and the two would drift apart.
+    if (!settings.motion || !hold) return;
     const ms = settings.ms([55, 75, 100, 130][Math.max(0, Math.min(3, power))]!);
     freeze(ms);
     if (color && power >= 2) screenFlash(color, 0.18 + power * 0.08, 10, at ?? undefined);
@@ -176,6 +182,8 @@ class Director {
         sound.passedOut();
         break;
       case 'cardPlayed':
+        // A new card on the table: anything still to come for the last set's cards is moot.
+        cancelBeats();
         // The sound and the payoff land with the card, not when the message arrives.
         setTimeout(() => {
           sound.card(m.mine);
@@ -260,11 +268,14 @@ class Director {
       this.trickFx = { ...this.trickFx!, phase: 'win' };
       const at = this.centerOf(`.area [data-seat="${m.winner}"]`);
       this.shake(RESPONSES[level].shakePx);
-      // The winner's element plays out on the winning card (S24): its everyday form (fireball,
-      // tornado, tsunami, rock smash) for a normal win; its sub-element (lightning, sound, ice,
-      // metal) for a win by trumping a different suit. No avatar: the plain versions.
+      // The winner's element attacks the three losing cards (S24, Ryan's round 8): fire burns
+      // them, air slices them, water pierces them, earth holes them; won by trumping another
+      // suit, its sub-element does (lightning, sound, ice, metal). Its own sounds replace the
+      // set-won chime. With reduced effects (or no element), the old signature on the winner.
       const element = elementAtSeat(conn, m.winner);
+      const cards = element && settings.motion ? this.cardsOf(m.winner) : null;
       const signature = (power: number) => {
+        if (cards && element) return setWon(element, m.trumpOver, cards.win, cards.losers, cards.ctx);
         if (!at) return;
         if (!element) return m.trumpOver ? glyphs(at.x, at.y, 7, this.trumpGlyph(conn), [TRUMP_COLOR, '#f2e6ff'], 'rise') : flash(at.x, at.y, gold(), 42);
         if (m.trumpOver) elementStrike(element, at.x, at.y, power);
@@ -281,15 +292,16 @@ class Director {
           ring(at.x, at.y, TRUMP_COLOR, { radius: 120, width: 5, frames: 30 });
           glyphs(at.x, at.y, RESPONSES[level].particles / 3, this.trumpGlyph(conn), [TRUMP_COLOR, '#f2e6ff', gold()], 'shower');
         }
-        this.impact(2, TRUMP_COLOR, at);
+        this.impact(2, TRUMP_COLOR, at, !cards);
       } else if (kind === 'trump') {
-        sound.trumpTrick();
+        if (!cards) sound.trumpTrick();
         if (mineWon) buzz('trumpTrick');
         this.flashSuit(conn, true);
         signature(0);
-        this.impact(1, TRUMP_COLOR);
+        if (cards) sound.impact(1);
+        else this.impact(1, TRUMP_COLOR);
       } else {
-        sound.lead(2);
+        if (!cards) sound.lead(2);
         if (mineWon) buzz('trick');
         signature(0);
       }
@@ -346,6 +358,11 @@ class Director {
     setTimeout(() => {
       if (this.clinch?.id !== id) return;
       this.holding = false;
+      // The deciding set (S24, Ryan's round 8): the winner's attack, then its finisher wipes the
+      // losing cards off the table and the finale lands (the chord, gold flash, big shake).
+      const element = elementAtSeat(conn, m.seat);
+      const cards = element && settings.motion ? this.cardsOf(m.seat, m.drama) : null;
+      if (cards && element) return gameWon(element, m.trumpOver, cards.win, cards.losers, cards.ctx);
       sound.clinch(m.drama);
       buzz('clinch');
       // The signature effect of whoever played the deciding card (S24): fire, air, water or earth.
@@ -353,7 +370,6 @@ class Director {
       this.impact(Math.min(3, 1 + m.drama), gold(), at);
       this.shake(base.shakePx + DRAMA_BOOST.shakePx * m.drama);
       if (!at) return;
-      const element = elementAtSeat(conn, m.seat);
       lightBurst(at.x, at.y, [this.colorOf(conn, m.seat), gold(), '#fffbe8'], Math.min(3, 1 + m.drama));
       if (element) elementBurst(element, at.x, at.y, m.drama);
       else {
@@ -420,6 +436,19 @@ class Director {
    *  sparks would vanish on the felt. */
   private colorOf(conn: Link, seat: Seat): string {
     return teamOf(conn, seat) === 'red' ? cssColor('--team-red', '#d23a3a') : '#c9ced6';
+  }
+
+  /**
+   * The cards of the set on the table: the winner's and the three others (the trick area's
+   * `.face`s, not any pieces an effect cut from them), and what an attack needs around them.
+   */
+  private cardsOf(winner: Seat, drama?: number): { win: HTMLElement; losers: HTMLElement[]; ctx: Ctx } | null {
+    const faces = [...document.querySelectorAll<HTMLElement>('.area [data-seat] .face:not(.fx-piece)')];
+    const win = faces.find((f) => f.closest<HTMLElement>('[data-seat]')?.dataset.seat === String(winner));
+    const losers = faces.filter((f) => f !== win);
+    const under = document.querySelector<HTMLElement>('.area .under');
+    if (!win || losers.length !== 3 || !under) return null;
+    return { win, losers, ctx: { under, shake: (px) => this.shake(px), drama } };
   }
 
   private centerOf(selector: string): { x: number; y: number } | null {

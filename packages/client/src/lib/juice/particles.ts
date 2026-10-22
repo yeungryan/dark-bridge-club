@@ -92,11 +92,14 @@ let particles: Particle[] = [];
 let comets: Comet[] = [];
 let wash: Wash | null = null;
 let running = false;
+/** Logical steps taken (60 a second, whatever the screen's rate): flicker and wobble run on it. */
 let frame = 0;
 let dpr = 1;
 /** Hit-stop: nothing advances until this time (performance.now() ms). */
 let frozenUntil = 0;
 let lastNow = 0;
+/** Real time not yet spent on a logical step (ms), carried from frame to frame. */
+let carry = 0;
 /**
  * Frame-time governor: a smoothed frame time, and `lite` when the device is falling behind.
  * Lite keeps every effect's shape, timing and the big blooms/rings/bolts, but drops the
@@ -547,10 +550,34 @@ export function comet(from: { x: number; y: number }, to: { x: number; y: number
   start();
 }
 
+/**
+ * Effects are designed in steps of 1/60 s (every life, delay, speed and gravity is "per step").
+ * They advance on the clock, not per screen frame, so a set's attack is over in its 0.80 s on a
+ * phone running at 30 fps or at 120 Hz alike: a slow frame takes two or three steps, a fast one
+ * may take none and just redraw.
+ */
+export const STEP_MS = 1000 / 60;
+/** At most this many steps per frame: after a long stall, drop the backlog rather than race. */
+export const MAX_STEPS = 4;
+/** A frame that's a hair short of a step still takes one (60 Hz frames jitter around 16.7 ms);
+ *  the carry goes slightly negative, so the average rate stays exact. */
+const SLACK_MS = 2;
+
+/** How many steps to take this frame, given the time carried over and the frame's length. */
+export function stepsFor(carried: number, dt: number, frozen = false): { steps: number; carry: number } {
+  // Frozen (hit-stop) time is thrown away: nothing catches up afterwards.
+  if (frozen) return { steps: 0, carry: 0 };
+  const total = carried + dt;
+  const n = Math.max(0, Math.floor((total + SLACK_MS) / STEP_MS));
+  if (n > MAX_STEPS) return { steps: MAX_STEPS, carry: 0 };
+  return { steps: n, carry: total - n * STEP_MS };
+}
+
 function start(): void {
   if (!running) {
     running = true;
     lastNow = performance.now();
+    carry = 0;
     frameEma = 16.7;
     requestAnimationFrame(step);
   }
@@ -975,16 +1002,17 @@ function step(): void {
   if (frozen) {
     // Hold comets in place by pushing their start forward.
     for (const k of comets) k.start += dt;
-  } else {
-    frame++;
   }
+  const { steps, carry: left } = stepsFor(carry, dt, frozen);
+  carry = left;
   if (box.x1 > box.x0) c.clearRect(box.x0 - 2, box.y0 - 2, box.x1 - box.x0 + 4, box.y1 - box.y0 + 4);
   next = { x0: Infinity, y0: Infinity, x1: -Infinity, y1: -Infinity };
   c.globalCompositeOperation = 'source-over';
 
-  // Pass 1: advance everything.
-  if (!frozen) particles = particles.filter((p) => p.life > 0);
-  if (!frozen) {
+  // Pass 1: advance everything, one logical step at a time.
+  for (let k = 0; k < steps; k++) {
+    frame++;
+    particles = particles.filter((p) => p.life > 0);
     for (const p of particles) {
       if (p.delay > 0) p.delay--;
       else {
@@ -1016,8 +1044,8 @@ function step(): void {
   flushStrokes(c);
   drawComets(c, now, frozen);
   drawWash(washEl ?? canvas, wash);
-  if (wash && !frozen) {
-    wash.life -= 1;
+  if (wash) {
+    wash.life -= steps;
     if (wash.life <= 0) wash = null;
   }
   c.globalCompositeOperation = 'source-over';

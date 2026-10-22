@@ -1,16 +1,21 @@
 import { freeze, spawn, type Spec } from './particles';
+import { settings } from './settings.svelte';
 import { sound } from './sound';
+import { speedFactor } from './timing';
 
-// Ryan's round 8 mockups: the winning card's element attacks the three losing cards of the set.
-// The whole thing is over in 1.0 s (Ryan's cap), and the losers stay on the table, wrecked:
+// Spec S24, set won (Ryan, round 8): the winning card's element attacks the three losing cards
+// of the set (friendly fire included), and the losers stay on the table, wrecked, until the
+// sweep. The whole thing is over in 0.80 s.
 //   Fire: Ignite, then fireballs set the losers burning; they end charred, edges eaten.
 //   Air: Wind slashes fly at the losers and slice each in two; the halves stay, parted.
 //   Water: The splash crown with ripples under the card; jets pierce the losers, which end
 //     full of holes, soaked, creased and dripping.
 //   Earth: The boulder slam; a giant boulder punches through each loser, leaving a big ragged
 //     hole, cracks and dirt.
-// Effects lab only (fxlab.html?set=attack). Card damage is done with the Web Animations API on
-// the card's own element so it can be held still for screenshots.
+// Won by trumping, the sub-element plays instead (subFx.ts); the deciding set adds a finisher
+// (finishFx.ts). Particles go on the effects canvas; the damage is done with the Web Animations
+// API on each card's own element (the trick area's `.face`), so the sweep carries it along.
+// The effects lab (fxlab.html) plays every one of these, and the options Ryan didn't pick.
 
 export type Pt = { x: number; y: number };
 export const rand = (a: number, b: number) => a + Math.random() * (b - a);
@@ -29,8 +34,11 @@ export const F = 1000 / 60;
  * gravity, drag and spin) all together, so every path and shape stays the same, only quicker.
  */
 export const K = 0.8;
-export const T = (o: KeyframeAnimationOptions): KeyframeAnimationOptions => ({ ...o, duration: Number(o.duration ?? 0) * K, delay: (o.delay ?? 0) * K });
+/** The time scale now: Ryan's cap, at the player's speed setting (Fast plays at 0.6×). */
+const k = () => K * speedFactor(settings.speed);
+export const T = (o: KeyframeAnimationOptions): KeyframeAnimationOptions => ({ ...o, duration: Number(o.duration ?? 0) * k(), delay: (o.delay ?? 0) * k() });
 export function fx(list: Spec[]): void {
+  const K = k();
   spawn(
     list.map((p) => ({
       ...p,
@@ -47,15 +55,41 @@ export function fx(list: Spec[]): void {
   );
 }
 
-let timers: ReturnType<typeof setTimeout>[] = [];
-export const at = (ms: number, fn: () => void) => timers.push(setTimeout(fn, ms * K));
-
-/** Hold everything still (for the screenshots). */
-export function holdStill(): void {
+const timers = new Set<ReturnType<typeof setTimeout>>();
+/** Run `fn` after `ms` (on the 1.0 s timeline, so it's scaled like everything else). */
+export const at = (ms: number, fn: () => void) => {
+  const id = setTimeout(() => {
+    timers.delete(id);
+    fn();
+  }, ms * k());
+  timers.add(id);
+};
+/** Drop every beat still to come (a new deal, or the table going away mid-effect). */
+export function cancelBeats(): void {
   timers.forEach(clearTimeout);
-  timers = [];
+  timers.clear();
+}
+
+/** Hold everything still (the effects lab's screenshots). */
+export function holdStill(): void {
+  cancelBeats();
   document.getAnimations().forEach((a) => a.pause());
   freeze(1e7);
+}
+
+/**
+ * A copy of a card made for an effect (a cut half, a fragment): only for the eye, so screen
+ * readers and tests still see one card per player.
+ */
+export function ghost(copy: HTMLElement): HTMLElement {
+  copy.setAttribute('aria-hidden', 'true');
+  copy.dataset.piece = '1';
+  for (const el of [copy, ...copy.querySelectorAll<HTMLElement>('[aria-label], [role]')]) {
+    el.removeAttribute('aria-label');
+    el.removeAttribute('role');
+  }
+  copy.classList.add('fx-piece');
+  return copy;
 }
 
 const FIRE = ['#ffb347', '#ff7a2f', '#e8402a', '#ffd27a'];
@@ -217,10 +251,8 @@ function slice(card: HTMLElement, th: number): void {
   };
   const parent = card.parentElement!;
   for (const s of [1, -1]) {
-    const piece = card.cloneNode(true) as HTMLElement;
+    const piece = ghost(card.cloneNode(true) as HTMLElement);
     piece.style.cssText += `position:absolute;left:${card.offsetLeft}px;top:${card.offsetTop}px;clip-path:${half(s)};margin:0;filter:drop-shadow(0 1px 1px rgba(0,0,0,.5));`;
-    // A finisher finds the halves by this (the card itself is hidden).
-    piece.dataset.piece = '1';
     parent.appendChild(piece);
     // Each half slides along the cut in opposite directions and drifts apart a little.
     const along = s * rand(4, 7);

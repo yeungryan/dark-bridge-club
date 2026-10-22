@@ -107,6 +107,9 @@
       <span class="flash" class:big={director.flash.big} aria-hidden="true"><Suit suit={director.flash.suit} label={false} /></span>
     {/key}
   {/if}
+  <!-- The felt under the cards, for effects that happen on the table (ripples, the marks the
+       game-winning set leaves). A new set on the table starts it clean. -->
+  {#key `${deal.tricksPlayed}:${live}`}<div class="under" aria-hidden="true"></div>{/key}
   {#each showing as play, i (play.seat + ':' + play.card.suit + play.card.rank)}
     {@const spot = spotOf(play.seat, me)}
     <div class="spot {spot}" data-seat={play.seat}>
@@ -156,6 +159,11 @@
   .area.armed::before {
     border-color: var(--accent);
     box-shadow: inset 0 0 30px var(--accent-glow), 0 0 18px var(--accent-glow);
+  }
+  .under {
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
   }
   .spot {
     position: absolute;

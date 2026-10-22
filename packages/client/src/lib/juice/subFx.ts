@@ -1,22 +1,24 @@
-import { at, center, F, fx, many, overlay, pick, ragged, rand, svgUrl, T, toward, type Pt } from './cardFx';
+import { at, center, F, fx, ghost, many, overlay, pick, type Pt, ragged, rand, svgUrl, T, toward } from './cardFx';
 import { elementStrike } from './particles';
 import { sound } from './sound';
 
-// Ryan's picks (round 8): Lightning A (chain), Sound A (sonic boom), Ice B (shards), Metal A
-// (blade storm). Batch 1: Fire Ignite → burnt, Air Wind slash → sliced, Water Splash crown →
-// pierced, Earth Boulder slam → holed. Friendly fire is fine.
-//
-// Ryan's round 8, batch 2: the sub-elements (a set won by trumping a different suit). Like
-// batch 1, the winner attacks the three losing cards (friendly fire included), which stay on the
-// table wrecked, and it's all over in 0.80 s (timed here for 1.0 s, played at K = 0.8 by the
-// helpers). Lightning is blue now (Ryan). Effects lab only (fxlab.html?set=lightning, …).
+// Spec S24, a set won by trumping another suit: the winner's sub-element attacks the three
+// losing cards (as cardFx.ts does for the elements), which stay on the table wrecked; over in
+// 0.80 s (timed here for 1.0 s, played at K = 0.8 by the helpers). Ryan's picks (round 8):
+//   Lightning (fire, blue): chain lightning, a burnt scar on each card.
+//   Sound (air): a sonic boom; the cards crumple like paper.
+//   Ice (water): shards fly and stick fast in each card.
+//   Metal (earth): spinning blades slash each card; the last one sticks in.
+// The other options Ryan saw are kept for the effects lab (SUB_SETS) and aren't in the game.
 
 export interface Ctx {
   /** A layer under the cards (for things on the felt). */
   under: HTMLElement;
   shake: (px: number) => void;
+  /** How dramatic the deciding set was (0–3, the finale grows with it). */
+  drama?: number;
 }
-type Attack = (win: HTMLElement, losers: HTMLElement[], ctx: Ctx) => void;
+export type Attack = (win: HTMLElement, losers: HTMLElement[], ctx: Ctx) => void;
 
 export const BOLT = ['#eaf6ff', '#9fd6ff', '#4aa3ff', '#6f8bff'];
 const SOUND = ['#fff6cf', '#f4d27a', '#ffffff'];
@@ -84,7 +86,7 @@ const local = (card: HTMLElement, p: Pt) => {
 // ── Lightning (blue) ─────────────────────────────────────────────────────────────────────────
 
 /** A: one bolt jumps winner → loser → loser → loser; each is left with a burnt lightning scar. */
-const chain: Attack = (win, losers, { shake }) => {
+export const chain: Attack = (win, losers, { shake }) => {
   const w = center(win);
   fx([{ shape: 'flash', x: w.x, y: w.y, size: 34, max: 10, alpha: 0.9, color: BOLT[1]!, glow: 'hot' }]);
   // Round the table from the winner: left, top, right.
@@ -186,7 +188,7 @@ const arcStorm: Attack = (win, losers, { shake }) => {
 // ── Sound ────────────────────────────────────────────────────────────────────────────────────
 
 /** A: a sonic boom; the shockwave hits each card, it shudders and crumples like paper. */
-const sonicBoom: Attack = (win, losers, { shake }) => {
+export const sonicBoom: Attack = (win, losers, { shake }) => {
   const w = center(win);
   fx([
     { shape: 'flash', x: w.x, y: w.y, size: 30, max: 8, alpha: 0.9, color: '#ffffff', glow: 'hot' },
@@ -325,7 +327,7 @@ const deepFreeze: Attack = (win, losers) => {
 };
 
 /** B: ice shards fly and stick fast in each card, frost blooming round where they went in. */
-const iceShards: Attack = (win, losers, { shake }) => {
+export const iceShards: Attack = (win, losers, { shake }) => {
   const w = center(win);
   fx([{ shape: 'flash', x: w.x, y: w.y, size: 30, max: 10, alpha: 0.9, color: ICE[1]!, glow: 'hot' }]);
   sound.iceWhistle();
@@ -408,7 +410,7 @@ const iceShatter: Attack = (win, losers, { shake }) => {
         rim.forEach((p, i) => {
           const q = rim[(i + 1) % rim.length]!;
           const mid = (p.a + (q.a < p.a ? q.a + Math.PI * 2 : q.a)) / 2;
-          const piece = l.cloneNode(true) as HTMLElement;
+          const piece = ghost(l.cloneNode(true) as HTMLElement);
           piece.querySelectorAll('div[style*="absolute"]').forEach((e) => (e as HTMLElement).remove());
           piece.style.cssText += `position:absolute;left:${l.offsetLeft}px;top:${l.offsetTop}px;margin:0;clip-path:polygon(${cx}px ${cy}px, ${p.x.toFixed(0)}px ${p.y.toFixed(0)}px, ${q.x.toFixed(0)}px ${q.y.toFixed(0)}px);`;
           const fr = overlay(piece, `background: ${frostBg};`);
@@ -436,7 +438,7 @@ const iceShatter: Attack = (win, losers, { shake }) => {
 // ── Metal ────────────────────────────────────────────────────────────────────────────────────
 
 /** A: spinning blades fly at each card, slash it twice, and the last one sticks in. */
-const bladeStorm: Attack = (win, losers, { shake }) => {
+export const bladeStorm: Attack = (win, losers, { shake }) => {
   const w = center(win);
   fx([{ shape: 'ring', x: w.x, y: w.y, size: 8, grow: 4, max: 12, color: '#ffffff', wobble: 3 }]);
   sound.bladeWhirr();

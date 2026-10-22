@@ -1,4 +1,4 @@
-import { at, center, F, fx, many, overlay, pick, ragged, rand, T, toward, type Pt } from './cardFx';
+import { at, center, F, fx, ghost, many, overlay, pick, type Pt, ragged, rand, T, toward } from './cardFx';
 import { finale, type Finish } from './finishFx';
 import { sound } from './sound';
 import { angle, bolt, BOLT, frostBg } from './subFx';
@@ -22,7 +22,7 @@ function pieces(card: HTMLElement, clips: string[]): HTMLElement[] {
   const { transform, filter } = now(card);
   const parent = card.parentElement!;
   const out = clips.map((clip) => {
-    const p = card.cloneNode(true) as HTMLElement;
+    const p = ghost(card.cloneNode(true) as HTMLElement);
     p.style.cssText += `position:absolute;left:${card.offsetLeft}px;top:${card.offsetTop}px;margin:0;clip-path:${clip};transform:${transform};filter:${filter};z-index:3;`;
     parent.appendChild(p);
     return p;

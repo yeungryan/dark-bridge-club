@@ -1,4 +1,4 @@
-import { at, center, F, fx, many, overlay, pick, ragged, rand, T, type Pt } from './cardFx';
+import { at, center, F, fx, ghost, many, overlay, pick, type Pt, ragged, rand, T } from './cardFx';
 import { finale, type Finish } from './finishFx';
 import { sound } from './sound';
 
@@ -169,7 +169,7 @@ const earth: Finish = (win, losers, ctx) => {
       rim.forEach((p, i) => {
         const q = rim[(i + 1) % n]!;
         const mid = (p.a + (q.a < p.a ? q.a + Math.PI * 2 : q.a)) / 2;
-        const piece = l.cloneNode(true) as HTMLElement;
+        const piece = ghost(l.cloneNode(true) as HTMLElement);
         piece.style.cssText += `position:absolute;left:${l.offsetLeft}px;top:${l.offsetTop}px;margin:0;transform:${from === 'none' ? 'none' : from};clip-path:polygon(${cx}px ${cy}px, ${p.x.toFixed(0)}px ${p.y.toFixed(0)}px, ${q.x.toFixed(0)}px ${q.y.toFixed(0)}px);`;
         l.parentElement!.appendChild(piece);
         const out = rand(8, 16);

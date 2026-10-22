@@ -17,8 +17,9 @@ export const TIMING = {
   raise: 160,
   /** A played card travels from its player's side to the trick. */
   cardFly: 220,
-  /** How long a finished trick stays visible before sweeping to the winner. */
-  trickHold: 650,
+  /** How long a finished trick stays visible before sweeping to the winner: the set-win
+   *  effect's 0.80 s (Ryan's cap, S24), so the wrecked cards are seen before they go. */
+  trickHold: 800,
   /** Extra hold for the first trump trick of a deal, so its banner can land. */
   firstTrumpHold: 450,
   /** A trick's glowing orb travelling to its side's score bar. */

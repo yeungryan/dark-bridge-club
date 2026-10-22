@@ -1,16 +1,16 @@
 import { center, fx, many, pick, type Pt } from './cardFx';
+import { buzz } from './haptics';
 import { screenFlash } from './particles';
 import { sound } from './sound';
 import type { Ctx } from './subFx';
 import { FINISH_1 } from './finishFx1';
 import { FINISH_2 } from './finishFx2';
 
-// Ryan's round 8: the game-winning set. The winner's attack plays as on any set (0.80 s), then a
-// finisher wipes the wrecked losing cards off the table, each element its own way, and the
-// finale lands (gold flash, big shake, the clinch chord). About 1.6 s in all; the game already
-// waits ~3 s after the deciding set, so it costs no time. Effects lab only (fxlab.html?set=finish1,
-// finish2). Finishers are timed for 1.0 s and played at K = 0.8 by the cardFx helpers, like the
-// attacks.
+// Spec S24, the game-winning set (Ryan, round 8): the winner's attack plays as on any set
+// (0.80 s, with a gold power-up), then a finisher wipes the wrecked losing cards off the table,
+// each element its own way, and the finale lands (gold flash, big shake, the clinch chord).
+// About 1.6 s in all; the game already waits ~3 s after the deciding set, so it costs no time.
+// Finishers are timed for 1.0 s and played at K = 0.8 by the cardFx helpers, like the attacks.
 
 /** Wipe the wrecked losers off the table. Called once the attack is over. */
 export type Finish = (win: HTMLElement, losers: HTMLElement[], ctx: Ctx) => void;
@@ -36,9 +36,11 @@ export function powerUp(win: HTMLElement): void {
  * shake and the clinch chord, as the game-winning set has today. Built on the scaled helpers so
  * it's over well inside the 1.6 s.
  */
-export function finale(win: HTMLElement, ctx: Ctx, drama = 1): void {
+export function finale(win: HTMLElement, ctx: Ctx): void {
+  const drama = ctx.drama ?? 1;
   const w: Pt = center(win);
   sound.clinch(drama);
+  buzz('clinch');
   screenFlash(GOLD, 0.34, 12, w);
   const n = 22 + drama * 6;
   fx([

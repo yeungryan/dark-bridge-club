@@ -34,7 +34,8 @@ export type Moment =
   | { kind: 'trickWon'; side: Side; winner: Seat; trump: boolean; trumpOver: boolean; firstTrump: boolean; pip: number }
   | { kind: 'oneAway'; side: Side }
   | { kind: 'decider' }
-  | { kind: 'clinch'; side: Side; seat: Seat; card: Card; drama: number }
+  /** `trumpOver`: the deciding set was won by trumping another suit (its sub-element plays). */
+  | { kind: 'clinch'; side: Side; seat: Seat; card: Card; drama: number; trumpOver: boolean }
   | { kind: 'dealComplete' }
   | { kind: 'nightEnded' };
 
@@ -190,6 +191,7 @@ export function momentsFrom(events: readonly PublicEvent[], view: TableView): Mo
           seat: c.seat,
           card: c.card,
           drama: clinchDrama({ decider: before.declarers === 1 && before.defenders === 1, level: deal.contract.level, trumpOver }),
+          trumpOver,
         });
         break;
       }
