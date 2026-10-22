@@ -53,7 +53,10 @@ export function startAutopilot(conn: Connection): () => void {
     if (!act) return;
     lastKey = key;
     if (pending) clearTimeout(pending);
-    pending = setTimeout(act, THINK_MS);
+    // Round 11: a new set's lead waits until the last set has played out (the server says when).
+    const leading = deal?.phase === 'play' && (deal.currentTrick?.cards.length ?? 0) === 0 && deal.tricksPlayed > 0;
+    const wait = leading && room.leadOpensAt ? room.leadOpensAt - conn.now() + 100 : 0;
+    pending = setTimeout(act, Math.max(THINK_MS, wait));
   };
 
   const interval = setInterval(tick, 150);

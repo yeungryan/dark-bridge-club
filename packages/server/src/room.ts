@@ -45,6 +45,8 @@ import {
   type ScheduleAction,
   applyChangeAction,
   carryForward,
+  isLead,
+  leadHoldAfter,
   perSeat,
   type CompletedTrick,
   emptyCarried,
@@ -101,6 +103,8 @@ interface Stored {
   /** The latest finished game's moments, and tonight's awards once it ends (S19). */
   gameMoments: Moment[];
   awards: Award[] | null;
+  /** Round 11: epoch ms before which the next set can't be led (the last set is still playing out). */
+  leadOpensAt?: number | null;
 }
 
 const IN_PROGRESS = new Set(['partnerPick', 'awaitingDeal', 'inDeal', 'betweenDeals']);
@@ -576,9 +580,18 @@ export class TableRoom extends DurableObject<Env> {
     if (this.isPaused()) {
       return send(ws, { type: 'error', code: 'PAUSED', message: 'Waiting for everyone to be back.' });
     }
+    // Round 11 (Ryan, option A): the next set waits until the last one has played out on
+    // everyone's screen. Phones wait for leadOpensAt themselves; this is the backstop.
+    const intent = message.intent as { type: string; action?: { type: string } };
+    const opensAt = this.data.leadOpensAt ?? 0;
+    if (intent.type === 'deal' && intent.action?.type === 'play' && isLead(this.data.session.deal) && Date.now() < opensAt) {
+      return send(ws, { type: 'error', code: 'TOO_SOON', message: 'One moment: the last set is still playing out.' });
+    }
     const outcome = applySessionAction(this.data.session, { ...message.intent, by: profile } as SessionAction);
     if (!outcome.ok) return send(ws, { type: 'error', code: outcome.error.code, message: outcome.error.message });
     this.data.session = outcome.state;
+    const hold = leadHoldAfter(outcome.events, outcome.state.deal);
+    if (hold !== null) this.data.leadOpensAt = Date.now() + hold;
     await this.commit(outcome.events);
   }
 
@@ -950,6 +963,7 @@ export class TableRoom extends DurableObject<Env> {
       paused: this.isPaused(),
       autoCloseAt: autoClose.length ? Math.min(...autoClose) : null,
       clinchDeadline: timer('clinch'),
+      leadOpensAt: this.data.leadOpensAt && this.data.leadOpensAt > Date.now() ? this.data.leadOpensAt : null,
       concessionDeadline: timer('concession'),
       serverTime: Date.now(),
       avatarReady: Object.fromEntries(PROFILE_IDS.map((id) => [id, !!this.data.avatars.picks[id]?.avatar])),

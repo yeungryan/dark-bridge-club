@@ -492,7 +492,7 @@ describe('captions', () => {
     expect(AWARDS.daredevil.caption(by.daredevil!, name)).toBe('Darren bid on 6 HCP worth of hope and won 1♠.');
     expect(AWARDS.heist.caption(by.heist!, name)).toBe('Adrian robbed the table on 0 HCP: 1♠, won.');
     expect(AWARDS.blogAboutIt.caption(by.blogAboutIt!, name)).toMatch(/Why don't you blog about that\?$/);
-    expect(AWARDS.bannerMoment.caption(by.bannerMoment!, name)).toBe('Darren: 1♠, made exactly. Banner moment na ba yan?');
+    expect(AWARDS.bannerMoment.caption(by.bannerMoment!, name)).toBe('Darren: 1♠, won exactly. Banner moment na ba yan?');
     expect(AWARDS.tenDollars.caption(by.tenDollars!, name)).toBe('Kim: 3 minutes of thinking. Oh, 10 dollars na yan!');
     expect(AWARDS.epicAttic.title).toBe('Epic Attic');
     expect(AWARDS.blogAboutIt.title).toBe("Why Don't You Blog About It");

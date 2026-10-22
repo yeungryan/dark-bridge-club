@@ -33,7 +33,7 @@ Balatro's lesson: **if you hide something, the reveal has to be worth it.** Hand
 - **When the data arrives:** every set (`DealView.playedTricks`) is sent only once the game is complete. During play, only the last set is ever sent (R8: remembering cards is part of the skill).
 
 ## Trimmed (Ryan, before M4)
-The result screen is now: one bold result ("Made +1", "Defeated −2", "Conceded"), one quiet line (contract · declarer's animal and name · "7–5 sets") and who take the game; the moments; the four hands (unchanged, with each hand's HCP as a small pill); then a square **rewind** icon (the replay) beside a wide **Next game**, and the four animals lighting up as each player is ready. Gone: the "Tonight" tally (the scoreboard shows tonight's games), "Tap to skip" (tapping still skips) and "(you)".
+The result screen is now: one bold result ("WON +1", "LOST −2", "Conceded"; round 11, was Made/Defeated), one quiet line (contract · declarer's animal and name · "7–5 sets") and who take the game; the moments; the four hands (unchanged, with each hand's HCP as a small pill); then a square **rewind** icon (the replay) beside a wide **Next game**, and the four animals lighting up as each player is ready. Gone: the "Tonight" tally (the scoreboard shows tonight's games), "Tap to skip" (tapping still skips) and "(you)".
 
 **Scrub, no arrows (Ryan):** drag along the set strip and the highlighted column follows your finger, set by set. The ◀ ▶ buttons are gone so the strip gets the full width: bigger columns and animals, with a little room around each column's number and animal, on a soft panel. Swiping the table and the arrow keys still step. The replay **opens on the set that decided the game** (★), or the last set played if none did.
 

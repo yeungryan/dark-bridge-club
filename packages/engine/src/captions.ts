@@ -28,9 +28,9 @@ function names(ids: readonly ProfileId[], name: Name): string {
 
 export const MOMENT_CAPTIONS: Record<MomentKind, (m: Moment, name: Name) => string> = {
   grandAmbition: (m, name) =>
-    `Grand ambition! ${names(m.players, name)} went for ${contractOf(m.payload)}${m.payload.made ? ' and made it.' : '.'}`,
+    `Grand ambition! ${names(m.players, name)} went for ${contractOf(m.payload)}${m.payload.made ? ' and won it.' : '.'}`,
   robbery: (m, name) =>
-    `Robbery! ${names(m.players, name)} made ${contractOf(m.payload)} with ${m.payload.hcpGap} fewer points.`,
+    `Robbery! ${names(m.players, name)} won ${contractOf(m.payload)} with ${m.payload.hcpGap} fewer points.`,
   heartbreak: (m, name) => `Heartbreak. ${names(m.players, name)} fell one trick short in ${contractOf(m.payload)}.`,
   decider: (m, name) => `The decider! Both sides one away, and ${name(m.players[0]!)} took it.`,
   trumpCard: (m, name) => `Trump card! ${name(m.players[0]!)} ruffed in with ${m.payload.card} to settle it.`,
@@ -90,11 +90,11 @@ export const AWARDS: Record<
     emoji: '🦹',
     detail: (a) =>
       a.payload.hcp === undefined
-        ? `${contractOf(a.payload)} made with ${a.payload.hcpGap} fewer points`
+        ? `${contractOf(a.payload)} won with ${a.payload.hcpGap} fewer points`
         : `Robbed the table on ${a.payload.hcp} HCP · ${contractOf(a.payload)}`,
     caption: (a, name) =>
       a.payload.hcp === undefined
-        ? `${name(a.profile)} made ${contractOf(a.payload)} with ${a.payload.hcpGap} fewer points than the defenders.`
+        ? `${name(a.profile)} won ${contractOf(a.payload)} with ${a.payload.hcpGap} fewer points than the defenders.`
         : `${name(a.profile)} robbed the table on ${a.payload.hcp} HCP: ${contractOf(a.payload)}, won.`,
   },
   // Ryan (round 10): a clean sweep of all 13 sets, by the side that bid it or the side that didn't.
@@ -145,9 +145,9 @@ export const AWARDS: Record<
     title: 'Banner Moment',
     emoji: '🪧',
     headline: 'Banner moment na ba yan?',
-    detail: (a) => `${contractOf(a.payload)}, ${Number(a.payload.spare) === 0 ? 'made exactly' : 'one to spare'}`,
+    detail: (a) => `${contractOf(a.payload)}, ${Number(a.payload.spare) === 0 ? 'won exactly' : 'one to spare'}`,
     caption: (a, name) =>
-      `${name(a.profile)}: ${contractOf(a.payload)}, ${Number(a.payload.spare) === 0 ? 'made exactly' : 'one to spare'}. Banner moment na ba yan?`,
+      `${name(a.profile)}: ${contractOf(a.payload)}, ${Number(a.payload.spare) === 0 ? 'won exactly' : 'one to spare'}. Banner moment na ba yan?`,
   },
   tenDollars: {
     title: "That's 10 Dollars",

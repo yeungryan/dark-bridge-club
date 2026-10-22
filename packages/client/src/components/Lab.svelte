@@ -58,8 +58,8 @@
         { label: 'First trump!', play: () => (sound.firstTrump(), after(1100, () => sound.sweep()), after(1450, () => sound.pip(5))), haptic: 'firstTrump' },
         { label: 'One set away', play: () => sound.close() },
         { label: 'Decider', play: () => sound.decider() },
-        { label: 'Contract made', play: () => sound.clinch(0), haptic: 'clinch' },
-        { label: 'Made, dramatically', play: () => sound.clinch(3), haptic: 'clinch' },
+        { label: 'Contract won', play: () => sound.clinch(0), haptic: 'clinch' },
+        { label: 'Won, dramatically', play: () => sound.clinch(3), haptic: 'clinch' },
       ],
     },
     {

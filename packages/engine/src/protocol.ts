@@ -40,6 +40,8 @@ export interface RoomInfo {
   readonly autoCloseAt: number | null;
   /** Epoch ms when the "Play it out?" window closes (R11). */
   readonly clinchDeadline: number | null;
+  /** Epoch ms before which the next set can't be led (round 11): the last set is still playing out. */
+  readonly leadOpensAt: number | null;
   /** Epoch ms when a pending concession expires (S04). */
   readonly concessionDeadline: number | null;
   /** The server's clock, so countdowns are correct even if a phone's clock is off. */
