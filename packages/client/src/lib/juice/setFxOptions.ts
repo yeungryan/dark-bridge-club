@@ -331,6 +331,8 @@ export const SET_FX: FxRow[] = [
 /** The rest as they play now (the current-state sheet; their options come in later batches). */
 const TRUMP = '#c58bff';
 export const CURRENT_OTHERS: FxRow[] = [
+  // Batch 2 (Ryan): lightning goes blue instead of yellow; and, like batch 1, every effect
+  // should be aimed at the set's three losing cards.
   { id: 'lightning', title: 'Lightning (fire, trump set)', options: [{ label: 'Now', name: 'Lightning', note: '', shake: 4, play: (x, y) => elementStrike('fire', x, y) }] },
   { id: 'sound', title: 'Sound (air, trump set)', options: [{ label: 'Now', name: 'Sound', note: '', shake: 4, play: (x, y) => elementStrike('air', x, y) }] },
   { id: 'ice', title: 'Ice (water, trump set)', options: [{ label: 'Now', name: 'Ice', note: '', shake: 4, play: (x, y) => elementStrike('water', x, y) }] },

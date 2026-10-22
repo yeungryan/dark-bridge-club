@@ -1,5 +1,7 @@
 import { mount } from 'svelte';
 import './app.css';
+import AttackLab from './components/AttackLab.svelte';
 import FxLab from './components/FxLab.svelte';
 
-export default mount(FxLab, { target: document.getElementById('app')! });
+const attack = new URLSearchParams(location.search).get('set') === 'attack';
+export default mount(attack ? AttackLab : FxLab, { target: document.getElementById('app')! });
