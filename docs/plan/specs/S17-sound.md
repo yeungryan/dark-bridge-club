@@ -28,3 +28,29 @@ Sound adds weight to the game without ever competing with your friends' voices (
 - **Haptics:** short vibrations on your own taps and card plays, and on big table moments (Android only; iPhone browsers have no vibration API). Settings → Vibrate.
 - On an iPhone, the ring/silent switch mutes web game sounds; this is not overridable without risking interrupting the call.
 - **lab.html** (the sound check page) plays every sound on demand, to check volume on a real Messenger call. **practice.html** is you against three bots in the browser, and nothing is recorded.
+
+## Set-win attack sounds (Ryan, round 8)
+Each set-win attack (S24) has its own sounds, built from the same synth parts and kept in the phone band (300 Hz–5 kHz). Each is fired at the effect's own impacts, so sound and picture stay together on a slow phone too.
+
+**Set won:**
+- **Fire:** a suck-in and a "whoomp", then a crackle as each card burns.
+- **Air:** a gust, then a "shing" per cut.
+- **Water:** a splash and a jet, a plop per hole, then drips.
+- **Earth:** a slam and a whistle, then a crunch per boulder.
+- **Lightning:** a zap per jump, rising.
+- **Sound:** a boom, then a paper crumple.
+- **Ice:** a whistle, then a glassy tink per shard and a frost crackle.
+- **Metal:** a whirr, then slashes, and a thunk and twang as the last blade sticks.
+
+**The game-winning set:** a rising gold power-up, then each finisher's own sound, leading into the clinch chord at the finale:
+- **Fire:** a roar and crackling ash.
+- **Air:** a blasting gust.
+- **Water:** a rushing wave.
+- **Earth:** a crack and clatter.
+- **Lightning:** a thunder crack and sizzle.
+- **Sound:** a bigger boom with fluttering paper.
+- **Ice:** a glass shatter.
+- **Metal:** shredding slashes.
+
+These replace the generic set-won chime (`lead`) and the trump-set brass (`trumpTrick`) whenever an attack plays.
+
