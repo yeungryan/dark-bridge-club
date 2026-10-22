@@ -458,14 +458,32 @@ describe('captions', () => {
     }
   });
 
-  it('a clean sweep (Ryan, round 10): all 13 sets, to the partner whose own cards won more of them', () => {
+  it('a clean sweep (Ryan, round 10): all 13 sets; only the one partner if their own cards won all 13', () => {
     const by = Object.fromEntries(awardCandidates(rich).map((c) => [c.kind, c]));
-    // Game 13: the defenders (seats 1 and 3) won all 13; seat 3 held every club, so every set.
-    expect(by.engineerSanitation?.profile).toBe(SEATING[3]);
-    expect(AWARDS.engineerSanitation.caption(by.engineerSanitation!, name)).toBe(`${name(SEATING[3])} swept all 13 sets against 1♣. They bid it. We binned it.`);
+    // Game 13: the defenders (seats 1 and 3) won all 13, and seat 3's clubs won every one: only them.
+    expect(awardCandidates(rich).filter((c) => c.kind === 'dogMroob').map((c) => c.profile)).toEqual([SEATING[3]]);
+    expect(AWARDS.dogMroob.caption(by.dogMroob!, name)).toBe(`${name(SEATING[3])} swept all 13 sets against 1♣. They bid it. We binned it.`);
     // 7♠ made with all 13 (a game in this night): declarer's side swept.
-    expect(by.sanitationEngineer).toBeDefined();
-    expect(AWARDS.engineerSanitation.flip).toBe(true);
+    expect(by.broomGod).toBeDefined();
+    expect(AWARDS.dogMroob.flip).toBe(true);
+    expect([AWARDS.broomGod.title, AWARDS.dogMroob.title]).toEqual(['Broom God', 'Dog Mroob']);
+  });
+
+  it('a clean sweep shared between partners goes to both, and is chosen as one', () => {
+    const shared: DealHistory = {
+      dealNumber: 1,
+      dealer: 3,
+      contract: { level: 7, strain: 'S', declarer: 0 },
+      result: { winner: 'declarers', reason: 'made', declarerTricks: 13, defenderTricks: 0, playedOut: true, overUnder: 0 },
+      hands: null,
+      tricks: null,
+      thinkMs: null,
+    };
+    const a = (kind: AwardKind, profile: ProfileId, score: number): Award => ({ kind, profile, score, payload: {} });
+    const cands = awardCandidates(night([shared]));
+    expect(cands.filter((c) => c.kind === 'broomGod').map((c) => c.profile).sort()).toEqual([SEATING[0], SEATING[2]].sort());
+    const picked = selectAwards([...cands, a('mvp', 'kim', 4), a('wall', 'kim', 4), a('epicAttic', 'adrian', 7), a('heist', 'ryan', 5)]);
+    expect(picked.filter((p) => p.kind === 'broomGod')).toHaveLength(2);
   });
 
   it("house awards keep Ryan's exact lines", () => {

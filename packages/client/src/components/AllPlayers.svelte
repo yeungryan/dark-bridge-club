@@ -27,8 +27,8 @@
     { kind: 'epicAttic', means: 'Bid 4+ and won.' },
     { kind: 'daredevil', means: 'Bid with <8 HCP and won.' },
     { kind: 'heist', means: 'Stood by with <8 HCP and still won.' },
-    { kind: 'sanitationEngineer', means: 'Bid and swept all sets.' },
-    { kind: 'engineerSanitation', means: 'Stood by and still swept all sets.' },
+    { kind: 'broomGod', means: 'Bid and swept all sets.' },
+    { kind: 'dogMroob', means: 'Stood by and still swept all sets.' },
   ];
 
   const animals = $derived(animalRecords(ids, nights, carried));
@@ -207,14 +207,18 @@
     line-height: 1;
     opacity: 0.25;
   }
-  /* Engineer Sanitation's broom, upside down. */
+  /* Dog Mroob's broom, upside down. */
   .flip {
     rotate: 180deg;
   }
+  /* One line each (Ryan, round 10: the sweeps are Broom God and Dog Mroob so they fit). */
   .an {
     font: 700 12px var(--font-name);
     color: var(--win);
     letter-spacing: 0.02em;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
   }
   .means {
     font-size: 10.5px;

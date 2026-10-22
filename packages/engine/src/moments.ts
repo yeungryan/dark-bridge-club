@@ -59,8 +59,8 @@ export type AwardKind =
   | 'wall'
   | 'daredevil'
   | 'heist'
-  | 'sanitationEngineer'
-  | 'engineerSanitation'
+  | 'broomGod'
+  | 'dogMroob'
   | 'heartbreakHotel'
   | 'epicAttic'
   | 'blogAboutIt'
@@ -337,6 +337,9 @@ export function allMoments(night: NightHistory): Moment[] {
 // Awards
 // ---------------------------------------------------------------------------------------------
 
+/** Awards both partners can share in one night (Ryan, round 10): a clean sweep is the pair's. */
+export const SHARED_AWARDS: readonly AwardKind[] = ['broomGod', 'dogMroob'];
+
 /** House awards (Ryan's inside jokes) get a selection bonus: they're the fun ones. */
 export const HOUSE_AWARDS: readonly AwardKind[] = ['epicAttic', 'blogAboutIt', 'bannerMoment', 'tenDollars'];
 
@@ -347,8 +350,8 @@ export const AWARD_ORDER: readonly AwardKind[] = [
   'bannerMoment',
   'tenDollars',
   'heist',
-  'sanitationEngineer',
-  'engineerSanitation',
+  'broomGod',
+  'dogMroob',
   'mvp',
   'heartbreakHotel',
   'wall',
@@ -365,8 +368,8 @@ export const STRONG_AT: Readonly<Record<AwardKind, number>> = {
   wall: 4, // contracts set
   daredevil: 5, // 8 − the declarer's HCP (3 or fewer is clearly earned)
   heist: 5, // 8 − the winner's HCP (3 or fewer is clearly earned)
-  sanitationEngineer: 13, // all 13 sets: always clearly earned
-  engineerSanitation: 13,
+  broomGod: 13, // all 13 sets: always clearly earned
+  dogMroob: 13,
   heartbreakHotel: 2, // heartbreaks
   epicAttic: 4, // contract level (any made 4+ contract is clearly earned)
   blogAboutIt: 4, // drama points (e.g. a Decider that was also a Heartbreak)
@@ -442,9 +445,9 @@ class Tally {
  *   grandAmbition 1, robbery 1; ties → the later game), to whoever played its clinching card. Needs 2+.
  * - bannerMoment: 10 − 4 × tricks to spare − level, for a level ≤ 2 contract made with no
  *   moments at all and at most one trick to spare; the declarer earns it.
- * - sanitationEngineer / engineerSanitation (Ryan, round 10): the declaring side / the defending
- *   side won all 13 sets (sets won after playing on count). Partners tie by definition; the one
- *   whose own cards won more of them gets it. Score 13.
+ * - broomGod / dogMroob (Ryan, round 10): the declaring side / the defending side won all 13
+ *   sets (sets won after playing on count). Both partners get it (SHARED_AWARDS), unless one of
+ *   them won all 13 with their own cards: then only them. The night's first such game. Score 13.
  * - tenDollars: total thinking seconds. Needs 60 s+ and at least 20% more than the median player.
  * Remaining ties: the earlier achiever, then seat order.
  */
@@ -462,7 +465,8 @@ export function awardCandidates(night: NightHistory): Award[] {
   const attics: (Entry & { payload: Award['payload'] })[] = [];
   const blogs: (Entry & { payload: Award['payload'] })[] = [];
   const banners: (Entry & { payload: Award['payload'] })[] = [];
-  const sweeps: Record<Side, (Entry & { payload: Award['payload'] })[]> = { declarers: [], defenders: [] };
+  // The night's first clean sweep by each side: who gets it, and the game's facts.
+  const sweeps: Partial<Record<Side, { profiles: ProfileId[]; payload: Award['payload'] }>> = {};
 
   night.deals.forEach((deal, i) => {
     const contract = deal.contract;
@@ -493,8 +497,10 @@ export function awardCandidates(night: NightHistory): Award[] {
     }
     // A clean sweep: one side won all 13 sets.
     const swept = deal.result?.declarerTricks === 13 ? 'declarers' : deal.result?.defenderTricks === 13 ? 'defenders' : null;
-    if (swept) {
-      for (const s of sideSeats(contract, swept)) sweeps[swept].push({ profile: who(s), keys: [13, r ? r.tricksBySeat[s] : 0, -i], payload: facts });
+    if (swept && !sweeps[swept]) {
+      const seats = sideSeats(contract, swept);
+      const alone = r ? seats.find((s) => r.tricksBySeat[s] === 13) : undefined;
+      sweeps[swept] = { profiles: (alone !== undefined ? [alone] : seats).map(who), payload: facts };
     }
     // Heist Master: anyone else on the winning side, on 7 or fewer HCP.
     if (winner && hcpOf) {
@@ -541,8 +547,9 @@ export function awardCandidates(night: NightHistory): Award[] {
   };
   pick('daredevil', daredevils);
   pick('heist', heists);
-  pick('sanitationEngineer', sweeps.declarers);
-  pick('engineerSanitation', sweeps.defenders);
+  for (const [kind, side] of [['broomGod', 'declarers'], ['dogMroob', 'defenders']] as const) {
+    for (const profile of sweeps[side]?.profiles ?? []) out.push({ kind, profile, score: 13, payload: sweeps[side]!.payload });
+  }
 
   const hbBest = best(heartbreaks.entries(), night);
   push('heartbreakHotel', hbBest, (e) => ({ heartbreaks: e.keys[0]! }));
@@ -582,33 +589,36 @@ export const MAX_AWARDS_PER_PLAYER = 2;
 /**
  * Choose which awards to show, highest priority first.
  * - Priority = strength (score / STRONG_AT, capped at 1) + 0.5 for house awards; ties → AWARD_ORDER.
- * - At most one award per kind, at most MAX_AWARDS.
+ * - At most one award per kind (a sweep: both partners, together, in one place), at most MAX_AWARDS places.
  * - A kind shown last night (`previous`) is skipped unless clearly earned (strength 1).
  * - Each player at most twice; relaxed only if needed to reach MIN_AWARDS.
  */
 export function selectAwards(candidates: readonly Award[], previous: readonly AwardKind[] = []): Award[] {
-  const byKind = new Map<AwardKind, Award>();
+  // One award per kind, the strongest; a shared kind (a sweep) keeps everyone who earned it,
+  // and they're chosen or left out together, taking one place.
+  const byKind = new Map<AwardKind, Award[]>();
   for (const a of candidates) {
     const cur = byKind.get(a.kind);
-    if (!cur || a.score > cur.score) byKind.set(a.kind, a);
+    if (SHARED_AWARDS.includes(a.kind)) byKind.set(a.kind, [...(cur ?? []), a]);
+    else if (!cur || a.score > cur[0]!.score) byKind.set(a.kind, [a]);
   }
   const ranked = [...byKind.values()]
-    .filter((a) => !previous.includes(a.kind) || awardStrength(a) >= 1)
-    .sort((a, b) => awardPriority(b) - awardPriority(a) || AWARD_ORDER.indexOf(a.kind) - AWARD_ORDER.indexOf(b.kind));
+    .filter((g) => !previous.includes(g[0]!.kind) || awardStrength(g[0]!) >= 1)
+    .sort((a, b) => awardPriority(b[0]!) - awardPriority(a[0]!) || AWARD_ORDER.indexOf(a[0]!.kind) - AWARD_ORDER.indexOf(b[0]!.kind));
 
-  const chosen: Award[] = [];
+  const chosen: Award[][] = [];
   const perPlayer = new Map<ProfileId, number>();
-  for (const a of ranked) {
+  for (const g of ranked) {
     if (chosen.length >= MAX_AWARDS) break;
-    if ((perPlayer.get(a.profile) ?? 0) >= MAX_AWARDS_PER_PLAYER) continue;
-    chosen.push(a);
-    perPlayer.set(a.profile, (perPlayer.get(a.profile) ?? 0) + 1);
+    if (g.some((a) => (perPlayer.get(a.profile) ?? 0) >= MAX_AWARDS_PER_PLAYER)) continue;
+    chosen.push(g);
+    for (const a of g) perPlayer.set(a.profile, (perPlayer.get(a.profile) ?? 0) + 1);
   }
-  for (const a of ranked) {
+  for (const g of ranked) {
     if (chosen.length >= MIN_AWARDS) break;
-    if (!chosen.includes(a)) chosen.push(a);
+    if (!chosen.includes(g)) chosen.push(g);
   }
-  return chosen.sort((a, b) => ranked.indexOf(a) - ranked.indexOf(b));
+  return chosen.sort((a, b) => ranked.indexOf(a) - ranked.indexOf(b)).flat();
 }
 
 /** The awards to show at the end of the night (3–5 when that many qualify). */

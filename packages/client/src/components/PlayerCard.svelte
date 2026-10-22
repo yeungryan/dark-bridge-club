@@ -34,7 +34,7 @@
   const pct = (won: number, played: number) => (played ? Math.round((won / played) * 100) : 0);
 
   // Only the noteworthy awards, as icons with counts (Ryan).
-  const CHIPS: AwardKind[] = ['wall', 'epicAttic', 'heist', 'daredevil', 'sanitationEngineer', 'engineerSanitation'];
+  const CHIPS: AwardKind[] = ['wall', 'epicAttic', 'heist', 'daredevil', 'broomGod', 'dogMroob'];
   const chips = $derived(
     CHIPS.filter((k) => (s.awards[k] ?? 0) > 0).map((k) => ({ k, emoji: AWARDS[k].emoji, flip: !!AWARDS[k].flip, title: AWARDS[k].title, n: s.awards[k]! })),
   );

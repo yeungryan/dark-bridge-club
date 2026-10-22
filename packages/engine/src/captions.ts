@@ -52,7 +52,7 @@ export const AWARDS: Record<
   {
     title: string;
     emoji: string;
-    /** Show the emoji upside down (Engineer Sanitation's broom). */
+    /** Show the emoji upside down (Dog Mroob's broom). */
     flip?: boolean;
     headline?: string;
     detail: (a: Award) => string;
@@ -98,15 +98,15 @@ export const AWARDS: Record<
         : `${name(a.profile)} robbed the table on ${a.payload.hcp} HCP: ${contractOf(a.payload)}, won.`,
   },
   // Ryan (round 10): a clean sweep of all 13 sets, by the side that bid it or the side that didn't.
-  sanitationEngineer: {
-    title: 'Sanitation Engineer',
+  broomGod: {
+    title: 'Broom God',
     emoji: '🧹',
     headline: 'Spotless. Not one set left on the floor.',
     detail: (a) => `Bid ${contractOf(a.payload)} and swept all 13 sets`,
     caption: (a, name) => `${name(a.profile)} bid ${contractOf(a.payload)} and swept all 13 sets. Spotless. Not one set left on the floor.`,
   },
-  engineerSanitation: {
-    title: 'Engineer Sanitation',
+  dogMroob: {
+    title: 'Dog Mroob',
     emoji: '🧹',
     flip: true,
     headline: 'They bid it. We binned it.',

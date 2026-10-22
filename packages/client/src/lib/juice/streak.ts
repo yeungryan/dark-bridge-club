@@ -2,7 +2,9 @@
 // the table after the attack, then shrinks into the scoreboard, where the plain "×n" stays.
 // The names echo DOTA's kill-streak announcer, with "Kill" swapped for "Skill" and bridge words.
 // Two in a row gets no stamp (the "×2" and the rising note are enough). The look stops growing at
-// ten; eleven to thirteen (only in a game played out) have their own sweep names (round 10).
+// ten; eleven to thirteen have their own sweep names (round 10). Eleven and twelve can come before
+// a 6- or 7-level game is decided; thirteen only when it's played out (a thirteenth set in a row
+// otherwise decides the game, and gets the finisher instead).
 
 export const STREAK_NAMES: Readonly<Record<number, string>> = {
   3: 'Skilling Spree',
