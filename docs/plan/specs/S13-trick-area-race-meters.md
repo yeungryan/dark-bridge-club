@@ -2,7 +2,7 @@
 **Milestone:** M1 → M2 · **Depends on:** S03, S04, S10, S16 · **Size:** M
 
 ## Purpose
-This is the heart of the game's tension. It's the bridge version of Balatro's climbing score (principle 7).
+This is the heart of the game's tension. It's the bridge version of Balatro's climbing score (principle 3).
 
 ## Trick area
 - Each played card lands on the side of the trick area facing its player.

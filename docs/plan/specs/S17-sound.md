@@ -2,7 +2,7 @@
 **Milestone:** M2 · **Depends on:** S16 · **Size:** S
 
 ## Purpose
-Sound adds weight to the game without ever competing with your friends' voices (P4, principle 8).
+Sound adds weight to the game without ever competing with your friends' voices (P4, principle 13).
 
 ## Behaviour
 - **Sound effects only. No music.** Each player has their own volume slider and a mute (remembered on each device).
