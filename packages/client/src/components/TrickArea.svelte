@@ -8,6 +8,7 @@
   import { TIMING } from '../lib/juice/timing';
   import Card from './Card.svelte';
   import Suit from './Suit.svelte';
+  import StreakStamp from './StreakStamp.svelte';
 
   // Spec S13/S16: each card flies in from where it came from (your finger, or the player's
   // name) and lands with a squash. The card currently winning the trick wears a gold ring.
@@ -134,6 +135,11 @@
     {/key}
   {/if}
   {#if decider}<span class="decider" role="status">Decider</span>{/if}
+  {#if director.stamp}
+    {#key director.stamp.id}
+      <StreakStamp {...director.stamp} />
+    {/key}
+  {/if}
 </div>
 
 <style>
