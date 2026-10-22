@@ -1,15 +1,15 @@
 <script lang="ts">
-  import { animalRecords, awardCounts, AWARDS, elementRecords, leaderboard, playerStats, type AwardKind, type Element, type LeaderStat, type ProfileInfo, type SavedNight } from '@dark/engine';
+  import { animalRecords, awardCounts, AWARDS, elementRecords, leaderboard, playerStats, type AwardKind, type Element, type LeaderStat, type ProfileInfo, type SavedNight, type Carried } from '@dark/engine';
   import { elementArt } from '../lib/animalArt';
   import { profileOf } from '../lib/format';
   import AnimalIcon from './AnimalIcon.svelte';
 
   // Spec S20, "All" (Ryan's design): the leaderboard as four champion cards (LB2), the award
   // tracker as big-number tiles (T5), then animals and elements.
-  let { profiles, nights }: { profiles: readonly ProfileInfo[]; nights: readonly SavedNight[] } = $props();
+  let { profiles, nights, carried }: { profiles: readonly ProfileInfo[]; nights: readonly SavedNight[]; carried?: Carried } = $props();
 
   const ids = $derived(profiles.map((p) => p.id));
-  const all = $derived(ids.map((id) => playerStats(id, ids, nights)));
+  const all = $derived(ids.map((id) => playerStats(id, ids, nights, carried)));
   const board = $derived(leaderboard(all));
   const name = (id: string) => profileOf(profiles, id).name;
   const animalOf = (id: string) => [...nights].sort((a, b) => b.startedAt - a.startedAt).find((n) => n.avatars?.[id])?.avatars?.[id]?.animal ?? null;
@@ -21,16 +21,19 @@
     { key: 'defending', label: 'Defending W–L' },
   ];
 
-  // The award tracker (Ryan): three awards, each with what it means in a few words.
+  // The award tracker (Ryan): each award with what it means in a few words. Three show at a
+  // time; swipe left past Heist Master for the two sweeps (round 10).
   const TRACKED: { kind: AwardKind; means: string }[] = [
-    { kind: 'epicAttic', means: 'Bid 4+ and won it.' },
-    { kind: 'daredevil', means: 'Bid on the hope of <8 HCP and won.' },
-    { kind: 'heist', means: 'Stole a win on standby with <8 HCP.' },
+    { kind: 'epicAttic', means: 'Bid 4+ and won.' },
+    { kind: 'daredevil', means: 'Bid with <8 HCP and won.' },
+    { kind: 'heist', means: 'Stood by with <8 HCP and still won.' },
+    { kind: 'broomGod', means: 'Bid and swept all sets.' },
+    { kind: 'dogMroob', means: 'Stood by and still swept all sets.' },
   ];
 
-  const animals = $derived(animalRecords(ids, nights));
+  const animals = $derived(animalRecords(ids, nights, carried));
   const ELEMENTS: Element[] = ['fire', 'water', 'air', 'earth'];
-  const elements = $derived(elementRecords(ids, nights));
+  const elements = $derived(elementRecords(ids, nights, carried));
   const bestOf = (pct: Record<Element, number | null>) => Math.max(-1, ...ELEMENTS.map((e) => pct[e] ?? -1));
 </script>
 
@@ -52,12 +55,12 @@
 <p class="note">Declaring and Defending rank by games played in that role.</p>
 
 <h3>Awards</h3>
-<div class="awards">
+<div class="awards" aria-label="Awards (swipe for more)">
   {#each TRACKED as t (t.kind)}
     {@const counts = awardCounts(t.kind, all)}
     {@const lead = counts[0]!}
     <div class="award">
-      <span class="wm" aria-hidden="true">{AWARDS[t.kind].emoji}</span>
+      <span class="wm" class:flip={AWARDS[t.kind].flip} aria-hidden="true">{AWARDS[t.kind].emoji}</span>
       <span class="an">{AWARDS[t.kind].title}</span>
       <span class="means">{t.means}</span>
       <span class="x">{lead.count}</span>
@@ -161,18 +164,32 @@
   .nowrap {
     white-space: nowrap;
   }
-  /* T5: the count as a huge number, the award's icon large behind it. */
+  /* T5: the count as a huge number, the award's icon large behind it. Three tiles across, the
+     rest a swipe away. Every tile shares one set of rows (subgrid), so the big numbers, leaders
+     and runners-up line up however long each description is (Ryan, round 10). */
   .awards {
     display: grid;
-    grid-template-columns: repeat(3, 1fr);
-    gap: 8px;
+    grid-auto-flow: column;
+    grid-auto-columns: calc((100% - 16px) / 3);
+    grid-template-rows: repeat(5, auto);
+    column-gap: 8px;
+    overflow-x: auto;
+    overscroll-behavior-x: contain;
+    scroll-snap-type: x mandatory;
+    scrollbar-width: none;
+  }
+  .awards::-webkit-scrollbar {
+    display: none;
   }
   .award {
     position: relative;
     overflow: hidden;
     display: grid;
+    grid-row: span 5;
+    grid-template-rows: subgrid;
     align-content: start;
-    gap: 2px;
+    row-gap: 2px;
+    scroll-snap-align: start;
     min-height: 168px;
     padding: 10px 8px;
     border-radius: 14px;
@@ -190,10 +207,18 @@
     line-height: 1;
     opacity: 0.25;
   }
+  /* Dog Mroob's broom, upside down. */
+  .flip {
+    rotate: 180deg;
+  }
+  /* One line each (Ryan, round 10: the sweeps are Broom God and Dog Mroob so they fit). */
   .an {
     font: 700 12px var(--font-name);
     color: var(--win);
     letter-spacing: 0.02em;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
   }
   .means {
     font-size: 10.5px;

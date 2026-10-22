@@ -57,7 +57,7 @@ export function liveReplay(conn: Connection): ReplayGame {
  *  page's colours are tonight's, so its scene is too). */
 export function savedReplay(detail: SavedGameDetail, viewer: ProfileId | null, profiles: readonly ProfileInfo[], theme: ThemeId): ReplayGame {
   const { night, game } = detail;
-  const seating = night.seating;
+  const seating = game.seating ?? night.seating;
   const seatOf = (id: ProfileId | null) => (seating && id ? (([0, 1, 2, 3] as Seat[]).find((s) => seating[s] === id) ?? null) : null);
   const me = seatOf(viewer) ?? 0;
   const profileAt = (seat: Seat) => seating?.[seat];

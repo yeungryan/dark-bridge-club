@@ -123,9 +123,11 @@
     display: grid;
     /* The call sits at the tile's leading corner, so it still reads when the next call overlaps. */
     place-items: center start;
-    padding-left: min(4px, 2.5cqw);
-    width: min(34px, 20cqw);
-    height: min(24px, 14cqw);
+    /* Ryan (round 10, option A): 30% bigger than before so the calls read across the table; the
+       "1st" fold stays its old size, and the call starts clear of it. */
+    padding-left: min(5px, 3.2cqw);
+    width: min(44px, 26cqw);
+    height: min(31px, 18cqw);
     flex: none;
     border-radius: 4px;
     background: var(--card);
@@ -134,22 +136,22 @@
     box-shadow: 0 1px 3px rgba(0, 0, 0, 0.5);
     font-family: var(--font-card);
     font-weight: 800;
-    font-size: min(13px, 8cqw);
+    font-size: min(17px, 10.4cqw);
     line-height: 1;
   }
   /* Each call overlaps the one before it; the latest is on top. */
   .at-top .tile + .tile,
   .at-bottom .tile + .tile {
-    margin-left: max(-13px, -7.6cqw);
+    margin-left: max(-17px, -9.9cqw);
   }
   .at-left .tile,
   .at-right .tile {
     align-items: start;
-    padding-top: min(4px, 2.4cqw);
+    padding-top: min(5px, 3.1cqw);
   }
   .at-left .tile + .tile,
   .at-right .tile + .tile {
-    margin-top: max(-9px, -5.3cqw);
+    margin-top: max(-11px, -6.4cqw);
   }
   /* A pass looks like the bidding box's Pass button: a quiet dark tile, faintly lit. Solid, so
      overlapping passes don't show through each other. */
@@ -159,7 +161,7 @@
     box-shadow:
       inset 0 0 0 1px var(--line),
       0 1px 3px rgba(0, 0, 0, 0.5);
-    font-size: min(9.5px, 5.8cqw);
+    font-size: min(12.5px, 7.5cqw);
   }
   /* The bid to beat, in gold (gold means leading or winning, in every theme). */
   .tile.top {

@@ -17,7 +17,12 @@ export interface SessionConfig {
   readonly usualPartner: Readonly<Record<ProfileId, ProfileId>>;
   /** Server-generated; makes the whole night replayable. */
   readonly seed: Seed;
+  /** Ryan: the pair this player is in trades seats every SWAP_EVERY games (S05 seat swap). */
+  readonly swapAnchor?: ProfileId;
 }
+
+/** Games between seat swaps, within one night. */
+export const SWAP_EVERY = 5;
 
 /** `awaitingDeal`: the next dealer is known and the deck is being shuffled; nothing is dealt
  * until they tap Deal (Ryan: the dealer starts each game, no automatic deal). */
@@ -32,6 +37,8 @@ export interface DealRecord {
   readonly result: DealResult | null;
   /** The pair that won the deal, or null for a pass-out. */
   readonly winningPair: PairId | null;
+  /** Who sat where for this game (seats can swap during a night); absent on older games. */
+  readonly seating?: PerSeat<ProfileId>;
 }
 
 export interface NightResult {
@@ -89,6 +96,8 @@ export type SessionEvent =
   | { type: 'captainDrawn'; captain: ProfileId; suggestedPartner: ProfileId | null }
   | { type: 'partnerChosen'; captain: ProfileId; partner: ProfileId; pairs: Record<PairId, [ProfileId, ProfileId]> }
   | { type: 'seated'; seating: PerSeat<ProfileId> }
+  /** Two partners traded seats: everyone's left and right opponents trade places. */
+  | { type: 'seatsSwapped'; seating: PerSeat<ProfileId>; players: [ProfileId, ProfileId] }
   | { type: 'awaitingDeal'; dealer: Seat }
   | { type: 'dealStarted'; dealNumber: number; dealer: Seat; seed: Seed }
   | { type: 'deal'; event: DealEvent }
@@ -260,6 +269,7 @@ function applyToDeal(state: SessionState, action: DealAction): SessionOutcome {
       contract: null,
       result: null,
       winningPair: null,
+      seating: state.seating!,
     };
     const nextDealer = next(deal.dealer);
     events.push({ type: 'redeal', nextDealer });
@@ -279,6 +289,7 @@ function applyToDeal(state: SessionState, action: DealAction): SessionOutcome {
       contract,
       result,
       winningPair,
+      seating: state.seating!,
     };
     events.push({ type: 'tallyUpdated', wins, winningPair });
     return {
@@ -299,7 +310,25 @@ function readyForNext(state: SessionState, by: ProfileId): SessionOutcome {
   const ready = [...state.readyForNext, by];
   const events: SessionEvent[] = [{ type: 'readyChanged', ready }];
   if (ready.length < 4) return { ok: true, state: { ...state, readyForNext: ready }, events };
-  return awaitDeal({ ...state, readyForNext: ready }, next(state.dealer!), events);
+  return awaitDeal(swapSeats({ ...state, readyForNext: ready }, events), next(state.dealer!), events);
+}
+
+/**
+ * Ryan: after every fifth game played (pass-outs are redeals, so they don't count), the anchor's
+ * pair trades seats. Partners stay opposite, so on everyone's screen it's the opponents on the
+ * left and right who trade places, and the bidding and play order changes. The dealer button stays
+ * with the seat. A new night starts from its own seating.
+ */
+function swapSeats(state: SessionState, events: SessionEvent[]): SessionState {
+  const anchor = state.config.swapAnchor;
+  const played = state.wins.A + state.wins.B;
+  if (!anchor || played === 0 || played % SWAP_EVERY !== 0) return state;
+  const seat = seatOf(state, anchor);
+  if (seat === null) return state;
+  const mate = partner(seat);
+  const seating = { ...state.seating!, [seat]: state.seating![mate], [mate]: anchor } as PerSeat<ProfileId>;
+  events.push({ type: 'seatsSwapped', seating, players: [anchor, state.seating![mate]] });
+  return { ...state, seating };
 }
 
 /** Ending the night needs all four votes (S05). */

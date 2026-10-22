@@ -33,14 +33,14 @@ const name = (id: ProfileId) => NAMES[id]!;
 const cards = (suit: Suit, ranks: readonly number[]): Card[] => ranks.map((rank) => ({ suit, rank }) as Card);
 const range = (lo: number, hi: number) => RANKS.filter((r) => r >= lo && r <= hi);
 
-/** Play a whole game through the real reducer (dealer 0, so calls start with seat 0). */
+/** Play a whole game through the real reducer (dealer 3, so calls start with seat 0, on their right). */
 function game(
   dealNumber: number,
   hands: PerSeat<Card[]>,
   calls: Call[],
   opts: { playOn?: boolean; thinkMs?: PerSeat<number> } = {},
 ): DealHistory {
-  let s: DealState = runAuction(newDealWithHands(hands, 0), calls);
+  let s: DealState = runAuction(newDealWithHands(hands, 3), calls);
   if (s.phase !== 'passedOut') {
     s = playUntil(s, (x) => x.phase !== 'play', highestLegal);
     if (s.phase === 'awaitingPlayOn') {
@@ -67,6 +67,8 @@ const SUITS4 = suitHands({ 0: 'S', 1: 'H', 2: 'D', 3: 'C' });
 
 /** Darren (seat 0) makes 1♠ exactly at the clinch: no moments. Pair B wins. */
 const oneSpade = (n: number, opts = {}) => game(n, SUITS4, [bid(1, 'S'), PASS, PASS, PASS], opts);
+/** Darren bids 1♣ into seat 3's every club, and it's played out: the defenders win all 13 sets. */
+const clubSweep = (n: number) => game(n, SUITS4, [bid(1, 'C'), PASS, PASS, PASS], { playOn: true });
 /** Darren makes 6♠ (clinched on trick 12, led in trumps). Pair B wins. */
 const sixSpades = (n: number) => game(n, SUITS4, [bid(6, 'S'), PASS, PASS, PASS]);
 /** Adrian (seat 2) bids 7♥; Ryan leads ♣A, Kim ruffs with ♥A: clinched on trick 1. Pair A wins. */
@@ -422,6 +424,7 @@ describe('captions', () => {
     trumpOver(10),
     trumpOver(11),
     hope(12),
+    clubSweep(13),
   ]);
   const everyone = Object.values(SEATING);
   const others = (ids: readonly ProfileId[]) => everyone.filter((p) => !ids.includes(p)).map(name);
@@ -453,6 +456,34 @@ describe('captions', () => {
       expect(text.startsWith(name(c.profile))).toBe(true);
       for (const other of others([c.profile])) expect(text).not.toContain(other);
     }
+  });
+
+  it('a clean sweep (Ryan, round 10): all 13 sets; only the one partner if their own cards won all 13', () => {
+    const by = Object.fromEntries(awardCandidates(rich).map((c) => [c.kind, c]));
+    // Game 13: the defenders (seats 1 and 3) won all 13, and seat 3's clubs won every one: only them.
+    expect(awardCandidates(rich).filter((c) => c.kind === 'dogMroob').map((c) => c.profile)).toEqual([SEATING[3]]);
+    expect(AWARDS.dogMroob.caption(by.dogMroob!, name)).toBe(`${name(SEATING[3])} swept all 13 sets against 1♣. They bid it. We binned it.`);
+    // 7♠ made with all 13 (a game in this night): declarer's side swept.
+    expect(by.broomGod).toBeDefined();
+    expect(AWARDS.dogMroob.flip).toBe(true);
+    expect([AWARDS.broomGod.title, AWARDS.dogMroob.title]).toEqual(['Broom God', 'Dog Mroob']);
+  });
+
+  it('a clean sweep shared between partners goes to both, and is chosen as one', () => {
+    const shared: DealHistory = {
+      dealNumber: 1,
+      dealer: 3,
+      contract: { level: 7, strain: 'S', declarer: 0 },
+      result: { winner: 'declarers', reason: 'made', declarerTricks: 13, defenderTricks: 0, playedOut: true, overUnder: 0 },
+      hands: null,
+      tricks: null,
+      thinkMs: null,
+    };
+    const a = (kind: AwardKind, profile: ProfileId, score: number): Award => ({ kind, profile, score, payload: {} });
+    const cands = awardCandidates(night([shared]));
+    expect(cands.filter((c) => c.kind === 'broomGod').map((c) => c.profile).sort()).toEqual([SEATING[0], SEATING[2]].sort());
+    const picked = selectAwards([...cands, a('mvp', 'kim', 4), a('wall', 'kim', 4), a('epicAttic', 'adrian', 7), a('heist', 'ryan', 5)]);
+    expect(picked.filter((p) => p.kind === 'broomGod')).toHaveLength(2);
   });
 
   it("house awards keep Ryan's exact lines", () => {

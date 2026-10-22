@@ -1,7 +1,7 @@
 <script lang="ts">
   import { lastNight, type ProfileInfo, type SavedNight, type ThemeId } from '@dark/engine';
   import { onMount } from 'svelte';
-  import { loadHistory, nightLine, pairName, shortDate, topAwardOf } from '../lib/history';
+  import { loadHistoryShared, nightLine, pairName, shortDate, topAwardOf } from '../lib/history';
   import { awardText } from '../lib/stories';
   import { themeOf } from '../lib/themes';
 
@@ -13,7 +13,7 @@
   // New all-time scores still waiting for your OK.
   let needsMe = $state(0);
   onMount(() => {
-    loadHistory()
+    loadHistoryShared()
       .then((h) => {
         last = lastNight(h.nights);
         needsMe = h.pending.filter((p) => !p.approvals.includes(me)).length;
@@ -38,7 +38,7 @@
     {/if}
     {#if award}
       {@const text = awardText(award, profiles)}
-      <p class="award"><span aria-hidden="true">{text.emoji}</span> <b>{text.headline}</b> {text.line}</p>
+      <p class="award"><span aria-hidden="true" style={text.flip ? 'display: inline-block; rotate: 180deg' : undefined}>{text.emoji}</span> <b>{text.headline}</b> {text.line}</p>
     {/if}
     <button class="ghost more" onclick={onHistory}>History &amp; rivals ›</button>
   </section>

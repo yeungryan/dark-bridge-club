@@ -1,5 +1,5 @@
 import { suitSymbol, trumpSuit, type Card, type Seat, type Side, type Suit } from '@dark/engine';
-import { elementAtSeat, teamOf } from '../avatars';
+import { elementAtSeat, teamOf, type Team } from '../avatars';
 import { cssColor } from '../themes';
 import type { Connection } from '../connection.svelte';
 import { cancelBeats } from './cardFx';
@@ -9,6 +9,7 @@ import { comet, elementBurst, elementStrike, elementWin, flash, freeze, glyphs, 
 import { settings } from './settings.svelte';
 import { sound } from './sound';
 import { gameWon, setWon } from './setWin';
+import { streakName } from './streak';
 import type { Ctx } from './subFx';
 import { DRAMA_BOOST, RESPONSES, TIMING, type Level } from './timing';
 
@@ -37,6 +38,10 @@ type Link = Pick<Connection, 'view' | 'room' | 'onEvents'>;
 
 /** Trump moments share one colour, so "that was a trump" reads at a glance. */
 const TRUMP_COLOR = '#c58bff';
+/** How long after the attack hits that a streak stamp lands (ms, before the speed setting). */
+const STAMP_DELAY = 200;
+/** On a game-winning set, how long after the finisher the streak stamp lands. */
+const STAMP_AFTER_FINISH = 200;
 /** The theme's accent (gold in the Clubhouse). */
 const gold = () => cssColor('--accent', '#e8c25a');
 
@@ -68,16 +73,24 @@ class Director {
   /** A game just dealt: the cards are flying (DealFlight); the hand fans open when it ends. */
   dealing = $state<{ id: number; dealer: Seat } | null>(null);
   private dealSafety: ReturnType<typeof setTimeout> | undefined;
+  /** Two partners just traded seats (Ryan: every five games), so the opponents cross sides. */
+  seatSwap = $state<{ id: number; players: readonly [string, string] } | null>(null);
+  private swapTimer: ReturnType<typeof setTimeout> | undefined;
   /** True during a hit-stop: the table's freeze-frame on a big impact. */
   frozen = $state(false);
   /** Sets won in a row by one side (shown as "×n" once its orb lands); n ≥ 2 is a combo. */
   combo = $state<{ side: Side; n: number; id: number } | null>(null);
+  /** A streak stamp on the table (three or more sets in a row), on its way to the scoreboard. */
+  stamp = $state<{ id: number; n: number; name: string; team: Team; dx: number; dy: number; holdMs: number; flyMs: number } | null>(null);
 
   /** Trick sequences; a newer trick cancels an older one's remaining beats. */
   private seq = 0;
   /** Ids for one-off effects (flashes, banners, clinches). */
   private fxId = 0;
   private stop: (() => void) | null = null;
+  /** How long the set just completed takes to play out (ms), for the hold before the results. */
+  private lastSetMs = 0;
+  private revealTimer: ReturnType<typeof setTimeout> | undefined;
 
   attach(conn: Link): void {
     this.stop?.();
@@ -86,13 +99,24 @@ class Director {
       if (!conn.view) return;
       const moments = momentsFrom(events, conn.view);
       const settles = moments.some((m) => m.kind === 'clinch');
+      this.lastSetMs = 0;
       for (const m of moments) this.respond(m, conn, settles);
-      // The last card of a game stays on the table for a few seconds before the results take over
-      // (Ryan), whether it's the 13th set or the end of a game played out after it was decided.
-      if (settles && moments.some((m) => m.kind === 'dealComplete')) {
+      // The game's last card stays on the table before the results take over (Ryan): its set's
+      // effects play out (the attack, the sweep, the orb and any streak stamp reaching the
+      // scoreboard, or the deciding set's finisher), then 3 s more. That's the deciding set and
+      // the 13th set of a game played out after it was decided alike (round 10). A game ended at
+      // the clinch window, with no card just played, goes straight to the results.
+      if (moments.some((m) => m.kind === 'dealComplete') && moments.some((m) => m.kind === 'trickWon' || m.kind === 'clinch')) {
         this.revealHold = true;
-        const fly = settings.animated ? settings.ms(TIMING.cardFly + RESPONSES[5].hitPauseMs) : 0;
-        setTimeout(() => (this.revealHold = false), fly + settings.ms(TIMING.resultsDelay));
+        clearTimeout(this.revealTimer);
+        this.revealTimer = setTimeout(() => (this.revealHold = false), this.lastSetMs + settings.ms(TIMING.resultsDelay));
+      }
+      const swapped = events.find((e) => e.type === 'seatsSwapped');
+      if (swapped?.type === 'seatsSwapped') {
+        this.seatSwap = { id: ++this.fxId, players: swapped.players };
+        sound.whoosh();
+        clearTimeout(this.swapTimer);
+        this.swapTimer = setTimeout(() => (this.seatSwap = null), settings.ms(2800));
       }
       const dealt = events.find((e) => e.type === 'dealStarted');
       if (dealt) {
@@ -126,6 +150,7 @@ class Director {
     this.flash = null;
     this.pipHold = { declarers: null, defenders: null };
     this.combo = null;
+    this.stamp = null;
   }
 
   /**
@@ -225,9 +250,36 @@ class Director {
           sound.riser(0.9);
         }, fly + 300);
         break;
-      case 'clinch':
-        setTimeout(() => this.playClinch(m, conn), fly);
+      case 'clinch': {
+        // A beat to see the deciding cards first (round 10), then the clinch.
+        const scan = settings.animated ? settings.ms(TIMING.scan) : 0;
+        setTimeout(() => this.playClinch(m, conn), fly + scan);
+        const pause = settings.animated ? settings.ms(RESPONSES[5].hitPauseMs) : 0;
+        const finished = fly + scan + pause + (settings.motion ? settings.ms(TIMING.gameWonFx) : 0);
+        this.lastSetMs = Math.max(this.lastSetMs, finished);
+        // Ryan (round 10): a game-winning set that also extends a streak gets its stamp too, just
+        // after the finisher; it shrinks into the scoreboard, where the "×n" stays. The results
+        // wait for it (lastSetMs).
+        const run = streak(conn.view?.deal?.trickWinners ?? []);
+        const name = streakName(run);
+        if (name) {
+          const dealNumber = conn.view?.dealNumber;
+          const mySeat = conn.view?.mySeat ?? null;
+          const mine = mySeat !== null && (m.seat - mySeat) % 2 === 0;
+          const at = finished + settings.ms(STAMP_AFTER_FINISH);
+          const hold = settings.animated ? settings.ms(TIMING.trickHold) : 900;
+          const flyMs = settings.ms(TIMING.orbFly);
+          setTimeout(() => {
+            if (conn.view?.dealNumber !== dealNumber) return;
+            this.slamStamp(conn, m.seat, m.side, run, name, mine, hold);
+            setTimeout(() => {
+              if (conn.view?.dealNumber === dealNumber) this.combo = { side: m.side, n: run, id: ++this.fxId };
+            }, hold + flyMs);
+          }, at);
+          this.lastSetMs = Math.max(this.lastSetMs, at + hold + flyMs);
+        }
         break;
+      }
       case 'nightEnded':
         sound.fanfare();
         break;
@@ -253,9 +305,12 @@ class Director {
     const level = intensityOf(m) as Level;
     const id = ++this.seq;
     const alive = () => this.trickFx?.trick === trick && this.seq === id;
+    // A beat to see the cards and who won before the effects start (Ryan, round 10).
+    const scan = settings.animated ? settings.ms(TIMING.scan) : 0;
     const pause = settings.animated ? settings.ms(RESPONSES[level].hitPauseMs) : 0;
     const hold = settings.animated ? settings.ms(TIMING.trickHold + (kind === 'first' ? TIMING.firstTrumpHold : 0)) : 900;
     const sweep = settings.motion ? settings.ms(TIMING.sweep) : 0;
+    this.lastSetMs = Math.max(this.lastSetMs, fly + scan + pause + hold + sweep + settings.ms(TIMING.orbFly));
 
     this.trickFx = { trick, winner: m.winner, kind, phase: 'landing' };
     this.pipHold = { ...this.pipHold, [side]: m.pip };
@@ -311,18 +366,42 @@ class Director {
         setTimeout(() => sound.combo(run - 1), 90);
         if (at) lightBurst(at.x, at.y, [this.colorOf(conn, m.winner), gold(), '#fff6d8'], Math.min(3, run - 2));
       }
-    }, fly + pause);
+      // Three or more: the streak's stamp slams down just after the attack hits (Ryan, round 9).
+      const name = streakName(run);
+      if (name) {
+        const delay = settings.ms(STAMP_DELAY);
+        setTimeout(() => alive() && this.slamStamp(conn, m.winner, side, run, name, mineWon, hold - delay + sweep), delay);
+      }
+    }, fly + scan + pause);
 
     setTimeout(() => {
       if (!alive()) return;
       this.trickFx = { ...this.trickFx!, phase: 'sweep' };
       if (sweep > 0) sound.sweep();
-    }, fly + pause + hold);
+    }, fly + scan + pause + hold);
 
     setTimeout(() => {
       if (this.seq === id && this.trickFx) this.trickFx = { ...this.trickFx, phase: 'done' };
       this.sendOrb(conn, m.winner, side, m.pip, kind, run);
-    }, fly + pause + hold + sweep);
+    }, fly + scan + pause + hold + sweep);
+  }
+
+  /**
+   * A streak stamp: it lands on the table, holds until the trick sweeps, then flies into the
+   * side's score row, arriving as the orb does (when the "×n" there pops in).
+   */
+  private slamStamp(conn: Link, winner: Seat, side: Side, n: number, name: string, mine: boolean, holdMs: number): void {
+    const from = this.centerOf('.area');
+    const to = this.centerOf(`.meters [data-side="${side}"] .count`);
+    const flyMs = settings.ms(TIMING.orbFly);
+    const id = ++this.fxId;
+    const [dx, dy] = from && to ? [to.x - from.x, to.y - from.y] : [0, 0];
+    this.stamp = { id, n, name, team: teamOf(conn, winner), dx, dy, holdMs: Math.max(0, holdMs), flyMs };
+    sound.stamp(Math.min(7, n - 1), mine);
+    if (mine) buzz('trick');
+    setTimeout(() => {
+      if (this.stamp?.id === id) this.stamp = null;
+    }, holdMs + flyMs + 80);
   }
 
   /** The orb from the winner's name to their side's next score pip. */

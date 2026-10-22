@@ -3,9 +3,10 @@
   import { pairName, sendChange, type HistoryData } from '../lib/history';
   import { sound } from '../lib/juice/sound';
 
-  // Set a matchup's all-time score by hand (Ryan): add nights played away from the app, stop
-  // counting some wins, or start again from zero. It starts from the score as it stands, and goes
-  // to the others: it counts once all four of you approve it.
+  // Set a matchup's all-time score by hand (Ryan): add nights played away from the app, or stop
+  // counting some wins. It starts from the score as it stands, and goes to the others: it counts
+  // once all four of you approve it. Starting again from 0–0 resets everything (Ryan): every
+  // matchup and every all-time stat, once all four approve.
   let {
     profiles,
     match,
@@ -23,17 +24,16 @@
     sound.tap();
     counts[side]![what] = Math.max(0, Math.min(9999, counts[side]![what] + by));
   };
-  const zero = () => {
-    sound.tap();
-    counts = counts.map(() => ({ nights: 0, games: 0 }));
-  };
+  // "Start again from 0–0" asks first: it resets far more than this matchup.
+  let resetting = $state(false);
 
   async function send() {
     const side = (i: number): ScoreSide => ({ players: match.sides[i]!.players, nightsWon: counts[i]!.nights, gamesWon: counts[i]!.games });
     busy = true;
     error = null;
     try {
-      onUpdate(await sendChange({ type: 'propose', change: { kind: 'score', sides: [side(0), side(1)] } }));
+      const change = resetting ? ({ kind: 'reset' } as const) : ({ kind: 'score', sides: [side(0), side(1)] } as const);
+      onUpdate(await sendChange({ type: 'propose', change }));
       sound.stamp(2, true);
       onCancel();
     } catch (e) {
@@ -60,12 +60,19 @@
       {/each}
     {/each}
   </div>
-  <button class="ghost zero" onclick={zero}>Start again from 0–0</button>
-  <p class="note">It counts once all four of you approve. Nights played after that add on top.</p>
+  {#if resetting}
+    <p class="note reset" role="status">
+      <strong>Everything goes back to 0–0:</strong> every matchup, player card, leaderboard and award count. The night log and replays
+      stay. It happens once all four of you approve.
+    </p>
+  {:else}
+    <button class="ghost zero" onclick={() => (sound.tap(), (resetting = true))}>Start again from 0–0</button>
+    <p class="note">It counts once all four of you approve. Nights played after that add on top.</p>
+  {/if}
   {#if error}<p class="error" role="alert">{error}</p>{/if}
   <div class="row">
-    <button class="ghost" onclick={onCancel}>Cancel</button>
-    <button class="primary" disabled={busy || unchanged} onclick={send}>Send for approval</button>
+    <button class="ghost" onclick={() => (resetting ? (resetting = false) : onCancel())}>{resetting ? 'Back' : 'Cancel'}</button>
+    <button class="primary" disabled={busy || (unchanged && !resetting)} onclick={send}>{resetting ? 'Send reset for approval' : 'Send for approval'}</button>
   </div>
 </section>
 

@@ -20,6 +20,7 @@
 
   /** "Darren & Kim 5–3 Adrian & Ryan · games 21–17 (now 3–2 · 14–11)". */
   function describe(p: PendingChange): { line: string; was: string } {
+    if (p.change.kind === 'reset') return { line: 'Start again from 0–0', was: 'Every matchup, player card, leaderboard and award count back to zero. The night log and replays stay.' };
     const [a, b] = p.change.sides;
     const line = `${pairName(profiles, a.players)} ${a.nightsWon}–${b.nightsWon} ${pairName(profiles, b.players)} · games ${a.gamesWon}–${b.gamesWon}`;
     const now = board.find((m) => m.sides.some((s) => pairKey(s.players) === pairKey(a.players)));

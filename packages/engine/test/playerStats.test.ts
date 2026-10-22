@@ -44,19 +44,32 @@ function night(id: string, startedAt: number, games: SavedGame[], extra: Partial
   };
 }
 
+describe('seat swaps (Ryan: his pair trades seats every five games)', () => {
+  it('credits each game to whoever sat in the declaring seat for that game', () => {
+    // Game 2: Ryan and Darren have traded seats, so seat 0 is Ryan's.
+    const swapped = { 0: 'ryan', 1: 'adrian', 2: 'darren', 3: 'kim' } as const;
+    const nights = [night('1', 100, [game(1, 0, 2, 'S', 8), { ...game(2, 0, 3, 'NT', 9), seating: swapped }])];
+    expect(playerStats('darren', P, nights).declaring).toEqual({ won: 1, lost: 0 });
+    expect(playerStats('ryan', P, nights).declaring).toEqual({ won: 1, lost: 0 });
+    expect(playerStats('ryan', P, nights).levels[3]).toBe(1);
+  });
+});
+
 describe('S20 player cards and the leaderboard', () => {
   const nights = [
     night('1', 100, [
-      game(1, 2, 2, 'S', 9), // Ryan declares 2♠, makes it with 9
-      game(2, 1, 3, 'NT', 8), // Adrian declares 3NT, one down
+      { ...game(1, 2, 2, 'S', 9), setsBySeat: { 0: 3, 1: 2, 2: 6, 3: 2 } }, // Ryan declares 2♠, makes it with 9 (6 his own)
+      { ...game(2, 1, 3, 'NT', 8), setsBySeat: { 0: 4, 1: 5, 2: 1, 3: 3 } }, // Adrian declares 3NT, one down
       passOut(3),
-      game(4, 2, 4, 'H', 9), // Ryan declares 4♥, one down
+      { ...game(4, 2, 4, 'H', 9), setsBySeat: { 0: 2, 1: 3, 2: 7, 3: 1 } }, // Ryan declares 4♥, one down
     ]),
   ];
 
   it('counts sets, games, declaring (declarer only) and defending (both defenders) for the right side', () => {
     const ryan = playerStats('ryan', P, nights);
-    expect(ryan.sets).toEqual({ won: 9 + 5 + 9, played: 39 });
+    // Ryan (round 10): only the sets his own card won, not Darren's.
+    expect(ryan.sets).toEqual({ won: 6 + 1 + 7, played: 39 });
+    expect(playerStats('darren', P, nights).sets).toEqual({ won: 3 + 4 + 2, played: 39 });
     expect(ryan.games).toEqual({ won: 2, played: 3 });
     expect(ryan.declaring).toEqual({ won: 1, lost: 1 });
     expect(ryan.defending).toEqual({ won: 1, lost: 0 });

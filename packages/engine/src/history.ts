@@ -16,5 +16,6 @@ export function dealHistory(record: DealRecord, deal: DealState | null, thinkMs:
     hands: deal ? deal.originalHands : null,
     tricks: deal ? deal.tricks : null,
     thinkMs,
+    seating: record.seating ?? null,
   };
 }

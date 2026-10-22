@@ -20,6 +20,11 @@ export const TIMING = {
   /** How long a finished trick stays visible before sweeping to the winner: the set-win
    *  effect's 0.80 s (Ryan's cap, S24), so the wrecked cards are seen before they go. */
   trickHold: 800,
+  /** After a set's last card lands, a beat to see the cards and who won before the effects
+   *  start (Ryan, round 10: the effects reinforce what you've already seen). */
+  scan: 400,
+  /** The game-winning set's attack and finisher (S24: 1.6 s). */
+  gameWonFx: 1600,
   /** Extra hold for the first trump trick of a deal, so its banner can land. */
   firstTrumpHold: 450,
   /** A trick's glowing orb travelling to its side's score bar. */
@@ -37,7 +42,8 @@ export const TIMING = {
   pipPop: 320,
   /** Shake decays to nothing over this long. */
   shakeDecay: 320,
-  /** After a game's last card lands, the table stays up this long before the results (Ryan: 3 s). */
+  /** After a game's last set has finished its effects (and its orb and any streak stamp have
+   *  reached the scoreboard), the table stays up this long before the results (Ryan: 3 s). */
   resultsDelay: 3000,
   /** "Play it out?" fades in after the clinch moment has landed. */
   clinchPromptDelay: 650,

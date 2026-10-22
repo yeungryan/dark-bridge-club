@@ -20,7 +20,7 @@
 </script>
 
 <div class="m">
-  <span class="e" aria-hidden="true">{text.emoji}</span>
+  <span class="e" aria-hidden="true" style={text.flip ? 'display: inline-block; rotate: 180deg' : undefined}>{text.emoji}</span>
   <div>
     <div class="h">{text.headline}</div>
     <div class="l">{text.line}{#if game}&nbsp;· Game {game}{/if}</div>

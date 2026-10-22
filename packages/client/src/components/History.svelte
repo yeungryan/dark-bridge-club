@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { AWARDS, headToHead, momentsWall, partnershipRecords, winRate, type PendingChange, type ProfileInfo, type SavedNight, type ScoreOverride, type ThemeId } from '@dark/engine';
+  import { AWARDS, countedNights, emptyCarried, headToHead, momentsWall, partnershipRecords, winRate, type PendingChange, type ProfileInfo, type SavedNight, type ScoreOverride, type ThemeId, type Carried } from '@dark/engine';
   import { onMount } from 'svelte';
   import { profileOf } from '../lib/format';
   import { loadGame, loadHistory, nightLine, pairName, shortDate, type HistoryData } from '../lib/history';
@@ -25,12 +25,16 @@
   let nights = $state<SavedNight[] | null>(null);
   let overrides = $state<ScoreOverride[]>([]);
   let pending = $state<PendingChange[]>([]);
+  let carried = $state<Carried>(emptyCarried());
+  let statsFrom = $state<number | null>(null);
   // The matchup whose score is being changed (Ryan: set by hand, with everyone's OK).
   let editing = $state<number | null>(null);
   const update = (d: HistoryData) => {
     nights = d.nights;
     overrides = d.overrides;
     pending = d.pending;
+    carried = d.carried ?? emptyCarried();
+    statsFrom = d.statsFrom ?? null;
   };
   let failed = $state(false);
   let tab = $state<'rivals' | 'players' | 'nights'>('rivals');
@@ -49,11 +53,14 @@
   const ids = $derived(profiles.map((p) => p.id));
   // Each night's top two awards, by night id.
   const highlights = $derived(new Map((nights ? momentsWall(nights, (k) => AWARDS[k as keyof typeof AWARDS]?.title ?? k) : []).map((m) => [m.night.id, m.awards])));
-  const board = $derived(nights ? headToHead(ids, nights, overrides) : []);
+  // The all-time numbers: nights since the last reset to 0–0, plus what was carried forward from
+  // deleted games. The night log still lists every night kept.
+  const counted = $derived(nights ? countedNights(nights, statsFrom) : []);
+  const board = $derived(nights ? headToHead(ids, counted, overrides, carried) : []);
   const name = (id: string) => profileOf(profiles, id).name;
 
   // Every partnership (six of them): nights and games together.
-  const partnerships = $derived(nights ? partnershipRecords(ids, nights, overrides) : []);
+  const partnerships = $derived(nights ? partnershipRecords(ids, counted, overrides, carried) : []);
 
   const rate = (won: number, played: number) => {
     const r = winRate(won, played);
@@ -161,9 +168,9 @@
           {/each}
         </div>
         {#if player}
-          <PlayerCard profile={player} {profiles} {nights} onWatch={watch} loading={loadingGame} />
+          <PlayerCard profile={player} {profiles} nights={counted} {carried} onWatch={watch} loading={loadingGame} />
         {:else}
-          <AllPlayers {profiles} {nights} />
+          <AllPlayers {profiles} nights={counted} {carried} />
         {/if}
       </section>
     {:else}
@@ -193,7 +200,7 @@
                     {#if g.contract}
                       <span class="what"
                         ><CallText call={{ type: 'bid', level: g.contract.level, strain: g.contract.strain }} />
-                        {#if night.seating}by {name(night.seating[g.contract.declarer])}{/if}
+                        {#if g.seating ?? night.seating}by {name((g.seating ?? night.seating)![g.contract.declarer])}{/if}
                         · {g.result?.winner === 'declarers' ? 'made' : 'defeated'}{#if g.result?.overUnder}
                           ({g.result.overUnder > 0 ? '+' : ''}{g.result.overUnder}){/if}</span
                       >

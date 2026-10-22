@@ -24,7 +24,7 @@ The game succeeds if the four of you **actually meet more often** and **want to 
 
 ## 2. Promises to the players
 
-This applies Alex Jaffe's "cursed problems" framing, the lens GMTK used on Balatro. A cursed problem is two promises that contradict each other. Write the promises down and look for conflicts before building.
+GMTK's Balatro video calls the hidden score preview a "cursed problem": two things the designer wants that can't both be true (the excitement of a slot machine and the predictability of a spreadsheet). The same trap applies here, so write the promises down and look for conflicts before building.
 
 | # | Promise |
 |---|---|
@@ -35,7 +35,7 @@ This applies Alex Jaffe's "cursed problems" framing, the lens GMTK used on Balat
 
 **Known conflict: B (ceremony) vs C (pace).** Resolved by an **attention budget**:
 - Big ceremonies happen only at **session boundaries** (start and end of the night) and at the **clinch** of each deal.
-- Feedback for each card or trick finishes within **400 ms** and **never blocks input**.
+- Feedback for each card finishes within **400 ms**. A set win plays inside the **0.80 s** hold before the trick sweeps (S24). Neither ever **blocks input**.
 - Every ceremony can be **skipped**, and any repeat ceremony gets shorter.
 
 **Possible conflict: A vs Balatro-style freshness.** Balatro feels fresh because its rules change every run, and you've ruled that out. So freshness here comes **only** from presentation (themes), memory (history), and stories (awards and moments). That is a deliberate constraint, not a gap.
@@ -44,8 +44,42 @@ This applies Alex Jaffe's "cursed problems" framing, the lens GMTK used on Balat
 
 ## 3. Design principles drawn from the two GMTK videos
 
+Sources, checked line by line (rewritten 2026-10-22):
+- **Balatro video:** GMTK's "Balatro has a fundamental design flaw" (script read from GMTK's Substack).
+- **Juice video:** GMTK's "Secrets of Game Feel and Juice" (transcript supplied by Ryan).
+- **Our playtests:** Ryan's notes from playing the build.
+
+Where a principle comes from our own playtests rather than a video, it says so. An earlier version credited two ideas to the videos that neither one says (an "Alex Jaffe" framing, and "big effects only for big moments"); both are corrected here.
+
+### What players know
+
 | # | Principle | Source | What it means here |
 |---|---|---|---|
+| 1 | **Show what players can work out anyway; hide only what's truly unknown.** | Balatro video: information that is "hidden, but attainable" gets worked out by hand anyway, because "given the opportunity, players will optimize the fun out of a game" (Soren Johnson). | **Always visible:** the auction, the contract, **both pairs' trick targets and counts**, and the last trick. **Hidden:** other players' hands and earlier tricks. Remembering played cards is a real bridge skill, so hiding past tricks isn't busywork. **Your own HCP stays hidden** (Ryan's decision, 2026-10-22): counting your own points is part of the game at your table. Principle 6 is the check on that call. |
+| 2 | **If you hide something, make the reveal worth it.** | Balatro video: the pageantry matters because you "watch it go before knowing" the result. Knowing ahead "would just get in the way." | Hands stay hidden all deal, so the **4-hand reveal** at the end is the big payoff (S14). |
+| 3 | **Turn an existing quantity into a visible race.** | Balatro video: after each hand "the numbers tick up, with escalating sound effects." | Your scoring is win or lose, so the drama is the **race between two trick meters**: declarers need `6+level`, defenders need `8−level`. The counts are already part of the game. Showing them as a race costs nothing and creates tension every trick. |
+
+### How it feels
+
+| # | Principle | Source | What it means here |
+|---|---|---|---|
+| 4 | **Every bit of polish should speak to what the game is about.** | Juice video's thesis: juice is "doubling down on whatever your game is about." | This game is about **winning sets as a pair** with your friends. Effects concentrate on the set win, the trick race and the clinch, and stay warm, never harsh: the target feeling is *"a private clubhouse with your best friends."* **Timing stays the same in every theme, and only the look changes**, so muscle memory carries over. |
+| 5 | **Fundamentals first: the blank-room test.** | Juice video: Mario 64 was "just hopping around a blank room" for months while the movement was tuned. Ask whether it is fun with the trappings stripped out. | Rules engine first (M0), then a playable but plain version (M1), and only then the effects (M2). The **reduced-effects setting** is the standing blank-room test: a deal must still feel good with it on. |
+| 6 | **Make impact unmistakable.** | Juice video: screen shake, a split-second hit-pause, flashes and knockback. "Anything you can add to make it really clear that you're damaging an enemy is worth it." | The winning element **attacks the three losing cards**, with a hit-pause and a shake (S24). |
+| 7 | **Keep the "camera" still where precision matters.** | Juice video: a jumping game keeps "the camera still so you can land each jump." | Shake moves the **trick area only**. Your hand, the bidding box and the scoreboard never shake, so you can always read and tap accurately. |
+| 8 | **Escalate repeats; don't repeat at the same size.** | Our playtests (Ryan: the confetti got repetitive, S16 M3), plus the Balatro video ("burn hotter and hotter with each multiplication") and the juice video ("rising pitch… to sell the tenuous joy of nursing a combo"). Note the juice video itself never asks for restraint; the restraint comes from us. | One **intensity scale** (S16) drives every effect, and the biggest moments are rare: the clinch and the night's end (the only confetti). **Streaks escalate:** sets won in a row raise the pitch (a pentatonic ladder) and the visuals. |
+| 9 | **Vary sounds, and fit them to the room.** | Juice video: "randomized sound effects to avoid repetition"; make them "bassy and loud". | Every sound has slight pitch variation. **Deliberate deviation from "bassy and loud":** you play on phone speakers during a Messenger call, so sounds are tuned to the band phones can play, and sit under your voices. |
+| 10 | **Let the aftermath linger.** | Juice video: in Hotline Miami, bodies "stick around", giving "a little short-term nostalgia of the chaos you've caused." | Losing cards stay **wrecked on the table until the sweep**. Over a longer span, the reveal, the moments, the awards, the replays and the rivalry history are the night's permanence. |
+
+### Who it is for
+
+| # | Principle | Source | What it means here |
+|---|---|---|---|
+| 11 | **Know who the game is for, and protect them.** | Balatro video: "you need to be certain who the game is for - and then protect that player base from certain design choices", even when a choice is offered only as an option. | Four friends on a call, not strangers. Features that would serve strangers, ranked play or teaching (see §1, Not goals) stay out, even as options. |
+| 12 | **Watch how players actually play, and change your mind when they show you.** | Balatro video: the deck view exists because playtesters were tracking cards by hand. "The best intentions in game design sometimes have to change, when you see how players actually interact with your game." | Playtests (S23) look for notepads, finger-counting and "wait, what's the contract?" Each one is a UI bug, and it can overturn an earlier decision, including principle 1's call on HCP. |
+| 13 | **The call is the soundtrack.** | Your setup. | Quiet sound effects, no music, no in-app chat. Pauses (reveal, awards) are timed to leave room for banter. |
+
+---|---|---|---|
 | 1 | **Show what players can work out anyway; hide only what's truly unknown.** | Balatro video | **Always visible:** the auction, the contract, **both pairs' trick targets and counts**, and the last trick. **Hidden:** other players' hands and earlier tricks. Remembering played cards is a real bridge skill, so hiding past tricks isn't busywork. |
 | 2 | **If you hide something, make the reveal worth it.** | Balatro video | Hands stay hidden all deal, so the **4-hand reveal** at the end is the big payoff (S14). |
 | 3 | **Big effects only for big moments.** | Game feel video | One **intensity scale** (S16) drives every effect. A routine card scarcely registers. The **clinching trick** gets the hit pause, the shake and the big sound. |
@@ -62,8 +96,8 @@ This applies Alex Jaffe's "cursed problems" framing, the lens GMTK used on Balat
 ### Rules: your house variant
 - **R1** Fixed partners for the whole session, seated opposite. At the start a random **captain** is drawn and chooses a partner. **Their usual partner (Darren ↔ Kim, Adrian ↔ Ryan) is pre-selected**, and the captain can override it. Seats are then randomized, with partners always opposite.
 - **R2** The first dealer is random. **The deal passes counter-clockwise** each deal, including after a pass-out.
-- **R3** **Bidding is counter-clockwise starting with the dealer.** Calls are `1♣…7NT` and `Pass` only, with **no double or redouble**. Each bid must outrank the last. Three passes after a bid end the auction. Four opening passes mean a redeal.
-- **R4** **Declarer = whoever made the final bid.** The opening lead comes from **declarer's right**, which is the next seat counter-clockwise. **Play is counter-clockwise.** You must follow suit if you can. The trick goes to the highest trump, otherwise the highest card of the suit led. The trick winner leads next.
+- **R3** **Bidding is counter-clockwise starting with the player on the dealer's right** (the next seat; Ryan, round 10, was the dealer). Calls are `1♣…7NT` and `Pass` only, with **no double or redouble**. Each bid must outrank the last. Three passes after a bid end the auction. Four opening passes mean a redeal.
+- **R4** **Declarer = whoever made the final bid.** The opening lead comes from **declarer's right**, which is the next seat counter-clockwise, **except in a no-trump contract, where declarer leads** (Ryan, round 10). **Play is counter-clockwise.** You must follow suit if you can. The trick goes to the highest trump, otherwise the highest card of the suit led. The trick winner leads next.
 - **R5** **No dummy.** All four hands stay hidden, and each player plays their own.
 - **R6** Declarers need at least `6 + level` tricks. **Making it scores +1 win for declarers. Failing scores +1 win for defenders.** The level never matters.
 - **R7** **No claims.** A player may propose **conceding** the rest of the deal, and **their partner must accept**.

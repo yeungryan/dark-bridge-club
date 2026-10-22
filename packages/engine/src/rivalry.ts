@@ -1,4 +1,5 @@
 import type { Avatar } from './avatars';
+import type { Carried } from './carried';
 import type { DealResult } from './deal';
 import { matchupKey, type ScoreOverride } from './historyChanges';
 import type { CompletedTrick } from './play';
@@ -6,8 +7,9 @@ import type { NightResult, PairId, ProfileId } from './session';
 import type { Call, Card, Contract, PerSeat, Seat } from './types';
 
 // Spec S20, the history the four of you share: every number here is worked out from the saved
-// nights and games each time (nothing is kept as a running counter that could drift), starting
-// from a matchup's agreed score where all four have set one by hand (historyChanges.ts).
+// nights and games each time, starting from a matchup's agreed score where all four have set one
+// by hand (historyChanges.ts), plus the totals carried forward from games old enough to have been
+// deleted (carried.ts: each game counts exactly once, so nothing can drift).
 
 /** One finished or passed-out game, as history keeps it. */
 export interface SavedGame {
@@ -19,6 +21,11 @@ export interface SavedGame {
   readonly winningPair: PairId | null;
   /** Whether the hands and sets were kept, so it can be replayed (not for a pass-out). */
   readonly replayable: boolean;
+  /** Who sat where for this game (seats swap every few games); absent: the night's seating. */
+  readonly seating?: PerSeat<ProfileId> | null;
+  /** Sets won by each seat's own card (Ryan, round 10: a set counts for the player who won it,
+   *  not their partner). From the saved sets; absent when they weren't kept. */
+  readonly setsBySeat?: PerSeat<number> | null;
 }
 
 /** The night's top award, for the "Last time…" line (kind, who, its facts). */
@@ -101,7 +108,12 @@ export interface MatchupRecord {
  * Head to head (S20 rivalry board): for each of the three matchups, nights and games won. Where
  * all four agreed a score for a matchup, it starts from that, and only nights begun since count on top.
  */
-export function headToHead(profiles: readonly ProfileId[], nights: readonly SavedNight[], overrides: readonly ScoreOverride[] = []): MatchupRecord[] {
+export function headToHead(
+  profiles: readonly ProfileId[],
+  nights: readonly SavedNight[],
+  overrides: readonly ScoreOverride[] = [],
+  carried?: Carried,
+): MatchupRecord[] {
   return allMatchups(profiles).map(([a, b]) => {
     const ka = pairKey(a);
     const kb = pairKey(b);
@@ -132,6 +144,16 @@ export function headToHead(profiles: readonly ProfileId[], nights: readonly Save
           else nightsB++;
         }
       }
+    }
+    // Plus the nights and games carried forward from deleted history (carried.ts).
+    const old = carried?.matchups[matchupKey(a, b)];
+    if (old) {
+      nightsA += old.wins[ka]?.nightsWon ?? 0;
+      nightsB += old.wins[kb]?.nightsWon ?? 0;
+      gamesA += old.wins[ka]?.gamesWon ?? 0;
+      gamesB += old.wins[kb]?.gamesWon ?? 0;
+      finished += old.nights;
+      if (old.lastPlayed !== null) lastPlayed = Math.max(lastPlayed ?? 0, old.lastPlayed);
     }
     return {
       sides: [
@@ -165,8 +187,9 @@ export function partnerRecords(
   profiles: readonly ProfileId[],
   nights: readonly SavedNight[],
   overrides: readonly ScoreOverride[] = [],
+  carried?: Carried,
 ): PartnerRecord[] {
-  const board = headToHead(profiles, nights, overrides);
+  const board = headToHead(profiles, nights, overrides, carried);
   return profiles
     .filter((p) => p !== profile)
     .map((partner) => {
@@ -186,11 +209,16 @@ export interface PartnershipRecord {
 }
 
 /** Every partnership (six for four players), with its record together. */
-export function partnershipRecords(profiles: readonly ProfileId[], nights: readonly SavedNight[], overrides: readonly ScoreOverride[] = []): PartnershipRecord[] {
+export function partnershipRecords(
+  profiles: readonly ProfileId[],
+  nights: readonly SavedNight[],
+  overrides: readonly ScoreOverride[] = [],
+  carried?: Carried,
+): PartnershipRecord[] {
   const out: PartnershipRecord[] = [];
   profiles.forEach((a, i) =>
     profiles.slice(i + 1).forEach((b) => {
-      const r = partnerRecords(a, profiles, nights, overrides).find((x) => x.partner === b)!;
+      const r = partnerRecords(a, profiles, nights, overrides, carried).find((x) => x.partner === b)!;
       out.push({ pair: [a, b], nights: r.nights, nightsWon: r.nightsWon, games: r.games, gamesWon: r.gamesWon });
     }),
   );

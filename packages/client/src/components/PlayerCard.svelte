@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { AWARDS, momentsWall, playerStats, shares, winRate, type AwardKind, type ProfileInfo, type SavedNight, type Strain, type Suit as SuitT } from '@dark/engine';
+  import { AWARDS, momentsWall, playerStats, shares, winRate, type AwardKind, type ProfileInfo, type SavedNight, type Strain, type Suit as SuitT, type Carried } from '@dark/engine';
   import { profileOf } from '../lib/format';
   import { shortDate } from '../lib/history';
   import AnimalIcon from './AnimalIcon.svelte';
@@ -13,26 +13,31 @@
     profile,
     profiles,
     nights,
+    carried,
     onWatch,
     loading,
   }: {
     profile: string;
     profiles: readonly ProfileInfo[];
     nights: readonly SavedNight[];
+    /** Totals carried forward from deleted games. */
+    carried?: Carried;
     onWatch: (night: SavedNight, game: number) => void;
     loading: string | null;
   } = $props();
 
   const ids = $derived(profiles.map((p) => p.id));
-  const s = $derived(playerStats(profile, ids, nights));
+  const s = $derived(playerStats(profile, ids, nights, carried));
   const name = (id: string) => profileOf(profiles, id).name;
   /** The animal someone picked most recently. */
   const animalOf = (id: string) => [...nights].sort((a, b) => b.startedAt - a.startedAt).find((n) => n.avatars?.[id])?.avatars?.[id]?.animal ?? null;
   const pct = (won: number, played: number) => (played ? Math.round((won / played) * 100) : 0);
 
   // Only the noteworthy awards, as icons with counts (Ryan).
-  const CHIPS: AwardKind[] = ['wall', 'epicAttic', 'heist', 'daredevil'];
-  const chips = $derived(CHIPS.filter((k) => (s.awards[k] ?? 0) > 0).map((k) => ({ k, emoji: AWARDS[k].emoji, title: AWARDS[k].title, n: s.awards[k]! })));
+  const CHIPS: AwardKind[] = ['wall', 'epicAttic', 'heist', 'daredevil', 'broomGod', 'dogMroob'];
+  const chips = $derived(
+    CHIPS.filter((k) => (s.awards[k] ?? 0) > 0).map((k) => ({ k, emoji: AWARDS[k].emoji, flip: !!AWARDS[k].flip, title: AWARDS[k].title, n: s.awards[k]! })),
+  );
 
   const suits = $derived(shares(s.strains));
   const levels = $derived(shares(s.levels).filter((l) => l.pct > 0));
@@ -58,7 +63,7 @@
   <div>
     <div class="n">
       {name(profile)}
-      {#each chips as c (c.k)}<span class="aw" title="{c.title} ×{c.n}"><span aria-hidden="true">{c.emoji}</span> <b>×{c.n}</b></span>{/each}
+      {#each chips as c (c.k)}<span class="aw" title="{c.title} ×{c.n}"><span aria-hidden="true" style={c.flip ? 'display: inline-block; rotate: 180deg' : undefined}>{c.emoji}</span> <b>×{c.n}</b></span>{/each}
     </div>
     <div class="sub">{s.nights} {s.nights === 1 ? 'night' : 'nights'}{#if s.since}&nbsp;· since {shortDate(s.since)}{/if}</div>
   </div>

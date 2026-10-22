@@ -48,7 +48,7 @@ describe('S03 golden deals', () => {
   const hands = suitHands({ 0: 'S', 1: 'H', 2: 'D', 3: 'C' });
 
   it('1♠ by seat 0: trumps win every trick; clinch on trick 7; play on to +6', () => {
-    let s = runAuction(newDealWithHands(hands, 0), [bid(1, 'S'), PASS, PASS, PASS]);
+    let s = runAuction(newDealWithHands(hands, 3), [bid(1, 'S'), PASS, PASS, PASS]);
     expect(s.currentTrick!.leader).toBe(next(0)); // opening lead from declarer's right
 
     // Trick 1: hearts led, diamonds and clubs discarded, declarer ruffs last.
@@ -69,19 +69,20 @@ describe('S03 golden deals', () => {
     expect(s.result).toEqual({ winner: 'declarers', reason: 'made', declarerTricks: 13, defenderTricks: 0, playedOut: true, overUnder: 6 });
   });
 
-  it('1NT by seat 0: the heart holder wins every trick; defenders clinch on trick 7', () => {
-    let s = runAuction(newDealWithHands(hands, 0), [bid(1, 'NT'), PASS, PASS, PASS]);
+  it('1NT by seat 0: declarer leads (R4, round 10) and their spades win every trick; declarers clinch on trick 7', () => {
+    let s = runAuction(newDealWithHands(hands, 3), [bid(1, 'NT'), PASS, PASS, PASS]);
+    expect(s.currentTrick!.leader).toBe(0);
     s = playUntil(s, (x) => x.phase !== 'play');
-    expect(s.clinch).toMatchObject({ side: 'defenders', trickNumber: 7, seat: 1 });
+    expect(s.clinch).toMatchObject({ side: 'declarers', trickNumber: 7, seat: 0 });
     s = act(s, { type: 'endAtClinch' });
-    expect(s.result).toEqual({ winner: 'defenders', reason: 'defeated', declarerTricks: 0, defenderTricks: 7, playedOut: false, overUnder: null });
+    expect(s.result).toEqual({ winner: 'declarers', reason: 'made', declarerTricks: 7, defenderTricks: 0, playedOut: false, overUnder: null });
   });
 
   it('playing out of turn, a card you do not hold, or revoking is rejected', () => {
-    const s = runAuction(newDealWithHands(hands, 0), [bid(1, 'NT'), PASS, PASS, PASS]);
-    const outOfTurn = applyDealAction(s, { type: 'play', seat: 0, card: c('SA') });
+    const s = runAuction(newDealWithHands(hands, 3), [bid(1, 'NT'), PASS, PASS, PASS]);
+    const outOfTurn = applyDealAction(s, { type: 'play', seat: 1, card: c('HA') });
     expect(!outOfTurn.ok && outOfTurn.error.code).toBe('NOT_YOUR_TURN');
-    const notHeld = applyDealAction(s, { type: 'play', seat: 1, card: c('SA') });
+    const notHeld = applyDealAction(s, { type: 'play', seat: 0, card: c('HA') });
     expect(!notHeld.ok && notHeld.error.code).toBe('NOT_IN_HAND');
   });
 
@@ -92,6 +93,7 @@ describe('S03 golden deals', () => {
       2: [...'DA DK DQ DJ D10 D9 D8 D7 D6 D5 D4 D3 D2'.split(' ').map(c)],
       3: [...'CA CK CQ CJ C10 C9 C8 C7 C6 C5 C4 C3 C2'.split(' ').map(c)],
     };
+    // Seat 1 declares 1NT (dealer 0, so seat 1 calls first) and leads (R4: declarer leads in NT).
     let s = runAuction(newDealWithHands(mixed, 0), [bid(1, 'NT'), PASS, PASS, PASS]);
     s = act(s, { type: 'play', seat: 1, card: c('HA') });
     s = act(s, { type: 'play', seat: 2, card: c('D2') });
