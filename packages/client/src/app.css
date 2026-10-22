@@ -131,16 +131,17 @@ h2,
   font-family: var(--font-display);
 }
 
-/* "1st" (Ryan): the one mark for every first, on the card that leads a set (and, in SeatCalls,
-   the game's opening bid). Small, lowercase, and a neutral stone (black and white is Team Black's),
-   on the top-right corner, clear of the rank or call at top-left. */
-.first-badge {
-  padding: 0 3px;
-  border-radius: 5px;
-  background: #d9d4c7;
-  color: #2d2a26;
-  font: 750 7.5px/11px system-ui, -apple-system, sans-serif;
-  letter-spacing: 0.02em;
-  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.45);
+/* "1st" (Ryan's pick, B4): a stone-coloured folded corner, no text, on the top-left of the card
+   that leads a set (and, in SeatCalls, the game's opening bid). Sits inside a positioned parent. */
+.first-fold {
+  position: absolute;
+  z-index: 2;
+  top: 0;
+  left: 0;
+  width: 0;
+  height: 0;
+  border-top: 10px solid #b8b09c;
+  border-right: 10px solid transparent;
+  border-top-left-radius: 5px;
   pointer-events: none;
 }

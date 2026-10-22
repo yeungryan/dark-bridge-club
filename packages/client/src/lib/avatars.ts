@@ -54,3 +54,12 @@ export const ELEMENT_RING: Record<Element, string> = {
   water: '#1e88e5',
   earth: '#43a047',
 };
+
+/** The DARK crest (Ryan): each friend's letter, suit and team, fixed (♠ D, ♥ A, ♦ R, ♣ K). */
+export const CREST: Record<ProfileId, { suit: 'S' | 'H' | 'D' | 'C'; team: Team }> = {
+  darren: { suit: 'S', team: 'black' },
+  adrian: { suit: 'H', team: 'red' },
+  ryan: { suit: 'D', team: 'red' },
+  kim: { suit: 'C', team: 'black' },
+};
+export const crestOf = (id: ProfileId, index: number) => CREST[id] ?? { suit: (['S', 'H', 'D', 'C'] as const)[index % 4]!, team: index % 3 === 0 ? 'black' : 'red' };

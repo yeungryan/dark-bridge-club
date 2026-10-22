@@ -71,7 +71,7 @@ export const AWARDS: Record<
       `${name(a.profile)} declared at level ${Number(a.payload.averageLevel).toFixed(1).replace(/\.0$/, '')} on average.`,
   },
   heist: {
-    title: 'Heist of the Night',
+    title: 'Heist Master',
     emoji: '🦹',
     detail: (a) => `${contractOf(a.payload)} made with ${a.payload.hcpGap} fewer points`,
     caption: (a, name) =>

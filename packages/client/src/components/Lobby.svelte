@@ -1,7 +1,8 @@
 <script lang="ts">
   import type { Connection } from '../lib/connection.svelte';
   import { tick } from 'svelte';
-  import { avatarOf } from '../lib/avatars';
+  import { avatarOf, crestOf } from '../lib/avatars';
+  import CrestTile from './CrestTile.svelte';
   import Avatar from './Avatar.svelte';
   import { elementBurst } from '../lib/juice/particles';
   import { themeOf } from '../lib/themes';
@@ -54,17 +55,20 @@
 
 <main>
   <div class="crest" class:complete aria-label="Who's here">
-    {#each room.profiles as p (p.id)}
+    {#each room.profiles as p, i (p.id)}
       {@const isHere = room.presence[p.id] === 'connected'}
       {@const ready = !!room.avatarReady?.[p.id]}
+      {@const c = crestOf(p.id, i)}
       <span
+        class="slot"
         class:lit={isHere}
         class:ready
         title="{p.name}: {!isHere ? 'not here yet' : ready ? 'ready' : 'picking'}"
         aria-label="{p.name}: {!isHere ? 'not here yet' : ready ? 'ready' : 'picking'}"
       >
-        {p.name[0]}
-        {#if ready}<i class="check" aria-hidden="true">✓</i>{/if}
+        <CrestTile letter={p.name[0]!} suit={c.suit} team={c.team} state={ready ? 'ready' : isHere ? 'lit' : 'off'}>
+          {#if ready}<i class="check" aria-hidden="true">✓</i>{/if}
+        </CrestTile>
       </span>
     {/each}
   </div>
@@ -119,43 +123,19 @@
     padding: 200px 16px 24px;
     text-align: center;
   }
-  /* One colour for all four letters (Ryan), the theme's accent: the crest reads as the title. */
+  /* The DARK crest (Ryan, L1 revised): Team Red's A and R, Team Black's D and K (CrestTile). */
   .crest {
-    --c: var(--accent);
     display: flex;
     justify-content: center;
     gap: 10px;
   }
-  /* Not here: a dim grey outline. */
-  .crest span {
-    position: relative;
-    width: 56px;
-    height: 64px;
+  .slot {
     display: grid;
-    place-items: center;
-    font-family: var(--font-display);
-    font-size: 2rem;
-    font-weight: 800;
-    border: 2px solid var(--line);
-    border-radius: 10px;
-    color: var(--line);
-    background: var(--panel);
-    transition:
-      color 0.3s,
-      border-color 0.3s,
-      background-color 0.3s;
   }
-  /* Here: lit in their colour. */
-  .crest span.lit {
-    color: var(--c);
-    border-color: var(--c);
+  .slot.lit {
     animation: light calc(380ms * var(--speed)) cubic-bezier(0.3, 1.6, 0.6, 1);
   }
-  /* Picked: filled solid, with a small check. */
-  .crest span.ready {
-    color: var(--accent-ink);
-    background: var(--c);
-    box-shadow: 0 0 16px color-mix(in srgb, var(--c) 55%, transparent);
+  .slot.ready {
     animation: fill calc(420ms * var(--speed)) cubic-bezier(0.3, 1.6, 0.6, 1);
   }
   .check {
@@ -172,7 +152,7 @@
     font-style: normal;
     font-size: 12px;
     font-weight: 800;
-    box-shadow: 0 0 0 2px var(--c);
+    box-shadow: 0 0 0 2px var(--line);
   }
   @keyframes light {
     0% {
@@ -187,19 +167,17 @@
       transform: scale(1.14) rotate(-4deg);
     }
   }
-  :global(.fx-reduced) .crest span.lit,
-  :global(.fx-reduced) .crest span.ready {
+  :global(.fx-reduced) .slot.lit,
+  :global(.fx-reduced) .slot.ready {
     animation: fade-in calc(300ms * var(--speed));
   }
   /* All four here: the whole crest flares. */
-  .crest.complete span {
+  .crest.complete .slot {
     animation: flare calc(1100ms * var(--speed)) ease-out;
-    box-shadow: 0 0 18px var(--c);
   }
   @keyframes flare {
     30% {
       transform: translateY(-6px) scale(1.12);
-      box-shadow: 0 0 30px var(--c);
     }
   }
   /* The four avatars flip over together. */

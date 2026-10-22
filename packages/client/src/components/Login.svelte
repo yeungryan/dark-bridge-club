@@ -1,4 +1,6 @@
 <script lang="ts">
+  import CrestTile from './CrestTile.svelte';
+  import { crestOf } from '../lib/avatars';
   import { fetchProfiles, login, roomKey, type ProfileListing } from '../lib/session';
 
   // Spec S07: open the private link → tap your name → enter your PIN.
@@ -60,7 +62,16 @@
 </script>
 
 <main>
-  <h1>DARK <span>Bridge Club</span></h1>
+  <!-- The title is the DARK crest, all four filled (Ryan), the same as in the lobby. -->
+  <h1 aria-label="DARK Bridge Club">
+    <span class="crest">
+      {#each [['D', 'darren'], ['A', 'adrian'], ['R', 'ryan'], ['K', 'kim']] as [letter, id], i (id)}
+        {@const c = crestOf(id!, i)}
+        <CrestTile letter={letter!} suit={c.suit} team={c.team} size={60} />
+      {/each}
+    </span>
+    <span class="club">Bridge Club</span>
+  </h1>
 
   {#if problem}
     <p class="panel">{problem}</p>
@@ -97,15 +108,21 @@
     text-align: center;
   }
   h1 {
-    color: var(--accent);
-    letter-spacing: 0.25em;
-    font-size: 2rem;
+    display: grid;
+    justify-items: center;
+    gap: 12px;
     margin: 12px 0 24px;
   }
-  h1 span {
+  .crest {
+    display: flex;
+    gap: 8px;
+  }
+  h1 .club {
     display: block;
-    letter-spacing: 0.05em;
-    font-size: 1rem;
+    letter-spacing: 0.3em;
+    text-transform: uppercase;
+    font-family: Georgia, serif;
+    font-size: 0.85rem;
     font-weight: 400;
     color: var(--ink-dim);
   }

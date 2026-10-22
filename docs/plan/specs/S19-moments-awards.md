@@ -24,7 +24,7 @@ Chosen by priority with variety (no award twice in a row across sessions unless 
 - **MVP:** most clinching cards played.
 - **The Wall:** most contracts set as a defender.
 - **Daredevil:** highest average contract level as declarer.
-- **Heist of the Night:** the biggest Robbery.
+- **Heist Master** (was "Heist of the Night"): the biggest Robbery.
 - **Heartbreak Hotel:** most Heartbreaks.
 - **Plus your custom awards** (M3 checkpoint): names and inside jokes you supply.
 

@@ -288,7 +288,7 @@ describe('award candidates', () => {
     expect(candidate(night([sixSpades(1)]), 'daredevil')).toBeUndefined();
     expect(candidate(night([oneSpade(1), oneSpade(2)]), 'daredevil')).toBeUndefined();
   });
-  it('Heist of the Night: the biggest Robbery, to the declarer', () => {
+  it('Heist Master: the biggest Robbery, to the declarer', () => {
     expect(candidate(night([robbery(1)]), 'heist')).toMatchObject({ profile: 'darren', score: 20 });
     expect(candidate(night([oneSpade(1)]), 'heist')).toBeUndefined();
   });
