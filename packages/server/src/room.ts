@@ -396,6 +396,12 @@ export class TableRoom extends DurableObject<Env> {
     return row ? (JSON.parse(row.v) as ScoreOverride[]) : [];
   }
 
+  /** The reset waiting for approval, if any, for everyone's screen. */
+  private pendingReset(): RoomInfo['pendingReset'] {
+    const p = this.loadChanges().pending.find((c) => c.change.kind === 'reset');
+    return p ? { id: p.id, proposedBy: p.proposedBy, approvals: p.approvals } : null;
+  }
+
   private loadChanges(): ChangeQueue {
     const row = this.sql.exec<{ v: string }>("SELECT v FROM kv WHERE k = 'historyChanges'").toArray()[0];
     return row ? (JSON.parse(row.v) as ChangeQueue) : emptyChangeQueue();
@@ -424,6 +430,8 @@ export class TableRoom extends DurableObject<Env> {
       }
     }
     this.sql.exec('INSERT OR REPLACE INTO kv (k, v) VALUES (?, ?)', 'historyChanges', JSON.stringify(queue));
+    // A reset asked for, agreed to or turned down shows on everyone's screen at once (round 13).
+    this.broadcast([]);
     const rows = this.sql
       .exec<SessionRow>(`SELECT rowid AS rid, ${SESSION_COLUMNS} FROM sessions WHERE pairs_json IS NOT NULL ORDER BY started_at DESC`)
       .toArray();
@@ -957,6 +965,7 @@ export class TableRoom extends DurableObject<Env> {
       avatarReady: Object.fromEntries(PROFILE_IDS.map((id) => [id, !!this.data.avatars.picks[id]?.avatar])),
       // Choices stay hidden until everyone flips together at the start of the night.
       avatars: this.data.session.phase === 'lobby' ? null : avatarsOf(this.data.avatars),
+      pendingReset: this.pendingReset(),
       theme: this.data.theme,
       gameMoments: this.data.gameMoments,
       awards: this.data.session.phase === 'ended' ? this.data.awards : null,

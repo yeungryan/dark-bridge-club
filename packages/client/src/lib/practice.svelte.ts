@@ -180,6 +180,7 @@ export class PracticeTable extends Connection {
         serverTime: Date.now(),
         avatarReady: Object.fromEntries(IDS.map((id) => [id, !!this.avatars.picks[id]?.avatar])),
         avatars: this.session.phase === 'lobby' ? null : avatarsOf(this.avatars),
+        pendingReset: null,
         theme: this.theme,
         gameMoments: this.gameMoments,
         awards: this.session.phase === 'ended' ? this.awards : null,

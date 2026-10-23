@@ -50,6 +50,11 @@ export interface RoomInfo {
   readonly avatarReady: Readonly<Record<ProfileId, boolean>>;
   /** Everyone's avatar, once the night has started; null before then (or if none). */
   readonly avatars: Readonly<Record<ProfileId, Avatar | null>> | null;
+  /**
+   * A "Reset everything to 0–0" waiting for everyone's OK (S20), or null. It pops up on every
+   * screen (Ryan, round 13) until all four agree or someone turns it down.
+   */
+  readonly pendingReset: { readonly id: string; readonly proposedBy: ProfileId; readonly approvals: readonly ProfileId[] } | null;
   /** Tonight's theme (S18), rolled when the lobby opens. */
   readonly theme: ThemeId;
   /** The latest finished game's moments (S19), for its reveal. */
