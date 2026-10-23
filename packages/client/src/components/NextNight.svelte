@@ -58,7 +58,9 @@
     display: grid;
     gap: 2px;
     width: 100%;
-    margin-top: 18px;
+    /* The same gap as under the all-time score (Ryan, round 14): tonight's picks above stand as
+       one group, the next night and the last one below as another. */
+    margin-top: 24px;
     padding: 12px 34px 12px 14px;
     text-align: left;
     border-radius: 14px;
