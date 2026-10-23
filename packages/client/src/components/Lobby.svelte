@@ -75,7 +75,7 @@
   </div>
   <h2>Bridge Club</h2>
   <!-- The all-time score (Ryan, S1); the practice table has no history. -->
-  {#if !conn.offline}<AllTimeScore profiles={room.profiles} />{/if}
+  {#if !conn.offline}<AllTimeScore profiles={room.profiles} refresh={JSON.stringify(room.pendingReset)} />{/if}
   <p class="tonight">
     <span class="label">Tonight's table</span>
     <strong class="display"><span class="flag">{theme.flag}</span> {theme.name}</strong>
@@ -115,7 +115,7 @@
   />
 {/if}
 {#if showHistory}
-  <History profiles={room.profiles} me={conn.view!.me} theme={room.theme} onClose={() => (showHistory = false)} />
+  <History profiles={room.profiles} me={conn.view!.me} theme={room.theme} refresh={JSON.stringify(room.pendingReset)} onClose={() => (showHistory = false)} />
 {/if}
 
 <style>
@@ -224,7 +224,8 @@
   .tonight {
     display: grid;
     gap: 2px;
-    margin: -10px 0 22px;
+    /* Close to "Who are you tonight?" below: they read as one group (Ryan, round 13). */
+    margin: -10px 0 8px;
   }
   .tonight .label {
     font-size: 11px;

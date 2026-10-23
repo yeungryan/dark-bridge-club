@@ -105,7 +105,7 @@
       <h1 class="game">Game {shuffling ? view.dealNumber + 1 : view.dealNumber}</h1>
       <!-- Ryan (round 12): tonight's all-time score, just under the title. It catches up as each new
            game starts, so it never gives a result away before the finisher has played. -->
-      {#if !conn.offline && view.pairs}<AllTimeScore {profiles} small pairs={[view.pairs.A, view.pairs.B]} refresh={view.dealNumber} />{/if}
+      {#if !conn.offline && view.pairs}<AllTimeScore {profiles} small pairs={[view.pairs.A, view.pairs.B]} refresh={`${view.dealNumber}:${JSON.stringify(conn.room!.pendingReset)}`} />{/if}
     </div>
     <button class="ghost gear" aria-label="Settings" onclick={() => (menuOpen = menuOpen ? null : 'settings')}>
       <SettingsIcon size={21} strokeWidth={2} aria-hidden="true" />
@@ -177,7 +177,7 @@
   {/if}
 
   {#if showHistory}
-    <History profiles={profiles} me={view.me} theme={conn.room!.theme} onClose={() => (showHistory = false)} />
+    <History profiles={profiles} me={view.me} theme={conn.room!.theme} refresh={JSON.stringify(conn.room!.pendingReset)} onClose={() => (showHistory = false)} />
   {/if}
   {#if peek && deal?.lastTrick}
     {#key deal.tricksPlayed}

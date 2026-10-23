@@ -1,11 +1,12 @@
 <script lang="ts">
+  import RotateCcwIcon from '@lucide/svelte/icons/rotate-ccw';
   import type { MatchupRecord, ProfileInfo, ScoreSide } from '@dark/engine';
   import { pairName, sendChange, type HistoryData } from '../lib/history';
   import { sound } from '../lib/juice/sound';
 
   // Set a matchup's all-time score by hand (Ryan): add nights played away from the app, or stop
   // counting some wins. It starts from the score as it stands, and goes to the others: it counts
-  // once all four of you approve it. Starting again from 0–0 resets everything (Ryan): every
+  // once all four of you approve it. "Reset everything to 0–0" clears it all (Ryan): every
   // matchup and every all-time stat, once all four approve.
   let {
     profiles,
@@ -24,7 +25,7 @@
     sound.tap();
     counts[side]![what] = Math.max(0, Math.min(9999, counts[side]![what] + by));
   };
-  // "Start again from 0–0" asks first: it resets far more than this matchup.
+  // "Reset everything to 0–0" asks first: it resets far more than this matchup.
   let resetting = $state(false);
 
   async function send() {
@@ -66,7 +67,9 @@
       stay. It happens once all four of you approve.
     </p>
   {:else}
-    <button class="ghost zero" onclick={() => (sound.tap(), (resetting = true))}>Start again from 0–0</button>
+    <button class="ghost zero" onclick={() => (sound.tap(), (resetting = true))}
+      ><RotateCcwIcon size={15} strokeWidth={2} aria-hidden="true" /> Reset everything to 0–0</button
+    >
     <p class="note">It counts once all four of you approve. Nights played after that add on top.</p>
   {/if}
   {#if error}<p class="error" role="alert">{error}</p>{/if}
@@ -122,6 +125,9 @@
   }
   .zero {
     justify-self: start;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
     min-height: 36px;
     font-size: 13.5px;
   }

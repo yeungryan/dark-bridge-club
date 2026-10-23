@@ -367,7 +367,7 @@ test.describe.serial('a night at the DARK table', () => {
     const before = Number(await first.locator('.big').first().textContent());
     await first.getByRole('button', { name: /^Change the score/ }).click();
     const editor = first.getByRole('region', { name: 'Change the score' });
-    const more = editor.getByRole('button', { name: /^One more nights/ }).first();
+    const more = editor.getByRole('button', { name: /^One more games/ }).first();
     for (let i = 0; i < 3; i++) await more.click();
     await editor.getByRole('button', { name: 'Send for approval' }).click();
     const pending = history.getByRole('region', { name: 'Changes waiting for approval' });
@@ -389,22 +389,30 @@ test.describe.serial('a night at the DARK table', () => {
     await history.getByRole('button', { name: 'Close the history' }).click();
   });
 
-  test('"Start again from 0–0" resets every matchup once all four approve (round 9)', async ({ request }) => {
+  test('"Reset everything to 0–0" pops up on everyone\'s screen and resets every matchup once all four approve (rounds 9, 13)', async ({ request }) => {
     const page = ryan().page;
     await page.getByRole('region', { name: 'Last time' }).getByRole('button', { name: /History/ }).click();
     const history = page.getByRole('dialog', { name: 'History' });
     const first = history.locator('.match').first();
     await first.getByRole('button', { name: /^Change the score/ }).click();
     const editor = first.getByRole('region', { name: 'Change the score' });
-    await editor.getByRole('button', { name: 'Start again from 0–0' }).click();
+    await editor.getByRole('button', { name: 'Reset everything to 0–0' }).click();
     await expect(editor).toContainText('Everything goes back to 0–0');
     await editor.getByRole('button', { name: 'Send reset for approval' }).click();
-    await expect(history.getByRole('region', { name: 'Changes waiting for approval' })).toContainText('Start again from 0–0');
+    await expect(history.getByRole('region', { name: 'Changes waiting for approval' })).toContainText('Reset everything to 0–0');
+    // Round 13: it pops up on every screen, like a concession but with no timer.
+    const darrenAsk = players[0]!.page.getByRole('alertdialog', { name: 'Reset everything to 0–0?' });
+    await expect(darrenAsk).toContainText('Ryan wants to reset everything to 0–0.');
+    await expect(darrenAsk.getByRole('button', { name: 'Agree' })).toBeVisible();
+    await expect(page.getByRole('alertdialog', { name: 'Reset everything to 0–0?' })).toContainText('1/4 agreed');
     const id = (await (await request.get(`/api/history?token=${await tokenOf(page)}`)).json()).pending[0].id;
     for (const seat of SEATS.filter((s) => s.id !== 'ryan')) {
       const login = await (await request.post('/api/login', { data: { k: 'dev', profile: seat.id, pin: seat.pin } })).json();
       expect((await request.post('/api/history/change', { data: { token: login.token, action: { type: 'approve', id } } })).ok()).toBe(true);
     }
+    // Once all four agree it goes from every screen.
+    await expect(page.getByRole('alertdialog', { name: 'Reset everything to 0–0?' })).toHaveCount(0);
+    await expect(darrenAsk).toHaveCount(0);
     await history.getByRole('button', { name: 'Close the history' }).click();
     await page.getByRole('region', { name: 'Last time' }).getByRole('button', { name: /History/ }).click();
     for (const big of await history.locator('.match .big').all()) await expect(big).toHaveText('0');

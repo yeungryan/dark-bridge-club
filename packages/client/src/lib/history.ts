@@ -44,6 +44,7 @@ export async function sendChange(action: ChangeAction): Promise<HistoryData> {
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ token: token(), action }),
   });
+  shared = null; // the scores may have just changed
   const body = (await res.json().catch(() => ({}))) as HistoryData & { message?: string };
   if (!res.ok) throw new Error(body.message ?? 'That didn’t go through. Try again.');
   return body;

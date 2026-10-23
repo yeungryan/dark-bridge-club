@@ -1,6 +1,5 @@
 <script lang="ts">
   import { AWARDS, countedNights, pairKey, type MatchupRecord, emptyCarried, headToHead, momentsWall, partnershipRecords, winRate, type PendingChange, type ProfileInfo, type SavedNight, type ScoreOverride, type ThemeId, type Carried } from '@dark/engine';
-  import { onMount } from 'svelte';
   import { profileOf } from '../lib/format';
   import { MAIN_PAIR } from '../lib/avatars';
   import { loadGame, loadHistory, nightLine, pairName, shortDate, type HistoryData } from '../lib/history';
@@ -11,6 +10,7 @@
   import Replay from './Replay.svelte';
   import TableScene from './TableScene.svelte';
   import PendingChanges from './PendingChanges.svelte';
+  import PencilIcon from '@lucide/svelte/icons/pencil';
   import ScoreEditor from './ScoreEditor.svelte';
   import PlayerCard from './PlayerCard.svelte';
   import AllPlayers from './AllPlayers.svelte';
@@ -21,7 +21,15 @@
   // partnership's record), the players (everyone's leaderboard, awards, animals and elements, or
   // one player's card), and the night log: each night with its two highlights (Ryan: the moments
   // wall lives here now), where any saved game opens in the replay.
-  let { profiles, me, theme, onClose }: { profiles: readonly ProfileInfo[]; me: string; theme: ThemeId; onClose: () => void } = $props();
+  // `refresh`: the reset waiting for approval (round 13). When it changes (someone answered the
+  // pop-up), the numbers and the changes waiting load again.
+  let {
+    profiles,
+    me,
+    theme,
+    onClose,
+    refresh = null,
+  }: { profiles: readonly ProfileInfo[]; me: string; theme: ThemeId; onClose: () => void; refresh?: unknown } = $props();
 
   let nights = $state<SavedNight[] | null>(null);
   let overrides = $state<ScoreOverride[]>([]);
@@ -45,7 +53,8 @@
   let replay = $state<ReplayGame | null>(null);
   let loadingGame = $state<string | null>(null);
 
-  onMount(() => {
+  $effect(() => {
+    void refresh;
     loadHistory()
       .then(update)
       .catch(() => (failed = true));
@@ -132,19 +141,18 @@
           <article class="match" class:fresh={m.nights === 0 && m.games === 0 && editing !== i}>
             <div class="side">
               <span class="who">{pairName(profiles, a.players)}</span>
-              <strong class="big">{a.nightsWon}</strong>
+              <strong class="big">{a.gamesWon}</strong>
             </div>
             <span class="vs">vs</span>
             <div class="side right">
-              <strong class="big">{b.nightsWon}</strong>
+              <strong class="big">{b.gamesWon}</strong>
               <span class="who">{pairName(profiles, b.players)}</span>
             </div>
             <p class="sub">
               {#if m.nights === 0 && m.games === 0}
                 Never played this way round
               {:else}
-                {m.nights} {m.nights === 1 ? 'night' : 'nights'} · games {a.gamesWon}–{b.gamesWon}{#if m.lastPlayed}
-                  · last {shortDate(m.lastPlayed)}{/if}
+                {m.nights} {m.nights === 1 ? 'night' : 'nights'}, won {a.nightsWon}–{b.nightsWon}{#if m.lastPlayed}{` · last ${shortDate(m.lastPlayed)}`}{/if}
               {/if}
               {#if m.setAt}<br /><span class="set">Score agreed by all four on {shortDate(m.setAt)}</span>{/if}
             </p>
@@ -152,7 +160,7 @@
               <ScoreEditor {profiles} match={m} onUpdate={update} onCancel={() => (editing = null)} />
             {:else}
               <button class="ghost edit" aria-label="Change the score: {pairName(profiles, a.players)} vs {pairName(profiles, b.players)}" onclick={() => (editing = i)}
-                >✏️ Change score</button
+                ><PencilIcon size={14} strokeWidth={2} aria-hidden="true" /> Change score</button
               >
             {/if}
           </article>
@@ -453,6 +461,9 @@
   .edit {
     grid-column: 1 / -1;
     justify-self: center;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
     min-height: 32px;
     padding: 0 10px;
     font-size: 12.5px;
