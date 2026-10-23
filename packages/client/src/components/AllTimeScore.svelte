@@ -68,7 +68,8 @@
     align-items: center;
     justify-content: center;
     gap: 8px;
-    margin: -12px 0 18px;
+    /* Round 13 (Ryan): more room below, so "Tonight's table" groups with the picker instead. */
+    margin: -12px 0 34px;
   }
   .pair {
     display: inline-flex;

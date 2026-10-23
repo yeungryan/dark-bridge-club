@@ -224,7 +224,8 @@
   .tonight {
     display: grid;
     gap: 2px;
-    margin: -10px 0 22px;
+    /* Close to "Who are you tonight?" below: they read as one group (Ryan, round 13). */
+    margin: -10px 0 8px;
   }
   .tonight .label {
     font-size: 11px;
