@@ -78,9 +78,13 @@ describe('S22 bot bidding (round 15)', () => {
     expect(safeLevels(view, seat).S).toBeGreaterThanOrEqual(2);
   });
 
-  it('rule 3: a fit beats switching to a new suit', () => {
+  it('rule 3: a fit beats switching to a new five-card suit', () => {
     // Three spades and a five-card club suit: support partner rather than bid clubs.
-    expect(call('K32.3.Q32.AKJ432', [bid(1, 'S'), bid(2, 'H')])).toEqual(bid(2, 'S'));
+    expect(call('K32.32.Q32.AKJ43', [bid(1, 'S'), bid(2, 'H')])).toEqual(bid(2, 'S'));
+  });
+
+  it('round 16: my own six-card suit beats three-card support when it is as safe', () => {
+    expect(call('K32.3.Q32.AKJ432', [bid(1, 'S'), bid(2, 'H')])).toEqual(bid(3, 'C'));
   });
 
   it('rule 3: never raises past the safe level, even with support', () => {
@@ -109,8 +113,12 @@ describe('S22 bot bidding (round 15)', () => {
     expect(call('A32.AKQ432.KQ32.', [PASS, bid(1, 'H'), PASS, bid(2, 'C'), PASS], 3)).toEqual(PASS);
   });
 
-  it('rule 1 needs a misfit: with 3+ cards in partner’s suit it just passes', () => {
-    expect(call('A2.32.K32.AKQ432', [bid(1, 'D'), PASS])).toEqual(PASS);
+  it('rule 1 needs a misfit: with 3+ cards in partner’s suit and an ordinary suit it just passes', () => {
+    expect(call('A32.32.K32.AQ432', [bid(1, 'D'), PASS])).toEqual(PASS);
+  });
+
+  it('round 16: a strong six-card suit is offered even with three cards in partner’s suit', () => {
+    expect(call('A2.32.K32.AKQ432', [bid(1, 'D'), PASS])).toEqual(bid(2, 'C'));
   });
 
   it('rule 2: a strong eight-card spade suit opens above level 1, at most 4', () => {
@@ -150,14 +158,52 @@ function botAuctions(count: number, check: (state: DealState, seat: Seat, made: 
   return done;
 }
 
+describe('S22 bot bidding, round 16 (Ryan: the bots were too quiet)', () => {
+  it("Ryan's deal: Darren's 10 points and six spades to the A-K open; Kim competes over 1♦ with five hearts", () => {
+    // Dealer 0; Adrian (seat 1) passed first. Darren then opens instead of passing.
+    const darren = call('AK9742.J62.Q.953', [PASS]);
+    expect(darren.type === 'bid' && darren.strain).toBe('S');
+    // As played: Adrian pass, Darren pass, Ryan 1♦. Kim no longer passes.
+    expect(call('1065.K10985.AJ3.Q7', [PASS, PASS, bid(1, 'D')])).toEqual(bid(1, 'H'));
+  });
+
+  it("weighs shape: a void, then a void and a doubleton, rate a five-card suit higher than a flat hand (Ryan's ladder)", () => {
+    const spades = (mine: string) => {
+      const { view, seat } = viewAfter(mine, [bid(1, 'H')]);
+      return safeLevels(view, seat).S;
+    };
+    const flat = spades('AQJ32.K54.Q76.84');
+    const void0 = spades('AQJ32.K54.Q7643.');
+    const voidAndDoubleton = spades('AQJ32.K5.Q76432.');
+    expect(void0).toBeGreaterThan(flat);
+    expect(voidAndDoubleton).toBeGreaterThan(void0);
+  });
+
+  it('opens light by the Rule of 20, and still passes a flat 10 points', () => {
+    // 10 points + five spades + five hearts = 20.
+    expect(call('KQ1032.KJ1032.J2.2', [])).toEqual(bid(1, 'S'));
+    expect(call('K32.Q32.K32.J432', [])).toEqual(PASS);
+  });
+
+  it('competes with 8+ points and a five-card suit over an opening, up to level 2', () => {
+    expect(call('KQ1032.32.Q32.J32', [bid(1, 'H')])).toEqual(bid(1, 'S'));
+    expect(call('KQ1032.32.32.5432', [bid(1, 'H')])).toEqual(PASS);
+  });
+});
+
 describe('S22 bot bidding properties (500 random deals)', () => {
-  it('always makes a legal call, and never bids above its safe level (except an opening 1-bid)', () => {
+  it('always makes a legal call, and never bids above its safe level (except an opening 1-bid or a light overcall)', () => {
     botAuctions(500, (s, seat, made) => {
       const view = seatView(s, seat);
       expect(view.legalCalls).toContainEqual(made);
       if (made.type !== 'bid') return;
       const opening = !s.auction.calls.some((c) => c.call.type === 'bid');
       if (opening && made.level === 1) return;
+      // Round 16's light overcall: 8+ points and a five-card suit compete up to level 2 anyway.
+      const bids = s.auction.calls.filter((c) => c.call.type === 'bid');
+      const opponentHolds = bids.length > 0 && bids[bids.length - 1]!.seat % 2 !== seat % 2;
+      const length = made.strain === 'NT' ? 0 : view.hand.filter((c) => c.suit === made.strain).length;
+      if (opponentHolds && made.level <= 2 && length >= 5) return;
       expect(made.level).toBeLessThanOrEqual(safeLevels(view, seat)[made.strain]);
     });
   });
