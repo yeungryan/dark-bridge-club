@@ -51,6 +51,10 @@ export function forgetLogin(): void {
   write('token', null);
 }
 
+/** Who last signed in on this device, so the practice table seats them as themselves. */
+export const rememberMe = (profile: string): void => write('me', profile);
+export const lastMe = (): string | null => read('me');
+
 export interface ProfileListing {
   id: string;
   name: string;
