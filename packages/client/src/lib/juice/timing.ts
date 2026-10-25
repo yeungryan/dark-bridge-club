@@ -45,6 +45,10 @@ export const TIMING = {
   /** After a game's last set has finished its effects (and its orb and any streak stamp have
    *  reached the scoreboard), the table stays up this long before the results (Ryan: 3 s). */
   resultsDelay: 3000,
+  /** A sweep's takeover (Broom God / Dog Moorb, round 15), and how long the "SWEEEP ×13"
+   *  stamp sits before it grows into it. */
+  sweepShow: 5000,
+  sweepLead: 700,
   /** "Play it out?" fades in after the clinch moment has landed. */
   clinchPromptDelay: 650,
   /** Numbers counting up (tallies, HCP). */

@@ -10,6 +10,7 @@ import { settings } from './settings.svelte';
 import { sound } from './sound';
 import { gameWon, setWon } from './setWin';
 import { streakName } from './streak';
+import { sweepOf, type Sweep, type SweepShow } from './sweep';
 import type { Ctx } from './subFx';
 import { DRAMA_BOOST, RESPONSES, TIMING, type Level } from './timing';
 
@@ -82,6 +83,10 @@ class Director {
   combo = $state<{ side: Side; n: number; id: number } | null>(null);
   /** A streak stamp on the table (three or more sets in a row), on its way to the scoreboard. */
   stamp = $state<{ id: number; n: number; name: string; team: Team; dx: number; dy: number; holdMs: number; flyMs: number } | null>(null);
+  /** A sweep's 5 s takeover (round 15), grown out of the "SWEEEP ×13" stamp. */
+  sweepShow = $state<SweepShow | null>(null);
+  /** The game just finished was a sweep: its ×13 stamp leads into the takeover. */
+  private pendingSweep: Sweep | null = null;
 
   /** Trick sequences; a newer trick cancels an older one's remaining beats. */
   private seq = 0;
@@ -100,7 +105,11 @@ class Director {
       const moments = momentsFrom(events, conn.view);
       const settles = moments.some((m) => m.kind === 'clinch');
       this.lastSetMs = 0;
+      const sweep = moments.some((m) => m.kind === 'dealComplete') ? sweepOf(conn) : null;
+      if (sweep) this.pendingSweep = sweep;
       for (const m of moments) this.respond(m, conn, settles);
+      // A sweep's takeover plays after its stamp, so the results wait for that too.
+      if (sweep && settings.animated) this.lastSetMs += settings.ms(TIMING.sweepShow);
       // The game's last card stays on the table before the results take over (Ryan): its set's
       // effects play out (the attack, the sweep, the orb and any streak stamp reaching the
       // scoreboard, or the deciding set's finisher), then 3 s more. That's the deciding set and
@@ -151,6 +160,8 @@ class Director {
     this.pipHold = { declarers: null, defenders: null };
     this.combo = null;
     this.stamp = null;
+    this.pendingSweep = null;
+    this.sweepShow = null;
   }
 
   /**
@@ -396,6 +407,26 @@ class Director {
     const flyMs = settings.ms(TIMING.orbFly);
     const id = ++this.fxId;
     const [dx, dy] = from && to ? [to.x - from.x, to.y - from.y] : [0, 0];
+    const sweep = n === 13 && settings.animated ? this.pendingSweep : null;
+    if (sweep) {
+      // Blend (Ryan, round 15): the SWEEEP stamp lands as usual, then, instead of flying to the
+      // scoreboard, it becomes the first thing to move in the sweep's takeover.
+      const lead = settings.ms(TIMING.sweepLead);
+      this.stamp = { id, n, name, team: teamOf(conn, winner), dx: 0, dy: 0, holdMs: lead * 4, flyMs: 0 };
+      sound.stamp(7, mine);
+      if (mine) buzz('trick');
+      const score = this.centerOf(`.meters [data-side="${side}"] .series`);
+      setTimeout(() => {
+        if (this.pendingSweep !== sweep) return;
+        if (this.stamp?.id === id) this.stamp = null;
+        const show: SweepShow = { ...sweep, id: ++this.fxId, from, to: score };
+        this.sweepShow = show;
+        setTimeout(() => {
+          if (this.sweepShow === show) this.sweepShow = null;
+        }, settings.ms(TIMING.sweepShow) + 100);
+      }, lead);
+      return;
+    }
     this.stamp = { id, n, name, team: teamOf(conn, winner), dx, dy, holdMs: Math.max(0, holdMs), flyMs };
     sound.stamp(Math.min(7, n - 1), mine);
     if (mine) buzz('trick');

@@ -656,6 +656,26 @@ export const sound = {
       noise(e, 0.7, 0.04, { highpass: 6000, delay: 0.3, shape: 'swell', peak: 0.25, wet: 0.4 });
     });
   },
+  /** Broom God (round 15): a heavenly choir chord that swells as the beam comes down (~2.4 s). */
+  choir() {
+    play('choir', (e) => {
+      // Soft "aah" voices: detuned triangles a fifth and octaves apart, slow attack, long tail.
+      [261.6, 329.6, 392, 523.3, 659.3].forEach((f, i) =>
+        [0.996, 1.004].forEach((d) => tone(e, f * d, 2.4, 0.045 - i * 0.004, { type: 'triangle', attack: 0.7, lowpass: 2200, delay: i * 0.06, wet: 0.6 })),
+      );
+      [0, 7, 12, 19].forEach((s, i) => bell(e, s, 1.6, 0.035, 0.9 + i * 0.12, 0.5, 0.2));
+      noise(e, 2.2, 0.025, { highpass: 7000, shape: 'swell', peak: 0.5, wet: 0.6 });
+    });
+  },
+  /** Dog Moorb (round 15): a record scratch as the world flips upside down (~0.5 s). */
+  scratch() {
+    play('scratch', (e) => {
+      noise(e, 0.18, 0.35, { band: 1400, sweepTo: 5200, q: 2.2, shape: 'swell', peak: 0.3 });
+      noise(e, 0.22, 0.3, { band: 4800, sweepTo: 900, q: 2.2, delay: 0.17, shape: 'swell', peak: 0.3 });
+      tone(e, 520, 0.18, 0.12, { type: 'sawtooth', glideTo: 1500, lowpass: 2800 });
+      tone(e, 1400, 0.24, 0.1, { type: 'sawtooth', glideTo: 380, lowpass: 2800, delay: 0.17 });
+    });
+  },
   /**
    * One riffle shuffle (~0.65 s): a burst of tiny papery clicks that speeds up then slows down,
    * then a soft "bridge" whoosh as the halves square up. Repeated every ~1.6 s while waiting for

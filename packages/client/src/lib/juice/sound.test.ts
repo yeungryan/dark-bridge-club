@@ -7,7 +7,7 @@ const { THEMES } = await import('../themes');
 
 describe('sound', () => {
   it('keeps every method the rest of the app (and the e2e tests) rely on', () => {
-    const names = ['tap', 'stamp', 'pass', 'going', 'sold', 'passedOut', 'card', 'lead', 'trumpIn', 'sweep', 'pip', 'trumpTrick', 'firstTrump', 'close', 'decider', 'clinch', 'flip', 'count', 'no', 'tick', 'accent', 'fanfare', 'combo', 'pickup', 'impact', 'riser', 'whoosh', 'riffle', 'dealCard', 'fan', 'dealButton'];
+    const names = ['tap', 'stamp', 'pass', 'going', 'sold', 'passedOut', 'card', 'lead', 'trumpIn', 'sweep', 'pip', 'trumpTrick', 'firstTrump', 'close', 'decider', 'clinch', 'flip', 'count', 'no', 'tick', 'accent', 'fanfare', 'combo', 'pickup', 'impact', 'riser', 'whoosh', 'riffle', 'dealCard', 'fan', 'dealButton', 'choir', 'scratch'];
     for (const n of names) expect(typeof (sound as Record<string, unknown>)[n]).toBe('function');
   });
 
