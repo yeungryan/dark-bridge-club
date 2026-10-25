@@ -209,8 +209,8 @@
         <div class="float"><BiddingBox {conn} /></div>
       {:else if showAuction && deal && deal.phase !== 'auction'}
         <!-- Ryan (round 15): a quiet heading on each sheet, and a tap anywhere on it closes it. -->
-        <button class="float above sheet" aria-label="Your bids (tap to close)" onclick={() => (showAuction = false)}>
-          <span class="sheet-head" aria-hidden="true">Your Bids</span>
+        <button class="float above sheet" aria-label="The bids (tap to close)" onclick={() => (showAuction = false)}>
+          <span class="sheet-head" aria-hidden="true">The Bids</span>
           <AuctionStrip {conn} />
         </button>
       {:else if peek && deal?.lastTrick}
