@@ -60,6 +60,7 @@ export type AwardKind =
   | 'daredevil'
   | 'heist'
   | 'broomGod'
+  // Dog Moorb (round 15; it was "Dog Mroob"). The id stays as saved, so past awards keep counting.
   | 'dogMroob'
   | 'heartbreakHotel'
   | 'epicAttic'

@@ -12,8 +12,15 @@
   // Spec S13 / R8: peeking at the last trick is like turning over the quitted trick at a real
   // table: the four cards flip up one by one in play order, then the winner lights up.
   // Tap anywhere on it to turn them back down.
-  let { trick, view, profiles, onClose }: { trick: CompletedTrick; view: TableView; profiles: readonly ProfileInfo[]; onClose: () => void } =
-    $props();
+  // `trump`: the trump suit, so trumps here wear the same purple bar as in the hand and on the
+  // table (round 15).
+  let {
+    trick,
+    view,
+    profiles,
+    trump = null,
+    onClose,
+  }: { trick: CompletedTrick; view: TableView; profiles: readonly ProfileInfo[]; trump?: string | null; onClose: () => void } = $props();
 
   const flip = (_node: Element, { delay }: { delay: number }) => ({
     delay: settings.animated ? settings.ms(delay) : 0,
@@ -40,7 +47,7 @@
   {#each trick.cards as play, i (play.seat)}
     <div class="peek-card" in:flip={{ delay: i * (TIMING.peekGap + TIMING.peekFlip / 2) }} out:flip={{ delay: 0 }}>
       <div class:winner={lit && play.seat === trick.winner}>
-        <Card card={play.card} width={46} highlight={lit && play.seat === trick.winner} />
+        <Card card={play.card} width={54} highlight={lit && play.seat === trick.winner} trump={play.card.suit === trump} />
       </div>
       <small class="who">{nameAtSeat(view, profiles, play.seat)}</small>
     </div>
@@ -48,12 +55,16 @@
 </button>
 
 <style>
+  /* It sits in the auction's floating sheet (Table), so it has no panel of its own. */
   .peek-sheet {
     display: flex;
     justify-content: center;
     gap: 10px;
-    margin: 6px auto;
+    width: 100%;
+    margin: 0;
+    padding: 0;
     border: 0;
+    background: none;
     min-height: 0;
     font: inherit;
     color: inherit;

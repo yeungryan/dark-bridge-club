@@ -466,7 +466,7 @@ describe('captions', () => {
     // 7♠ made with all 13 (a game in this night): declarer's side swept.
     expect(by.broomGod).toBeDefined();
     expect(AWARDS.dogMroob.flip).toBe(true);
-    expect([AWARDS.broomGod.title, AWARDS.dogMroob.title]).toEqual(['Broom God', 'Dog Mroob']);
+    expect([AWARDS.broomGod.title, AWARDS.dogMroob.title]).toEqual(['Broom God', 'Dog Moorb']);
   });
 
   it('a clean sweep shared between partners goes to both, and is chosen as one', () => {

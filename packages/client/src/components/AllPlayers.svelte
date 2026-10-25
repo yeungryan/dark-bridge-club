@@ -214,11 +214,11 @@
     line-height: 1;
     opacity: 0.25;
   }
-  /* Dog Mroob's broom, upside down. */
+  /* Dog Moorb's broom, upside down. */
   .flip {
     rotate: 180deg;
   }
-  /* One line each (Ryan, round 10: the sweeps are Broom God and Dog Mroob so they fit). */
+  /* One line each (Ryan, round 10: the sweeps are Broom God and Dog Moorb so they fit). */
   .an {
     font: 700 12px var(--font-name);
     color: var(--win);

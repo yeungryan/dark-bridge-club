@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { next, partner, type Seat } from '@dark/engine';
+  import { next, partner, trumpSuit, type Seat } from '@dark/engine';
   import type { Connection } from '../lib/connection.svelte';
   import { callLabel, nameAtSeat, profileOf, seatAt } from '../lib/format';
   import AuctionStrip from './AuctionStrip.svelte';
@@ -179,11 +179,6 @@
   {#if showHistory}
     <History profiles={profiles} me={view.me} theme={conn.room!.theme} refresh={JSON.stringify(conn.room!.pendingReset)} onClose={() => (showHistory = false)} />
   {/if}
-  {#if peek && deal?.lastTrick}
-    {#key deal.tricksPlayed}
-      <LastTrickPeek trick={deal.lastTrick} {view} {profiles} onClose={() => (peek = false)} />
-    {/key}
-  {/if}
 
   <section class="bottom">
     <!-- The contract and the race, where "X to play" used to be: the header stays clear for the theme.
@@ -205,7 +200,7 @@
           {/if}
         </div>
       {:else}
-        <Scoreboard {conn} onPeek={() => (peek = !peek)} onAuction={() => (showAuction = !showAuction)} />
+        <Scoreboard {conn} onPeek={() => ((peek = !peek), (showAuction = false))} onAuction={() => ((showAuction = !showAuction), (peek = false))} />
       {/if}
       <!-- Decisions that interrupt play ("Play the rest out?", concessions, ending the night) float
            above the scoreboard too: in the flow they pushed the whole table up (Ryan's rule). -->
@@ -214,6 +209,14 @@
         <div class="float"><BiddingBox {conn} /></div>
       {:else if showAuction && deal && deal.phase !== 'auction'}
         <div class="float above"><AuctionStrip {conn} /></div>
+      {:else if peek && deal?.lastTrick}
+        <!-- The last set floats up from the scoreboard like the auction, at the auction's height,
+             so the table doesn't move (Ryan, round 15). -->
+        <div class="float above">
+          {#key deal.tricksPlayed}
+            <LastTrickPeek trick={deal.lastTrick} {view} {profiles} trump={trumpSuit(deal.contract?.strain ?? 'NT')} onClose={() => (peek = false)} />
+          {/key}
+        </div>
       {/if}
     </div>
     <!-- Whose turn is shown on the seats themselves (S10); this line is for screen readers. -->
