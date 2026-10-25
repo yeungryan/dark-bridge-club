@@ -1,4 +1,4 @@
-import { applyDealAction, newDeal, type DealAction, type DealEvent, type DealResult, type DealState } from './deal';
+import { applyDealAction, gameWorth, newDeal, type DealAction, type DealEvent, type DealResult, type DealState } from './deal';
 import { Rng, rngStateFromSeed, type RngState, type Seed } from './rng';
 import { next, partner, SEATS } from './seats';
 import { fail, type Contract, type Outcome, type PerSeat, type Seat } from './types';
@@ -281,7 +281,8 @@ function applyToDeal(state: SessionState, action: DealAction): SessionOutcome {
     const contract = deal.contract!;
     const declarerPair = pairOfSeat(state, contract.declarer);
     const winningPair: PairId = result.winner === 'declarers' ? declarerPair : declarerPair === 'A' ? 'B' : 'A';
-    const wins = { ...state.wins, [winningPair]: state.wins[winningPair] + 1 };
+    // A sweep counts for more than one (round 15).
+    const wins = { ...state.wins, [winningPair]: state.wins[winningPair] + gameWorth(result) };
     const record: DealRecord = {
       dealNumber: state.dealNumber,
       dealer: deal.dealer,
@@ -321,7 +322,8 @@ function readyForNext(state: SessionState, by: ProfileId): SessionOutcome {
  */
 function swapSeats(state: SessionState, events: SessionEvent[]): SessionState {
   const anchor = state.config.swapAnchor;
-  const played = state.wins.A + state.wins.B;
+  // Games played, not won: a sweep counts 10 in the score but is still one game here.
+  const played = state.records.filter((r) => r.winningPair).length;
   if (!anchor || played === 0 || played % SWAP_EVERY !== 0) return state;
   const seat = seatOf(state, anchor);
   if (seat === null) return state;

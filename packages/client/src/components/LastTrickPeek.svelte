@@ -11,7 +11,7 @@
 
   // Spec S13 / R8: peeking at the last trick is like turning over the quitted trick at a real
   // table: the four cards flip up one by one in play order, then the winner lights up.
-  // Tap anywhere on it to turn them back down.
+  // Tap anywhere on its sheet (Table) to turn them back down.
   // `trump`: the trump suit, so trumps here wear the same purple bar as in the hand and on the
   // table (round 15).
   let {
@@ -19,8 +19,7 @@
     view,
     profiles,
     trump = null,
-    onClose,
-  }: { trick: CompletedTrick; view: TableView; profiles: readonly ProfileInfo[]; trump?: string | null; onClose: () => void } = $props();
+  }: { trick: CompletedTrick; view: TableView; profiles: readonly ProfileInfo[]; trump?: string | null } = $props();
 
   const flip = (_node: Element, { delay }: { delay: number }) => ({
     delay: settings.animated ? settings.ms(delay) : 0,
@@ -43,38 +42,37 @@
   });
 </script>
 
-<button class="peek-sheet panel" aria-label="Last set (tap to close)" onclick={onClose}>
+<div class="peek-sheet">
   {#each trick.cards as play, i (play.seat)}
     <div class="peek-card" in:flip={{ delay: i * (TIMING.peekGap + TIMING.peekFlip / 2) }} out:flip={{ delay: 0 }}>
-      <div class:winner={lit && play.seat === trick.winner}>
-        <Card card={play.card} width={54} highlight={lit && play.seat === trick.winner} trump={play.card.suit === trump} />
+      <div class="face" class:winner={lit && play.seat === trick.winner}>
+        <Card card={play.card} width={32} highlight={lit && play.seat === trick.winner} trump={play.card.suit === trump} />
+        <!-- The card that led the set: the same "1st" fold as on the table (round 15). -->
+        {#if i === 0}<span class="first-fold" role="img" aria-label="led"></span>{/if}
       </div>
       <small class="who">{nameAtSeat(view, profiles, play.seat)}</small>
     </div>
   {/each}
-</button>
+</div>
 
 <style>
   /* It sits in the auction's floating sheet (Table), so it has no panel of its own. */
+  /* As tall as a one-row auction (Ryan, round 15), so each name sits beside its card. */
   .peek-sheet {
     display: flex;
     justify-content: center;
     gap: 10px;
-    width: 100%;
-    margin: 0;
-    padding: 0;
-    border: 0;
-    background: none;
-    min-height: 0;
-    font: inherit;
-    color: inherit;
   }
   .peek-card {
-    display: grid;
-    justify-items: center;
-    gap: 2px;
+    display: flex;
+    align-items: center;
+    gap: 5px;
+  }
+  .face {
+    position: relative;
   }
   .who {
+    font-size: 12.5px;
     font-family: var(--font-name);
     color: var(--ink);
   }

@@ -45,6 +45,18 @@ export interface DealResult {
   readonly overUnder: number | null;
 }
 
+/** Ryan (round 15): a sweep (the declaring side won all 13 sets, a Broom God) counts as 10 games won,
+ *  a reverse sweep (the defenders won all 13, a Dog Moorb) as 100, for the night and all time. */
+export const SWEEP_WORTH = 10;
+export const REVERSE_SWEEP_WORTH = 100;
+
+/** How many games a finished game counts as: 1, or more for a sweep. */
+export function gameWorth(result: Pick<DealResult, 'declarerTricks' | 'defenderTricks'> | null | undefined): number {
+  if (result?.declarerTricks === 13) return SWEEP_WORTH;
+  if (result?.defenderTricks === 13) return REVERSE_SWEEP_WORTH;
+  return 1;
+}
+
 export interface PendingConcession {
   readonly by: Seat;
   readonly side: Side;

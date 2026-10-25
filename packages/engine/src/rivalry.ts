@@ -1,6 +1,6 @@
 import type { Avatar } from './avatars';
 import type { Carried } from './carried';
-import type { DealResult } from './deal';
+import { gameWorth, type DealResult } from './deal';
 import { matchupKey, type ScoreOverride } from './historyChanges';
 import type { CompletedTrick } from './play';
 import type { NightResult, PairId, ProfileId } from './session';
@@ -63,10 +63,10 @@ export interface SavedGameDetail {
   readonly tricks: readonly CompletedTrick[];
 }
 
-/** Games won by each pair in a night, counted from its saved games. */
+/** Games won by each pair in a night, counted from its saved games (a sweep counts for more, round 15). */
 export function gamesWonIn(night: SavedNight): Record<PairId, number> {
   const won = { A: 0, B: 0 };
-  for (const g of night.games) if (g.winningPair) won[g.winningPair]++;
+  for (const g of night.games) if (g.winningPair) won[g.winningPair] += gameWorth(g.result);
   return won;
 }
 

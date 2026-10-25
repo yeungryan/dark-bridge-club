@@ -461,12 +461,12 @@ describe('captions', () => {
   it('a clean sweep (Ryan, round 10): all 13 sets; only the one partner if their own cards won all 13', () => {
     const by = Object.fromEntries(awardCandidates(rich).map((c) => [c.kind, c]));
     // Game 13: the defenders (seats 1 and 3) won all 13, and seat 3's clubs won every one: only them.
-    expect(awardCandidates(rich).filter((c) => c.kind === 'dogMroob').map((c) => c.profile)).toEqual([SEATING[3]]);
-    expect(AWARDS.dogMroob.caption(by.dogMroob!, name)).toBe(`${name(SEATING[3])} swept all 13 sets against 1♣. They bid it. We binned it.`);
+    expect(awardCandidates(rich).filter((c) => c.kind === 'dogMoorb').map((c) => c.profile)).toEqual([SEATING[3]]);
+    expect(AWARDS.dogMoorb.caption(by.dogMoorb!, name)).toBe(`${name(SEATING[3])} swept all 13 sets against 1♣. They bid it. We binned it.`);
     // 7♠ made with all 13 (a game in this night): declarer's side swept.
     expect(by.broomGod).toBeDefined();
-    expect(AWARDS.dogMroob.flip).toBe(true);
-    expect([AWARDS.broomGod.title, AWARDS.dogMroob.title]).toEqual(['Broom God', 'Dog Moorb']);
+    expect(AWARDS.dogMoorb.flip).toBe(true);
+    expect([AWARDS.broomGod.title, AWARDS.dogMoorb.title]).toEqual(['Broom God', 'Dog Moorb']);
   });
 
   it('a clean sweep shared between partners goes to both, and is chosen as one', () => {

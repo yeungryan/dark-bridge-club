@@ -105,7 +105,7 @@ export const AWARDS: Record<
     detail: (a) => `Bid ${contractOf(a.payload)} and swept all 13 sets`,
     caption: (a, name) => `${name(a.profile)} bid ${contractOf(a.payload)} and swept all 13 sets. Spotless. Not one set left on the floor.`,
   },
-  dogMroob: {
+  dogMoorb: {
     title: 'Dog Moorb',
     emoji: '🧹',
     flip: true,
