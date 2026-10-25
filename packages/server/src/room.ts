@@ -169,6 +169,11 @@ export class TableRoom extends DurableObject<Env> {
       CREATE INDEX IF NOT EXISTS moments_by_game ON moments (session_id, deal_number);
       CREATE INDEX IF NOT EXISTS deals_by_age ON deals (completed_at);
     `);
+    // Round 15: the "Dog Mroob" award became "Dog Moorb", id and all. Rename it wherever it was
+    // saved (the awards, the carried-forward counts, tonight's awards) so past ones keep counting.
+    // Safe to run every time: once renamed there is nothing left to match.
+    this.sql.exec("UPDATE awards SET kind = 'dogMoorb' WHERE kind = 'dogMroob'");
+    this.sql.exec(`UPDATE kv SET v = replace(v, '"dogMroob"', '"dogMoorb"') WHERE k IN ('carried', 'room')`);
   }
 
   private load(): Stored {

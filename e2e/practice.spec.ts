@@ -195,8 +195,12 @@ test('seats stay put from bidding to play; the newest set on the scoreboard open
   });
   // No separate "Last set" button any more: the latest silhouette is the way in.
   await expect(page.getByRole('button', { name: /^Last set$/ })).toHaveCount(0);
+  const before = await page.locator('.area').boundingBox();
   await page.locator('.pip.latest').tap();
   await expect(page.getByRole('button', { name: 'Last set (tap to close)' })).toBeVisible();
+  // Round 15: it floats over the felt like the auction, so the table doesn't move.
+  const after = await page.locator('.area').boundingBox();
+  expect(Math.abs(after!.y - before!.y)).toBeLessThanOrEqual(1);
 });
 
 test('after a game, replay it set by set with every hand face up', async ({ page }) => {

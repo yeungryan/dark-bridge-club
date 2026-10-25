@@ -52,7 +52,7 @@ export const AWARDS: Record<
   {
     title: string;
     emoji: string;
-    /** Show the emoji upside down (Dog Mroob's broom). */
+    /** Show the emoji upside down (Dog Moorb's broom). */
     flip?: boolean;
     headline?: string;
     detail: (a: Award) => string;
@@ -105,8 +105,8 @@ export const AWARDS: Record<
     detail: (a) => `Bid ${contractOf(a.payload)} and swept all 13 sets`,
     caption: (a, name) => `${name(a.profile)} bid ${contractOf(a.payload)} and swept all 13 sets. Spotless. Not one set left on the floor.`,
   },
-  dogMroob: {
-    title: 'Dog Mroob',
+  dogMoorb: {
+    title: 'Dog Moorb',
     emoji: '🧹',
     flip: true,
     headline: 'They bid it. We binned it.',

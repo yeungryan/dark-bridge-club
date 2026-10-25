@@ -60,7 +60,8 @@ export type AwardKind =
   | 'daredevil'
   | 'heist'
   | 'broomGod'
-  | 'dogMroob'
+  // Dog Moorb (round 15; it was "Dog Mroob": the server renames saved ones on start).
+  | 'dogMoorb'
   | 'heartbreakHotel'
   | 'epicAttic'
   | 'blogAboutIt'
@@ -338,7 +339,7 @@ export function allMoments(night: NightHistory): Moment[] {
 // ---------------------------------------------------------------------------------------------
 
 /** Awards both partners can share in one night (Ryan, round 10): a clean sweep is the pair's. */
-export const SHARED_AWARDS: readonly AwardKind[] = ['broomGod', 'dogMroob'];
+export const SHARED_AWARDS: readonly AwardKind[] = ['broomGod', 'dogMoorb'];
 
 /** House awards (Ryan's inside jokes) get a selection bonus: they're the fun ones. */
 export const HOUSE_AWARDS: readonly AwardKind[] = ['epicAttic', 'blogAboutIt', 'bannerMoment', 'tenDollars'];
@@ -351,7 +352,7 @@ export const AWARD_ORDER: readonly AwardKind[] = [
   'tenDollars',
   'heist',
   'broomGod',
-  'dogMroob',
+  'dogMoorb',
   'mvp',
   'heartbreakHotel',
   'wall',
@@ -369,7 +370,7 @@ export const STRONG_AT: Readonly<Record<AwardKind, number>> = {
   daredevil: 5, // 8 − the declarer's HCP (3 or fewer is clearly earned)
   heist: 5, // 8 − the winner's HCP (3 or fewer is clearly earned)
   broomGod: 13, // all 13 sets: always clearly earned
-  dogMroob: 13,
+  dogMoorb: 13,
   heartbreakHotel: 2, // heartbreaks
   epicAttic: 4, // contract level (any made 4+ contract is clearly earned)
   blogAboutIt: 4, // drama points (e.g. a Decider that was also a Heartbreak)
@@ -445,7 +446,7 @@ class Tally {
  *   grandAmbition 1, robbery 1; ties → the later game), to whoever played its clinching card. Needs 2+.
  * - bannerMoment: 10 − 4 × tricks to spare − level, for a level ≤ 2 contract made with no
  *   moments at all and at most one trick to spare; the declarer earns it.
- * - broomGod / dogMroob (Ryan, round 10): the declaring side / the defending side won all 13
+ * - broomGod / dogMoorb (Ryan, round 10): the declaring side / the defending side won all 13
  *   sets (sets won after playing on count). Both partners get it (SHARED_AWARDS), unless one of
  *   them won all 13 with their own cards: then only them. The night's first such game. Score 13.
  * - tenDollars: total thinking seconds. Needs 60 s+ and at least 20% more than the median player.
@@ -547,7 +548,7 @@ export function awardCandidates(night: NightHistory): Award[] {
   };
   pick('daredevil', daredevils);
   pick('heist', heists);
-  for (const [kind, side] of [['broomGod', 'declarers'], ['dogMroob', 'defenders']] as const) {
+  for (const [kind, side] of [['broomGod', 'declarers'], ['dogMoorb', 'defenders']] as const) {
     for (const profile of sweeps[side]?.profiles ?? []) out.push({ kind, profile, score: 13, payload: sweeps[side]!.payload });
   }
 

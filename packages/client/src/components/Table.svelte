@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { next, partner, type Seat } from '@dark/engine';
+  import { next, partner, trumpSuit, type Seat } from '@dark/engine';
   import type { Connection } from '../lib/connection.svelte';
   import { callLabel, nameAtSeat, profileOf, seatAt } from '../lib/format';
   import AuctionStrip from './AuctionStrip.svelte';
@@ -179,11 +179,6 @@
   {#if showHistory}
     <History profiles={profiles} me={view.me} theme={conn.room!.theme} refresh={JSON.stringify(conn.room!.pendingReset)} onClose={() => (showHistory = false)} />
   {/if}
-  {#if peek && deal?.lastTrick}
-    {#key deal.tricksPlayed}
-      <LastTrickPeek trick={deal.lastTrick} {view} {profiles} onClose={() => (peek = false)} />
-    {/key}
-  {/if}
 
   <section class="bottom">
     <!-- The contract and the race, where "X to play" used to be: the header stays clear for the theme.
@@ -205,7 +200,7 @@
           {/if}
         </div>
       {:else}
-        <Scoreboard {conn} onPeek={() => (peek = !peek)} onAuction={() => (showAuction = !showAuction)} />
+        <Scoreboard {conn} onPeek={() => ((peek = !peek), (showAuction = false))} onAuction={() => ((showAuction = !showAuction), (peek = false))} />
       {/if}
       <!-- Decisions that interrupt play ("Play the rest out?", concessions, ending the night) float
            above the scoreboard too: in the flow they pushed the whole table up (Ryan's rule). -->
@@ -213,7 +208,20 @@
       {#if myTurnToCall}
         <div class="float"><BiddingBox {conn} /></div>
       {:else if showAuction && deal && deal.phase !== 'auction'}
-        <div class="float above"><AuctionStrip {conn} /></div>
+        <!-- Ryan (round 15): a quiet heading on each sheet, and a tap anywhere on it closes it. -->
+        <button class="float above sheet" aria-label="The bids (tap to close)" onclick={() => (showAuction = false)}>
+          <span class="sheet-head" aria-hidden="true">The Bids</span>
+          <AuctionStrip {conn} />
+        </button>
+      {:else if peek && deal?.lastTrick}
+        <!-- The last set floats up from the scoreboard like the auction, at the auction's height,
+             so the table doesn't move (Ryan, round 15). -->
+        <button class="float above sheet" aria-label="Last set (tap to close)" onclick={() => (peek = false)}>
+          <span class="sheet-head" aria-hidden="true">Previous Set</span>
+          {#key deal.tricksPlayed}
+            <LastTrickPeek trick={deal.lastTrick} {view} {profiles} trump={trumpSuit(deal.contract?.strain ?? 'NT')} />
+          {/key}
+        </button>
       {/if}
     </div>
     <!-- Whose turn is shown on the seats themselves (S10); this line is for screen readers. -->
@@ -538,6 +546,25 @@
     margin: 0;
     background: var(--sheet);
     box-shadow: 0 6px 20px rgba(0, 0, 0, 0.45);
+  }
+  /* The sheets are whole-area buttons (tap anywhere to close), so undo the button look. */
+  .float.sheet {
+    display: grid;
+    gap: 4px;
+    width: auto;
+    min-height: 0;
+    font: inherit;
+    color: inherit;
+    text-align: inherit;
+    cursor: pointer;
+  }
+  .sheet-head {
+    justify-self: center;
+    font-size: 10.5px;
+    font-weight: 600;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--ink-dim);
   }
   /* The auction, during play, opens above the scoreboard so the race stays visible. */
   .float.above {

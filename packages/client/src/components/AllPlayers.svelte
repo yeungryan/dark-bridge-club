@@ -28,7 +28,7 @@
     { kind: 'daredevil', means: 'Bid with <8 HCP and won.' },
     { kind: 'heist', means: 'Stood by with <8 HCP and still won.' },
     { kind: 'broomGod', means: 'Bid and swept all sets.' },
-    { kind: 'dogMroob', means: 'Stood by and still swept all sets.' },
+    { kind: 'dogMoorb', means: 'Stood by and still swept all sets.' },
   ];
 
   const animals = $derived(animalRecords(ids, nights, carried));
@@ -214,11 +214,11 @@
     line-height: 1;
     opacity: 0.25;
   }
-  /* Dog Mroob's broom, upside down. */
+  /* Dog Moorb's broom, upside down. */
   .flip {
     rotate: 180deg;
   }
-  /* One line each (Ryan, round 10: the sweeps are Broom God and Dog Mroob so they fit). */
+  /* One line each (Ryan, round 10: the sweeps are Broom God and Dog Moorb so they fit). */
   .an {
     font: 700 12px var(--font-name);
     color: var(--win);

@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import {
   applySessionAction,
   bid,
+  gameWorth,
   legalPlays,
   newSession,
   next,
@@ -146,8 +147,9 @@ describe('S05 session', () => {
     s = [PASS, PASS, PASS, PASS].reduce(call, s);
     for (let i = 0; i < 5; i++) s = allReady(playDeal(s));
     s = playDeal(s);
-    expect(s.wins.A + s.wins.B).toBe(s.records.length - s.passOuts);
-    expect(s.wins.A + s.wins.B).toBe(6);
+    // Each game counts once, or 10 / 100 for a sweep (round 15).
+    expect(s.wins.A + s.wins.B).toBe(s.records.reduce((n, r) => n + (r.winningPair ? gameWorth(r.result) : 0), 0));
+    expect(s.records.length - s.passOuts).toBe(6);
     expect(s.pairs).toEqual(pairs);
   });
 

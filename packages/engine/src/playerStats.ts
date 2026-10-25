@@ -1,4 +1,5 @@
 import type { Element } from './avatars';
+import { gameWorth } from './deal';
 import type { Carried } from './carried';
 import type { AwardKind } from './moments';
 import type { SavedAward, SavedGame, SavedNight } from './rivalry';
@@ -112,12 +113,15 @@ function countPlayer(profile: ProfileId, profiles: readonly ProfileId[], nights:
       const seat = seatOf(night, g, profile);
       if (!g.winningPair) continue;
       const won = g.winningPair === pair;
-      games.played++;
-      if (won) games.won++;
+      // A sweep counts as 10 games (a reverse one 100) for everyone at the table, won by the
+      // sweepers and lost by the others, so win rates stay true (round 15).
+      const worth = gameWorth(g.result);
+      games.played += worth;
+      if (won) games.won += worth;
       if (partner && partners.has(partner)) {
         const rec = partners.get(partner)!;
-        rec.played++;
-        if (won) rec.won++;
+        rec.played += worth;
+        if (won) rec.won += worth;
       }
       if (seat === null || !g.contract || !g.result) continue;
       const declarerSide = seat % 2 === g.contract.declarer % 2;
@@ -205,8 +209,9 @@ export function pickCounts(profiles: readonly ProfileId[], nights: readonly Save
       if (countNights) rec.nights++;
       for (const g of night.games) {
         if (!g.winningPair) continue;
-        rec.played++;
-        if (g.winningPair === pair) rec.won++;
+        const worth = gameWorth(g.result);
+        rec.played += worth;
+        if (g.winningPair === pair) rec.won += worth;
       }
       out[profile]![pick] = rec;
     }
