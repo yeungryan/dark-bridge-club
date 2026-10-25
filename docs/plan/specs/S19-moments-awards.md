@@ -57,3 +57,10 @@ Each award goes to **whoever earns it** on the night, so the joke's namesake can
   - A kind given last night is skipped unless it's clearly earned again.
 - **Epic Attic, Daredevil, Heist Master (round 7, Ryan):** redefined as above. Their lines: "Threaded a 4+ needle", "Bid on 6 HCP worth of hope and won", "Robbed the table on 3 HCP". Each counts as clearly earned at level 4+ (Epic Attic) or on 3 HCP or fewer (the other two). Awards already saved keep their old wording.
 - **Award cards trimmed (Ryan):** no avatars. The house awards lead with their joke line as the headline, and the others with their name. One plain line follows: the player · the fact (e.g. "Darren · 2♠, won exactly").
+
+## Sweep takeovers (Ryan, round 15)
+A sweep (all 13 sets to one side) takes over the screen for 5 s, straight after the game-winning effects. It blends out of the "SWEEEP ×13" streak stamp: the stamp lands as usual, then, instead of flying to the scoreboard, it is the first thing to move (`TIMING.sweepLead` 700 ms, then `TIMING.sweepShow` 5000 ms; the results wait for it).
+- **Broom God** (the declarers swept; option A, "The Ascension"): the screen dims, a gold beam comes down and lifts the stamp away, a giant broom spins down and stands upright in the middle with a shockwave, the 13 sets fly in and pile up under it, a choir chord swells.
+- **Dog Moorb** (the defenders swept; option B, "Upside-Down World"): a record scratch and the table turns upside down; the stamp falls off the bottom, the declarers dangle from strings at the top, an upside-down broom sweeps their contract ("2♥ LOST") off the screen, then the world flips back.
+- Both end with the title, "Adrian & Ryan swept Darren & Kim" (or "reverse-swept") in team colours with their animals (the losers greyed), and "+10" / "+100" flying into the sweepers' score for the night. The pair is named even when one partner swept alone (the score bonus is the pair's).
+- Reduced effects: no movement or flipping; the beam, title and +N fade in. Effects off: none. Preview: `lab.html?set=sweeps`.

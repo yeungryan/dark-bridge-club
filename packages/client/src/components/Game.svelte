@@ -13,6 +13,7 @@
   import Particles from './Particles.svelte';
   import PauseBanner from './PauseBanner.svelte';
   import ResetPrompt from './ResetPrompt.svelte';
+  import SweepTakeover from './SweepTakeover.svelte';
   import Table from './Table.svelte';
   import TableScene from './TableScene.svelte';
 
@@ -74,6 +75,8 @@
 {/if}
 
 {#if conn.view && conn.room}<ResetPrompt {conn} />{/if}
+<!-- A sweep's takeover (round 15): over everything, straight after the game-winning effects. -->
+{#if director.sweepShow}{#key director.sweepShow.id}<SweepTakeover show={director.sweepShow} />{/key}{/if}
 {#if conn.error}<div class="toast" role="alert">{conn.error}</div>{/if}
 <Particles />
 {#if conn.room}<TableScene theme={conn.room.theme} />{/if}

@@ -145,3 +145,11 @@ h2,
   border-top-left-radius: 5px;
   pointer-events: none;
 }
+
+/* Dog Moorb's upside-down world (round 15, SweepTakeover): the table turns over, then back. */
+.table {
+  transition: rotate calc(600ms * var(--speed, 1)) cubic-bezier(0.5, 0, 0.3, 1.2);
+}
+.world-flipped .table {
+  rotate: 180deg;
+}

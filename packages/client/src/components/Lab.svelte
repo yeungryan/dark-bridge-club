@@ -171,6 +171,9 @@
     {/each}
   </div>
 
+  <h2>Sweeps</h2>
+  <p class="muted small"><a href="lab.html?set=sweeps">Broom God and Dog Moorb takeovers →</a></p>
+
   <h2>Effects</h2>
   <p class="muted small">Each moment has its own look; confetti is only for winning the night. Effects must be on Full.</p>
   <div class="grid">
