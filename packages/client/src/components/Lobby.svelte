@@ -99,7 +99,7 @@
       <LastTime profiles={room.profiles} me={conn.view!.me} onHistory={() => (showHistory = true)} />
     {/if}
     <p class="extras">
-      <a href="lab.html" target="_blank">sound check</a> · <a href="practice.html" target="_blank">practice table</a>
+      <a href="lab.html" target="_blank">sound check</a> · <a href="practice.html?as={conn.view!.me}" target="_blank">practice table</a>
     </p>
   {/if}
 </main>

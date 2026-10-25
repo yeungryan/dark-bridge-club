@@ -1,13 +1,15 @@
 <script lang="ts">
   import { isThemeId } from '@dark/engine';
   import { PRACTICE_PROFILES, PracticeTable } from '../lib/practice.svelte';
+  import { lastMe } from '../lib/session';
   import Game from './Game.svelte';
 
   // practice.html: you against three bots, all in this browser. Nothing is sent to the
-  // server or recorded. ?as=darren (etc.) to sit as someone else; Ryan by default.
+  // server or recorded. You sit as whoever last signed in on this device (Darren found himself
+  // playing as Ryan); ?as=darren (etc.) to sit as someone else; Ryan if nobody has signed in.
   // ?theme=bali (etc.) to practise in one theme; otherwise each night rolls one, like the real table.
   const params = new URLSearchParams(location.search);
-  const asked = params.get('as') ?? 'ryan';
+  const asked = params.get('as') ?? lastMe() ?? 'ryan';
   const me = PRACTICE_PROFILES.some((p) => p.id === asked) ? asked : 'ryan';
   const theme = params.get('theme');
   const table = new PracticeTable(me, isThemeId(theme) ? theme : null);

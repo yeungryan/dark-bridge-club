@@ -5,7 +5,7 @@
   import { director } from '../lib/juice/director.svelte';
   import { settings } from '../lib/juice/settings.svelte';
   import { TIMING } from '../lib/juice/timing';
-  import { forgetLogin, options } from '../lib/session';
+  import { forgetLogin, options, rememberMe } from '../lib/session';
   import { applyTheme } from '../lib/themes';
   import Lobby from './Lobby.svelte';
   import NightEnded from './NightEnded.svelte';
@@ -41,6 +41,11 @@
   // Tonight's theme (S18) restyles every screen.
   $effect(() => {
     if (conn.room) applyTheme(conn.room.theme);
+  });
+
+  // Remember who's signed in here, so the practice table seats them as themselves (not Ryan).
+  $effect(() => {
+    if (!link && conn.view?.me) rememberMe(conn.view.me);
   });
 
   $effect(() => {
