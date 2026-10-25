@@ -136,10 +136,13 @@ function readTable(view: DealView, me: Seat): Table {
   const bids = view.calls.filter((c): c is Bid => c.call.type === 'bid');
   const partnerShown = shownBy(view.calls, partner(me));
   const opponentPoints = shownBy(view.calls, next(me)).points + shownBy(view.calls, next(partner(me))).points;
-  // Partner hasn't bid: assume a third of the points we can't account for (conservative).
+  // Partner hasn't bid: a fair share of the points we can't account for. They're split between
+  // the hands that haven't shown any: three before anyone bids, two once an opponent has
+  // (round 16: thirds underrated partner, so bots stayed quiet).
+  const unknownHands = opponentPoints > 0 ? 2 : 3;
   const partnerPoints = partnerShown.bid
     ? partnerShown.points
-    : Math.max(0, (40 - hcp(hand) - opponentPoints) / 3);
+    : Math.max(0, (40 - hcp(hand) - opponentPoints) / unknownHands);
   const opponentSuits = new Set<Suit>();
   for (const b of bids) {
     if (b.seat !== me && b.seat !== partner(me) && b.call.strain !== 'NT') opponentSuits.add(b.call.strain);
@@ -189,8 +192,36 @@ function suitTricks(t: Table, suit: Suit): number {
   const supporting = t.partnerShown.length[suit] >= 4 && mine >= 3;
   const distribution = supporting ? shortnessPoints(t.myLengths, suit) : Math.max(0, mine - 4);
   const points = hcp(t.hand) + distribution + t.partnerPoints;
-  const tricks = 10 + ((points - 26) * 2) / 7 + fitAdjustment(fit);
+  const byPoints = 10 + ((points - 26) * 2) / 7 + fitAdjustment(fit);
+  // Ryan (round 16): weigh the hand's shape too. A void or a doubleton beside a long suit lets
+  // you trump early, so the losing-trick count rates it higher than points alone; averaging the
+  // two keeps a wild shape from promising a slam.
+  const byShape = 24 - myLosers(t, suit) - partnerLosers(t) + fitAdjustment(fit);
+  const tricks = (byPoints + byShape) / 2;
   return Math.min(13, Math.max(tricks, soloTricks(t.hand, suit)));
+}
+
+/**
+ * Losing-trick count with `trumps` as trumps: in each suit up to three losers, less each of
+ * A, K, Q among them, so a void has none and a singleton at most one. Shortness in a suit
+ * partner bid is a misfit, not a ruffing chance, so it gets no credit there.
+ */
+function myLosers(t: Table, trumps: Suit): number {
+  return SUITS.reduce((n, s) => {
+    const cards = t.hand.filter((c) => c.suit === s);
+    const losers = suitLosers(cards);
+    const misfit = s !== trumps && t.partnerShown.length[s] >= 4 && cards.length < 3;
+    return n + (misfit ? Math.max(losers, 2) : losers);
+  }, 0);
+}
+
+/** Partner's losers, from what they showed: an opener has about 7, a new suit 8, a raise 9. */
+function partnerLosers(t: Table): number {
+  const p = t.partnerShown;
+  if (!p.bid) return 9;
+  if (p.points >= 12) return 7;
+  if (p.points >= 8) return 8;
+  return 9;
 }
 
 /** NT needs no short suit in my hand and a stopper in every suit the opponents named. */
@@ -206,9 +237,10 @@ function noTrumpTricks(t: Table): number {
   return Math.min(13, 9 + ((points - 25) * 3) / 8);
 }
 
-/** Highest level our side can safely contract for: expected tricks − 6, with half a trick to spare. */
+/** Highest level our side can safely contract for: expected tricks − 6 (round 16: no extra margin
+ *  on top of the estimate's own caution; it kept bots out of auctions they'd have won). */
 function safeLevelFromTricks(tricks: number): number {
-  return Math.max(0, Math.min(7, Math.floor(tricks - 0.5) - 6));
+  return Math.max(0, Math.min(7, Math.floor(tricks) - 6));
 }
 
 function safeLevelsFor(t: Table): Record<Strain, number> {
@@ -279,11 +311,25 @@ function blockingOpening(hand: readonly Card[]): Call | null {
   return level >= 2 ? bid(level as Level, suit) : null;
 }
 
-/** Nobody has bid yet: block with a long strong suit, open 1 with 12+ points, otherwise pass. */
-function openingCall(t: Table): Call {
+/** Two of the top three honours (A, K, Q) in a suit. */
+const strongSuit = (hand: readonly Card[], suit: Suit) => hand.filter((c) => c.suit === suit && c.rank >= 12).length >= 2;
+
+/**
+ * Nobody has bid yet: block with a long strong suit, open 1 with 12+ points, otherwise pass.
+ * Round 16 (Ryan's Darren deal): 9–11 points with a strong six-card suit opens too, at 2 if
+ * that's safe (it blocks the opponents' cheap bids); and by the Rule of 20, 10–11 points open
+ * when points plus the two longest suits' lengths reach 20.
+ */
+function openingCall(t: Table, safe: Record<Strain, number>): Call {
   const block = blockingOpening(t.hand);
   if (block) return block;
   const points = hcp(t.hand);
+  if (points >= 9 && points < 12) {
+    const six = SUITS.find((s) => t.myLengths[s] >= 6 && strongSuit(t.hand, s));
+    if (six) return bid(safe[six] >= 2 ? 2 : 1, six);
+    const [first, second] = Object.values(t.myLengths).sort((a, b) => b - a);
+    if (points >= 10 && points + first! + second! >= 20) return bid(1, longestSuit(t.hand));
+  }
   if (points < 12) return PASS;
   if (isBalanced(t.hand) && points >= 15 && points <= 17) return bid(1, 'NT');
   return bid(1, longestSuit(t.hand));
@@ -297,8 +343,16 @@ function openingCall(t: Table): Call {
  */
 function partnerHoldsCall(t: Table, safe: Record<Strain, number>): Call {
   const theirs = t.last!.call.strain;
-  if (theirs === 'NT' || t.myLengths[theirs] > 2) return PASS;
+  if (theirs === 'NT') return PASS;
   if (switchesOnPartner(t) > 0 || partnerSwitchedOnMe(t)) return PASS;
+  // Round 16: a strong six-card suit of my own is offered even with three cards in partner's.
+  if (t.myLengths[theirs] <= 3) {
+    const six = SUITS.filter((s) => s !== theirs && t.myLengths[s] >= 6 && strongSuit(t.hand, s) && !t.opponentSuits.has(s))
+      .map((s) => safeBid(t, s, safe))
+      .filter((c): c is Call => c !== null);
+    if (six[0]) return six[0];
+  }
+  if (t.myLengths[theirs] > 2) return PASS;
   const options = SUITS.filter((s) => s !== theirs && t.myLengths[s] >= 5 && !t.opponentSuits.has(s))
     .map((s) => safeBid(t, s, safe))
     .filter((c): c is Call => c !== null);
@@ -313,18 +367,39 @@ function partnerHoldsCall(t: Table, safe: Record<Strain, number>): Call {
 function opponentHoldsCall(t: Table, safe: Record<Strain, number>): Call {
   const theirs = partnersStrain(t);
   if (theirs !== null) {
+    // Partner turned my suit down, or I already offered one: support or pass, nothing new.
+    const settled = partnerSwitchedOnMe(t) || switchesOnPartner(t) > 0;
+    // Round 16: my own six-card suit beats three-card support when it's at least as safe.
+    if (!settled && theirs !== 'NT' && t.myLengths[theirs] <= 3) {
+      const own = SUITS.find((s) => s !== theirs && t.myLengths[s] >= 6 && !t.opponentSuits.has(s) && safe[s] >= safe[theirs]);
+      const call = own ? safeBid(t, own, safe) : null;
+      if (call) return call;
+    }
     const fits = theirs === 'NT' ? canPlayNoTrumps(t) : t.myLengths[theirs] >= 3;
     if (fits) {
       const raise = safeBid(t, theirs, safe);
       if (raise) return raise;
     }
-    // Partner turned my suit down, or I already offered one: support or pass, nothing new.
-    if (partnerSwitchedOnMe(t) || switchesOnPartner(t) > 0) return PASS;
+    if (settled) return PASS;
   }
   const strains: Strain[] = SUITS.filter((s) => s !== theirs && t.myLengths[s] >= 5 && !t.opponentSuits.has(s));
   if (theirs !== 'NT' && isBalanced(t.hand)) strains.push('NT');
   const options = strains.map((s) => safeBid(t, s, safe)).filter((c): c is Call => c !== null);
-  return bestOf(options, safe) ?? PASS;
+  return bestOf(options, safe) ?? lightOvercall(t, theirs);
+}
+
+/**
+ * Round 16: an opponent holds the contract and nothing above was safe, but 8+ points and a
+ * five-card suit still compete, up to level 2. Letting them play cheaply cost the stronger side
+ * most of those games (it won only 40% when it stayed quiet).
+ */
+function lightOvercall(t: Table, partners: Strain | null): Call {
+  if (hcp(t.hand) < 8) return PASS;
+  const five = SUITS.filter((s) => s !== partners && t.myLengths[s] >= 5 && !t.opponentSuits.has(s))
+    .sort((a, b) => t.myLengths[b] - t.myLengths[a])
+    .map((s) => cheapestBid(t, s))
+    .filter((c): c is Call & { type: 'bid' } => c !== null && c.level <= 2);
+  return five[0] ?? PASS;
 }
 
 /** The option with the most room under its safe level; ties go to the cheaper bid. */
@@ -359,7 +434,7 @@ export function botCall(view: DealView, me: Seat): Call {
   const t = readTable(view, me);
   const safe = safeLevelsFor(t);
   let call: Call;
-  if (!t.last) call = openingCall(t);
+  if (!t.last) call = openingCall(t, safe);
   else if (t.last.seat === partner(me)) call = partnerHoldsCall(t, safe);
   else if (t.last.seat === me) call = PASS;
   else call = opponentHoldsCall(t, safe);

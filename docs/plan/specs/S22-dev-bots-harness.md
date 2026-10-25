@@ -27,3 +27,15 @@ Ryan's report: bots raised partner for nothing ("Ryan 2♣, Kim pass, Adrian 3�
 - Bots still decide only from their own view, and always the same way for the same view (no randomness).
 
 `npx tsx scripts/bot-bidding-sim.ts` (in `packages/engine`) compares old and new bidding over 2,000 all-bot deals: contracts made 74% → 84%, uncontested partner raises in 47% of deals → none, and about one auction in seven is now contested.
+
+## Round 16 bidding (Ryan: "the bots were too quiet")
+Measured over 4,000 all-bot deals, round 15's bots ended 66% of auctions after a single bid; when the opponents of a 1-level opener held 21+ points they stayed silent 71% of the time and then won only 40% of those games. The fixes, measured head-to-head (one pair new, one pair old, same deals, seats swapped):
+- **Partner's points:** once an opponent has bid, the unknown points are split between two hands, not three.
+- **No extra half-set margin** on top of the estimate.
+- **Light overcalls:** an opponent holds the contract and nothing is "safe", but 8+ points and a five-card suit still compete, up to level 2.
+- **Strong six-card suit over partner's:** with three or fewer cards in partner's suit, a six-card suit with two of the top three honours is offered (once per auction).
+- **Light openings:** 9–11 points with such a suit open (at 2 if safe); and by the Rule of 20, 10–11 points open when points + the two longest suits ≥ 20.
+- **Own six-card suit over three-card support** when it's at least as safe.
+- **Shape (Ryan):** suit contracts average the points estimate with a losing-trick count (24 − my losers − partner's), so a void and a doubleton beside a long suit rate it higher; shortness in partner's suit gets no credit (a misfit). NT is unchanged.
+
+Result: single-bid auctions 66% → 22%, strong opponents silent 71% → 12%; the new bots win 56.4% of games against round 15's and 63.4% against the original (≈5,900 games each). Card play is unchanged; bots still only see the last trick, so the extra value of shape isn't fully cashed in play yet.
