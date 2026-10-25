@@ -1,7 +1,11 @@
 import {
   applyDealAction,
+  declarerTarget,
+  defenderTarget,
+  legalCalls,
   legalPlays,
   newDealWithHands,
+  perSeat,
   RANKS,
   Rng,
   seatToAct,
@@ -10,7 +14,9 @@ import {
   type Card,
   type DealAction,
   type DealState,
+  type DealView,
   type PerSeat,
+  type Seat,
   type Suit,
 } from '../src';
 
@@ -57,3 +63,35 @@ export function randomLegal(rng: Rng) {
 }
 
 export { newDealWithHands };
+
+/** One seat's DealView straight from a DealState (no session), for driving bots in tests and scripts. */
+export function seatView(state: DealState, seat: Seat): DealView {
+  const turn = seatToAct(state);
+  const myTurn = turn === seat;
+  const contract = state.contract;
+  return {
+    phase: state.phase,
+    dealer: state.dealer,
+    calls: state.auction.calls,
+    contract,
+    declarerTarget: contract ? declarerTarget(contract.level) : null,
+    defenderTarget: contract ? defenderTarget(contract.level) : null,
+    turn,
+    hand: state.hands[seat],
+    handCounts: perSeat((s) => state.hands[s].length),
+    currentTrick: state.currentTrick,
+    lastTrick: state.tricks[state.tricks.length - 1] ?? null,
+    tricksPlayed: state.tricks.length,
+    tricksWon: state.tricksWon,
+    trickWinners: state.tricks.map((t) => t.winner),
+    trumpTricksWon: 0,
+    clinch: state.clinch,
+    playingOn: state.playingOn,
+    concession: state.concession,
+    result: state.result,
+    legalCalls: myTurn && state.phase === 'auction' ? legalCalls(state.auction) : [],
+    legalPlays: myTurn && state.phase === 'play' ? legalPlays(state.hands[seat], state.currentTrick!.cards) : [],
+    revealedHands: null,
+    playedTricks: null,
+  };
+}
