@@ -4,6 +4,7 @@
   import Moon from '@lucide/svelte/icons/moon';
   import History from '@lucide/svelte/icons/history';
   import AudioLines from '@lucide/svelte/icons/audio-lines';
+  import Users from '@lucide/svelte/icons/users';
   import type { Connection } from '../lib/connection.svelte';
   import { pairNames } from '../lib/format';
   import { themeOf } from '../lib/themes';
@@ -71,6 +72,12 @@
         <span class="icon" aria-hidden="true"><History size={22} strokeWidth={1.75} /></span>
         <span class="text"><strong>History &amp; rivals</strong><small>Head to head, partnerships, and every past game</small></span>
       </button>
+    {:else}
+      <!-- Practice (Ryan): the way back to the real table, any time. -->
+      <a class="row" href="/">
+        <span class="icon" aria-hidden="true"><Users size={22} strokeWidth={1.75} /></span>
+        <span class="text"><strong>Back to the multiplayer table</strong><small>Leaves practice; nothing here is saved</small></span>
+      </a>
     {/if}
 
     <a class="row" href="lab.html" target="_blank" rel="noopener">

@@ -71,6 +71,16 @@ test('no sound before the first tap; after it, the game is audible', async ({ pa
   expect(await page.evaluate(() => (window as unknown as { __darkSounds: string[] }).__darkSounds.length)).toBeGreaterThan(0);
 });
 
+test('the way back: the title screen links to the multiplayer table, and so does the menu mid-game', async ({ page }) => {
+  await page.goto(PRACTICE);
+  // You're already at the practice table, so the title screen offers the way back instead (Ryan).
+  await expect(page.getByRole('link', { name: 'multiplayer table' })).toHaveAttribute('href', '/');
+  await expect(page.getByRole('link', { name: 'practice table' })).toHaveCount(0);
+  await playUntil(page, () => page.getByRole('button', { name: 'Menu' }).isVisible());
+  await page.getByRole('button', { name: 'Menu' }).tap();
+  await expect(page.getByRole('link', { name: /Back to the multiplayer table/ })).toHaveAttribute('href', '/');
+});
+
 test('the bid ladder: tap a bid to see what it needs, then Bid; Pass is one tap', async ({ page }) => {
   await page.goto('/practice.html');
   await playUntil(page, () => page.locator('.box .ladder').isVisible());
