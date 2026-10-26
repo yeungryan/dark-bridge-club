@@ -15,7 +15,7 @@
   const table = new PracticeTable(me, isThemeId(theme) ? theme : null);
 </script>
 
-<div class="tag">Practice · not recorded · <a href="lab.html">sound check</a></div>
+<div class="tag">Practice · not recorded · <a href="lab.html">sound check</a> · <span class="build">build {__BUILD__}</span></div>
 <Game link={table} onSignedOut={() => {}} />
 
 <style>

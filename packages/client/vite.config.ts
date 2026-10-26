@@ -1,9 +1,25 @@
 import { svelte } from '@sveltejs/vite-plugin-svelte';
+import { execSync } from 'node:child_process';
 import { resolve } from 'node:path';
 import { defineConfig } from 'vite';
 
+// Which build this is (the commit and the day), shown on the practice table so an old tab that
+// was never reloaded is easy to spot: it keeps running the code it first loaded.
+function buildId(): string {
+  let sha = process.env.GITHUB_SHA?.slice(0, 7) ?? '';
+  if (!sha) {
+    try {
+      sha = execSync('git rev-parse --short HEAD').toString().trim();
+    } catch {
+      sha = 'dev';
+    }
+  }
+  return `${sha} · ${new Date().toISOString().slice(0, 10)}`;
+}
+
 export default defineConfig({
   plugins: [svelte()],
+  define: { __BUILD__: JSON.stringify(buildId()) },
   build: {
     target: 'es2022',
     rollupOptions: {
