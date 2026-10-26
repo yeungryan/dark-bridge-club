@@ -441,25 +441,4 @@ export function botCall(view: DealView, me: Seat): Call {
   return isLegal(view, call) ? call : PASS;
 }
 
-/** Leads top of the longest side suit; wins cheaply when partner isn't already winning. */
-export function botCard(view: DealView, me: Seat): Card {
-  const hand = view.hand;
-  const trick = view.currentTrick?.cards ?? [];
-  const trump = trumpSuit(view.contract!.strain);
-  const legal = view.legalPlays;
-
-  if (trick.length === 0) {
-    const nonTrump = hand.filter((c) => c.suit !== trump);
-    const pool = nonTrump.length > 0 ? nonTrump : hand;
-    return highest(pool.filter((c) => c.suit === longestSuit(pool)));
-  }
-
-  const current = winningPlay(trick, trump);
-  const partnerWinning = current.seat === partner(me);
-  const winners = legal.filter((c) => winningPlay([...trick, { seat: me, card: c }], trump).seat === me);
-  if (partnerWinning || winners.length === 0) {
-    const discards = legal.filter((c) => c.suit !== trump);
-    return lowest(discards.length > 0 ? discards : legal);
-  }
-  return lowest(winners);
-}
+export { botCard } from './botPlay';

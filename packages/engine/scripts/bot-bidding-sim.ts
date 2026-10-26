@@ -110,7 +110,7 @@ function simulate(bidder: Bidder, deals: number): Stats {
         continue;
       }
       const seat = seatToAct(s)!;
-      s = act(s, { type: 'play', seat, card: botCard(seatView(s, seat), seat) });
+      s = act(s, { type: 'play', seat, card: botCard(seatView(s, seat), seat, s.tricks) });
     }
     stats.contracts++;
     const sides = new Set(s.auction.calls.filter((c) => c.call.type === 'bid').map((c) => c.seat % 2));
