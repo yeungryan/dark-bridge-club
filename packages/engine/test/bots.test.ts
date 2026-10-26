@@ -191,6 +191,19 @@ describe('S22 bot bidding, round 16 (Ryan: the bots were too quiet)', () => {
   });
 });
 
+describe('S22 bot bidding (round 18)', () => {
+  it("Ryan's Darren deal: after responding 1♠ to Kim's 1♣, Darren competes 2♠ over Ryan's 2♥", () => {
+    // Kim 1♣, Adrian pass, Darren 1♠, Ryan 2♥, Kim pass, Adrian pass: Darren's spades are safe at 3.
+    expect(call('A98764.A10.J104.A5', [bid(1, 'C'), PASS, bid(1, 'S'), bid(2, 'H'), PASS, PASS])).toEqual(bid(2, 'S'));
+  });
+
+  it('but not once partner has turned the suit down', () => {
+    // Kim answers Darren's 1♠ with 2♦ (a different suit), then Ryan bids 2♥.
+    const made = call('A98764.A10.J104.A5', [bid(1, 'C'), PASS, bid(1, 'S'), PASS, bid(2, 'D'), bid(2, 'H'), PASS]);
+    expect(made.type === 'bid' && made.strain === 'S').toBe(false);
+  });
+});
+
 describe('S22 bot bidding properties (500 random deals)', () => {
   it('always makes a legal call, and never bids above its safe level (except an opening 1-bid or a light overcall)', () => {
     botAuctions(500, (s, seat, made) => {
@@ -217,12 +230,17 @@ describe('S22 bot bidding properties (500 random deals)', () => {
     });
     for (const s of botAuctions(500, () => {})) {
       for (const seat of [0, 1, 2, 3] as Seat[]) {
+        // A switch offers a new suit; bidding my own suit again over the opponents (round 18) isn't one.
         let partnerStrain: string | null = null;
         let switches = 0;
+        const mine = new Set<string>();
         for (const c of s.auction.calls) {
           if (c.call.type !== 'bid') continue;
           if (c.seat === partner(seat)) partnerStrain = c.call.strain;
-          else if (c.seat === seat && partnerStrain !== null && c.call.strain !== partnerStrain) switches++;
+          else if (c.seat === seat) {
+            if (partnerStrain !== null && c.call.strain !== partnerStrain && !mine.has(c.call.strain)) switches++;
+            mine.add(c.call.strain);
+          }
         }
         expect(switches).toBeLessThanOrEqual(1);
       }

@@ -380,7 +380,17 @@ function opponentHoldsCall(t: Table, safe: Record<Strain, number>): Call {
       const raise = safeBid(t, theirs, safe);
       if (raise) return raise;
     }
-    if (settled) return PASS;
+    // Round 18 (Ryan's Darren deal): having offered my own suit isn't a reason to go quiet.
+    // Unless partner turned it down, I compete in it again over the opponents.
+    if (settled) {
+      if (partnerSwitchedOnMe(t)) return PASS;
+      const mine = new Set(t.bids.filter((b) => b.seat === t.me).map((b) => b.call.strain));
+      const again = [...mine]
+        .filter((s) => s !== theirs && (s === 'NT' || !t.opponentSuits.has(s)))
+        .map((s) => safeBid(t, s, safe))
+        .filter((c): c is Call => c !== null);
+      return bestOf(again, safe) ?? PASS;
+    }
   }
   const strains: Strain[] = SUITS.filter((s) => s !== theirs && t.myLengths[s] >= 5 && !t.opponentSuits.has(s));
   if (theirs !== 'NT' && isBalanced(t.hand)) strains.push('NT');
