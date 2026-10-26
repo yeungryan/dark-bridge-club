@@ -71,6 +71,16 @@ test('no sound before the first tap; after it, the game is audible', async ({ pa
   expect(await page.evaluate(() => (window as unknown as { __darkSounds: string[] }).__darkSounds.length)).toBeGreaterThan(0);
 });
 
+test('the way back: the title screen links to the multiplayer table, and so does the menu mid-game', async ({ page }) => {
+  await page.goto(PRACTICE);
+  // You're already at the practice table, so the title screen offers the way back instead (Ryan).
+  await expect(page.getByRole('link', { name: 'multiplayer table' })).toHaveAttribute('href', '/');
+  await expect(page.getByRole('link', { name: 'practice table' })).toHaveCount(0);
+  await playUntil(page, () => page.getByRole('button', { name: 'Menu' }).isVisible());
+  await page.getByRole('button', { name: 'Menu' }).tap();
+  await expect(page.getByRole('link', { name: /Back to the multiplayer table/ })).toHaveAttribute('href', '/');
+});
+
 test('the bid ladder: tap a bid to see what it needs, then Bid; Pass is one tap', async ({ page }) => {
   await page.goto('/practice.html');
   await playUntil(page, () => page.locator('.box .ladder').isVisible());
@@ -232,6 +242,17 @@ test('after a game, replay it set by set with every hand face up', async ({ page
   // Each set's mark is the animal of the player who won it (as on the scoreboard), in their lane.
   const winner = await replay.locator('.hand').filter({ has: page.locator('.tag.won') }).locator('.who [data-animal]').getAttribute('data-animal');
   await expect(replay.locator('.lanes .set').first().locator('[data-animal]')).toHaveAttribute('data-animal', winner!);
+  // Trumps carry the purple stripe, as at the table (Ryan): exactly the cards of the trump suit.
+  const trump = await replay.getAttribute('data-trump');
+  const symbol = { S: '♠', H: '♥', D: '♦', C: '♣' }[trump!] ?? null;
+  for (let i = 1; i <= sets; i++) {
+    await replay.locator('.lanes .set').nth(i - 1).tap();
+    await expect(replay.getByText(`Set ${i} of ${sets}`)).toBeVisible();
+    const labels = await replay.locator('.table .card').evaluateAll((cards) =>
+      cards.map((c) => ({ label: c.getAttribute('aria-label') ?? '', trump: c.classList.contains('trump') })),
+    );
+    for (const { label, trump: striped } of labels) expect(striped, label).toBe(symbol !== null && label.endsWith(symbol));
+  }
   await replay.getByRole('button', { name: 'Close the replay' }).tap();
   await expect(replay).toBeHidden();
   await expect(page.getByRole('button', { name: 'Next game' })).toBeVisible();
