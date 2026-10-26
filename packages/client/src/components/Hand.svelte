@@ -234,7 +234,7 @@
 {#if pending}
   <!-- Your card, waiting where you let go until the table confirms it (a few tens of ms). -->
   <div class="ghost" style="left: {pending.rect.left}px; top: {pending.rect.top}px">
-    <Card card={pending.card} width={pending.rect.width} highlight />
+    <Card card={pending.card} width={pending.rect.width} highlight trump={pending.card.suit === trumpSuit} />
   </div>
 {/if}
 {#if raised && myTurnToPlay && !pending}

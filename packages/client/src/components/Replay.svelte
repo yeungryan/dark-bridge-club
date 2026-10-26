@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { partner, type Card as CardT, type Seat } from '@dark/engine';
+  import { partner, trumpSuit, type Card as CardT, type Seat } from '@dark/engine';
   import { cardText, isRed, seatAt, spotOf, type Spot } from '../lib/format';
   import { replaySteps } from '../lib/replay';
   import { targetsOf, type ReplayGame } from '../lib/replayGame';
@@ -21,6 +21,8 @@
   const me = $derived(game.me);
   const contract = $derived(game.contract);
   const targets = $derived(targetsOf(contract));
+  // Trumps carry the purple stripe here too, as at the table (Ryan).
+  const trump = $derived(trumpSuit(contract.strain));
   const steps = $derived(replaySteps(game.dealt, game.tricks, contract));
   // Opens on the set that decided the game (Ryan), or the last one played.
   // svelte-ignore state_referenced_locally
@@ -101,7 +103,7 @@
 
 <svelte:window onkeydown={key} />
 
-<div class="replay" role="dialog" aria-modal="true" aria-label="Replay of {game.title.toLowerCase()}">
+<div class="replay" role="dialog" aria-modal="true" aria-label="Replay of {game.title.toLowerCase()}" data-trump={trump ?? 'NT'}>
   <!-- Tonight's scene along the top, as at the table (the replay's felt would hide the page's). -->
   <TableScene theme={game.theme} />
   <header>
@@ -139,7 +141,7 @@
       {#if step.trick}
         {#each step.trick.cards as play, i (play.seat)}
           <div class="spot {spotOf(play.seat, me)}" class:winner={play.seat === step.trick.winner}>
-            <Card card={play.card} width={36} highlight={play.seat === step.trick.winner} />
+            <Card card={play.card} width={36} highlight={play.seat === step.trick.winner} trump={play.card.suit === trump} />
             {#if i === 0}<span class="first-fold" role="img" aria-label="led"></span>{/if}
           </div>
         {/each}
