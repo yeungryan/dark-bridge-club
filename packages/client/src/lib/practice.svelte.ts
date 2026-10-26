@@ -248,7 +248,7 @@ export class PracticeTable extends Connection {
           action = { type: 'deal', by, action: { type: 'call', call: botCall(view, seat) } };
           delay = think(700);
         } else if (s.deal.phase === 'play') {
-          action = { type: 'deal', by, action: { type: 'play', card: botCard(view, seat) } };
+          action = { type: 'deal', by, action: { type: 'play', card: botCard(view, seat, s.deal.tricks) } };
           // Leading to a fresh trick waits for the last one to be swept up (round 11: at least
           // until the lead opens).
           delay = think(s.deal.currentTrick?.cards.length ? 650 : 1300);

@@ -198,7 +198,7 @@ function runDeal(n: number, sc: Scenario): void {
       if (!s.deal || s.deal.phase !== 'play') break;
     }
     const seat = seatToAct(s.deal)!;
-    apply({ type: 'deal', by: s.seating![seat], action: { type: 'play', card: botCard(tableView(s, s.seating![seat]).deal!, seat) } });
+    apply({ type: 'deal', by: s.seating![seat], action: { type: 'play', card: botCard(tableView(s, s.seating![seat]).deal!, seat, s.deal!.tricks) } });
     if (dealPhase() === 'awaitingPlayOn') {
       flushTricks();
       const who = sc.playOn(s);
