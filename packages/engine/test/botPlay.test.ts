@@ -106,6 +106,22 @@ describe('S22 round 19: saving partner\'s set', () => {
     expect(seatToAct(s)).toBe(2);
     expect(sameCard(botAt(s), cards('..8.')[0]!)).toBe(true);
   });
+
+  it("leads low into the suit partner is out of, so partner can trump it", () => {
+    // Seat 0 declares 1♥. Seat 1 cashes ♠A, then ♣A; partner (seat 3) shows out of clubs but
+    // holds hearts. Seat 1 leads clubs again, low (♣3, not the ♣Q from Q-J), for partner to trump.
+    const hands = {
+      0: cards('987.AKQJ106.2.K109'),
+      1: cards('A.54.987654.AQJ3'),
+      2: cards('65432.32..876542'),
+      3: cards('KQJ10.987.AKQJ103.'),
+    } as PerSeat<Card[]>;
+    let s = dealt(hands, [bid(1, 'H'), PASS, PASS, PASS]);
+    s = play(s, 'A... 2... 10... 7...');
+    s = play(s, '...A ...2 ..3. ...9');
+    expect(seatToAct(s)).toBe(1);
+    expect(sameCard(botAt(s), cards('...3')[0]!)).toBe(true);
+  });
 });
 
 describe("S22 round 17: Ryan's 3♣ deal", () => {
