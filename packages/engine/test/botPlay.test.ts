@@ -95,6 +95,19 @@ describe('S22 round 17: leads', () => {
   });
 });
 
+describe('S22 round 19: saving partner\'s set', () => {
+  it("trumps partner's low card when the last opponent could beat it (Ryan: Adrian threw a heart on his ♠8)", () => {
+    // Seat 0 declares 1♦. Trick 1: Kim leads ♣2, Ryan wins with ♣A. Ryan leads ♠8, Kim ♠3;
+    // Adrian (seat 2, no spades, ♦QJ8) is next, and Darren still holds the top spades.
+    const hands = fill({ 0: '98..10974.A', 1: '3...2', 2: '.AKQ8765.QJ8.QJ9', 3: 'AKJ7...10' });
+    let s = dealt(hands, [bid(1, 'D'), PASS, PASS, PASS]);
+    s = play(s, '...2 ...9 ...10 ...A');
+    s = play(s, '8... 3...');
+    expect(seatToAct(s)).toBe(2);
+    expect(sameCard(botAt(s), cards('..8.')[0]!)).toBe(true);
+  });
+});
+
 describe("S22 round 17: Ryan's 3♣ deal", () => {
   // Ryan 876.Q942.QJ.AQJ6, Kim J10.J1073.K643.872, Adrian K543.AK86.8.K1095, Darren AQ92.5.A109752.43.
   // Same auction as the screenshot: 1♣ P P 1♦, 2♣ P P 2♦, P P 3♣ (Adrian) P P P.

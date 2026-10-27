@@ -256,10 +256,11 @@ function follow(m: Memory, trick: readonly PlayedCard[], legal: readonly Card[])
   const winners = legal.filter(wins);
 
   if (current.seat === partner(m.me)) {
-    // Partner is winning. Last to play: let it be. Third hand: overtake only with a sure
-    // winner when the last opponent could beat partner's card.
+    // Partner is winning. Last to play: let it be. Third hand: take over with a sure winner
+    // when the last opponent could beat partner's card. Out of the suit, that's a trump the
+    // last opponent can't overtrump (round 19, Ryan: Adrian threw a heart on his ♠8).
     const threatened = opponentsAfter.some((s) => canBeat(m, s, current.card, led));
-    const sure = winners.filter((c) => safe(c) && c.suit === led);
+    const sure = winners.filter(safe);
     if (threatened && sure.length > 0) return lowest(sure);
     return cheapest(m, legal, led);
   }
