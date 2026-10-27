@@ -151,6 +151,21 @@ function trumpPull(m: Memory): Card | null {
   return master ?? lowest(mine);
 }
 
+/**
+ * Leading a suit partner has shown out of, so partner can trump it (Ryan, round 19). Only when
+ * it gains: partner may still hold a trump, and on the declaring side only when partner is the
+ * shorter trump hand. The longer hand's trumps win sets anyway; the shorter hand's would just be
+ * pulled. (No opponent may be able to trump first or over the top: see `ruffed` in leadScore.)
+ */
+function feedsPartner(m: Memory, suit: Suit): boolean {
+  const p = partner(m.me);
+  if (m.trump === null || suit === m.trump || !m.voids[p].has(suit) || !mayHoldTrump(m, p)) return false;
+  if (!m.declaring) return true;
+  const played = m.playedBy[p].filter((c) => c.suit === m.trump).length;
+  const partnerShows = Math.max(0, m.reads[p].length[m.trump] - played);
+  return partnerShows <= ofSuit(m.hand, m.trump).length;
+}
+
 /** How good a suit is to lead from (higher is better). */
 function leadScore(m: Memory, suit: Suit, noTrumps: boolean): number {
   const cards = byRankDown(ofSuit(m.hand, suit));
@@ -170,7 +185,7 @@ function leadScore(m: Memory, suit: Suit, noTrumps: boolean): number {
 
   // Partner's suit, and partner's ruff.
   if (m.reads[partnerSeat].bid.has(suit)) score += m.declaring ? 1.5 : 3;
-  if (m.voids[partnerSeat].has(suit) && mayHoldTrump(m, partnerSeat) && !ruffed) score += 4;
+  if (feedsPartner(m, suit) && !ruffed) score += 4;
 
   // The opponents' suits: they hold the length and the honours.
   if (opponents(m.me).some((s) => m.reads[s].bid.has(suit)) && !isMaster(m, top)) score -= 3;
@@ -196,6 +211,8 @@ function leadFrom(m: Memory, suit: Suit): Card {
   const cards = byRankDown(ofSuit(m.hand, suit));
   const top = cards[0]!;
   if (isMaster(m, top) || cards.length === 1) return top;
+  // Partner will trump it: lead the lowest and keep the honours.
+  if (feedsPartner(m, suit)) return cards[cards.length - 1]!;
   const second = cards[1]!;
   if (second.rank === top.rank - 1 && top.rank >= 10) return top; // top of a sequence
   if (cards.length === 2 && top.rank <= 11) return top; // high from a short suit
@@ -256,10 +273,11 @@ function follow(m: Memory, trick: readonly PlayedCard[], legal: readonly Card[])
   const winners = legal.filter(wins);
 
   if (current.seat === partner(m.me)) {
-    // Partner is winning. Last to play: let it be. Third hand: overtake only with a sure
-    // winner when the last opponent could beat partner's card.
+    // Partner is winning. Last to play: let it be. Third hand: take over with a sure winner
+    // when the last opponent could beat partner's card. Out of the suit, that's a trump the
+    // last opponent can't overtrump (round 19, Ryan: Adrian threw a heart on his ♠8).
     const threatened = opponentsAfter.some((s) => canBeat(m, s, current.card, led));
-    const sure = winners.filter((c) => safe(c) && c.suit === led);
+    const sure = winners.filter(safe);
     if (threatened && sure.length > 0) return lowest(sure);
     return cheapest(m, legal, led);
   }
