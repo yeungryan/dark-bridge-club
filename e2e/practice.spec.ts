@@ -71,6 +71,15 @@ test('no sound before the first tap; after it, the game is audible', async ({ pa
   expect(await page.evaluate(() => (window as unknown as { __darkSounds: string[] }).__darkSounds.length)).toBeGreaterThan(0);
 });
 
+test('a link pasted into a chat shows the title-screen preview image', async ({ request }) => {
+  const html = await (await request.get('/')).text();
+  expect(html).toContain('<meta property="og:image" content="https://dark-bridge-club.yeungryan2000.workers.dev/og.jpg"');
+  expect(html).toContain('<meta property="og:title" content="DARK Bridge Club"');
+  const image = await request.get('/og.jpg');
+  expect(image.status()).toBe(200);
+  expect(image.headers()['content-type']).toContain('image/jpeg');
+});
+
 test('the way back: the title screen links to the multiplayer table, and so does the menu mid-game', async ({ page }) => {
   await page.goto(PRACTICE);
   // You're already at the practice table, so the title screen offers the way back instead (Ryan).
