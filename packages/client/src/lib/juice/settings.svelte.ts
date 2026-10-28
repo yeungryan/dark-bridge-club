@@ -7,11 +7,9 @@ import { SPEED, speedFactor } from './timing';
 //  - speed:   fast plays every animation at 0.6×.
 //  - volume / muted: sound effects only; there is no music.
 //  - haptics: phone vibration on big moments (Android; iPhone browsers can't vibrate).
-//  - playStyle: drag a card to the table (default), or tap it twice.
 
 export type EffectsMode = 'full' | 'reduced' | 'off';
 export type SpeedMode = keyof typeof SPEED;
-export type PlayStyle = 'drag' | 'tap';
 
 const KEY = `dark.${options.slot}.settings`;
 
@@ -21,7 +19,6 @@ interface Saved {
   volume: number;
   muted: boolean;
   haptics: boolean;
-  playStyle: PlayStyle;
   /** Saved-settings version; v1 (M2) had a much quieter default volume. */
   v: number;
 }
@@ -43,11 +40,12 @@ function load(): Saved {
     volume: 0.7,
     muted: false,
     haptics: true,
-    playStyle: 'drag',
     v: VERSION,
   };
   try {
-    const saved = JSON.parse(localStorage.getItem(KEY) ?? '{}') as Partial<Saved>;
+    const saved = JSON.parse(localStorage.getItem(KEY) ?? '{}') as Partial<Saved> & { playStyle?: unknown };
+    // Round 19: one way to play cards for everyone, so the old "Play cards" choice is gone.
+    delete saved.playStyle;
     // M2 saved its too-quiet default on every phone; start those over at the new volume.
     if ((saved.v ?? 1) < VERSION) delete saved.volume;
     return { ...defaults, ...saved, v: VERSION };
@@ -62,7 +60,6 @@ class Settings {
   volume = $state(0.7);
   muted = $state(false);
   haptics = $state(true);
-  playStyle = $state<PlayStyle>('drag');
 
   constructor() {
     const { v: _v, ...saved } = load();
@@ -75,7 +72,6 @@ class Settings {
           volume: this.volume,
           muted: this.muted,
           haptics: this.haptics,
-          playStyle: this.playStyle,
           v: VERSION,
         };
         try {

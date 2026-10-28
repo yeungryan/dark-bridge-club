@@ -12,17 +12,19 @@
   import { TIMING } from '../lib/juice/timing';
   import Card from './Card.svelte';
 
-  // Spec S11: tap a card to lift it for a closer look; drag or flick it up to the table to play.
-  // The card follows your finger anywhere, the table glows once it will play, and it flies
-  // on from exactly where you let go. Settings → "Play cards by: Tap twice" brings back
-  // tap-to-raise, tap-again-to-play.
+  // Spec S11, round 19 (Ryan): tap a card to raise it. A raised card you can play shows a
+  // blinking double chevron; tap it again, or swipe it up, to play it. Swipe it down, or tap
+  // anywhere else, to lower it. A card that isn't raised can't be swiped onto the table: a swipe
+  // up just raises it. A raised card follows your finger, the table glows once letting go would
+  // play it, and it flies on from exactly where you let go.
   let { conn }: { conn: Connection } = $props();
 
   const deal = $derived(conn.view!.deal!);
   const myTurnToPlay = $derived(deal.phase === 'play' && deal.turn === conn.view!.mySeat && !conn.room!.paused);
   let raised = $state<CardT | null>(null);
   let wobble = $state<CardT | null>(null);
-  let nudge = $state(0);
+  /** When the card was raised: a second tap within the double-tap guard is a slip, not a play. */
+  let raisedAt = 0;
   /** Played but not yet confirmed by the server: hidden from the hand, shown as a ghost. */
   let pending = $state<{ card: CardT; rect: DOMRect } | null>(null);
   let pendingTimer: ReturnType<typeof setTimeout> | null = null;
@@ -61,7 +63,7 @@
   const trumpSuit = $derived(deal.contract && deal.contract.strain !== 'NT' ? deal.contract.strain : null);
   // Round 11: while the last set is still playing out, the next lead waits (cards stay asleep).
   const isLegal = (c: CardT) => !leadHold.waiting && deal.legalPlays.some((l) => sameCard(l, c));
-  const tapStyle = $derived(settings.playStyle === 'tap');
+  const isUp = (c: CardT) => raised !== null && sameCard(raised, c);
 
   function reject(card: CardT) {
     wobble = card;
@@ -86,23 +88,34 @@
     raised = null;
   }
 
-  function tap(card: CardT, el: HTMLElement | null, keyboard = false) {
-    const isRaised = raised !== null && sameCard(raised, card);
-    if (!isRaised) {
-      raised = card;
-      sound.pickup();
-      buzz('tap');
-      return;
-    }
-    if (!myTurnToPlay) {
-      raised = null;
-      return;
-    }
-    if (!isLegal(card)) return reject(card);
-    // Tap-twice style (and the keyboard) play on the second tap; drag style asks for a swipe.
-    if (tapStyle || keyboard) return play(card, el);
-    nudge++;
+  function raise(card: CardT) {
+    raised = card;
+    raisedAt = performance.now();
+    sound.pickup();
+    buzz('tap');
   }
+
+  function lower() {
+    raised = null;
+  }
+
+  function tap(card: CardT, el: HTMLElement | null, keyboard = false) {
+    if (!isUp(card)) return raise(card);
+    if (!myTurnToPlay) return lower();
+    if (!isLegal(card)) return reject(card);
+    if (!keyboard && performance.now() - raisedAt < TIMING.doubleTapGuard) return;
+    play(card, el);
+  }
+
+  // Tapping anywhere outside your hand lowers a raised card.
+  $effect(() => {
+    if (!raised) return;
+    const away = (e: PointerEvent) => {
+      if (!(e.target instanceof Element) || !e.target.closest('.hand')) lower();
+    };
+    window.addEventListener('pointerdown', away, true);
+    return () => window.removeEventListener('pointerdown', away, true);
+  });
 
   // Drag: the card follows your finger. Let go far enough up (or flick it) to play it.
   const MOVE_SLOP = 8;
@@ -118,6 +131,9 @@
     t: number;
     lastX: number;
     lastY: number;
+    /** Fastest speed seen up (most negative) and down during the gesture: a flick can slow before lift-off. */
+    peakUp: number;
+    peakDown: number;
   } | null>(null);
   /**
    * The held card leans in 3D (Balatro): toward your finger when you press it, and into the
@@ -128,8 +144,15 @@
   const leanOf = (card: CardT) => (settings.motion && lean !== null && sameCard(lean.card, card) ? lean : null);
 
   const playable = (card: CardT) => myTurnToPlay && isLegal(card);
+  const upward = (d: NonNullable<typeof drag>) => Math.abs(d.dy) >= Math.abs(d.dx) * 0.6;
+  /** Only a raised card plays, on a short swipe up or an upward flick. */
   const willPlay = (d: NonNullable<typeof drag>) =>
-    playable(d.card) && (d.dy <= -TIMING.dragToPlay || (d.vy <= -TIMING.flickSpeed && d.dy <= -TIMING.flickMin));
+    isUp(d.card) &&
+    playable(d.card) &&
+    upward(d) &&
+    (d.dy <= -TIMING.swipeToPlay || (d.peakUp <= -TIMING.flickSpeed && d.dy <= -TIMING.flickMin));
+  const willLower = (d: NonNullable<typeof drag>) =>
+    isUp(d.card) && upward(d) && (d.dy >= TIMING.swipeToLower || (d.peakDown >= TIMING.flickSpeed && d.dy >= TIMING.flickMin));
 
   $effect(() => {
     launch.armed = drag !== null && drag.moved && willPlay(drag);
@@ -137,7 +160,7 @@
 
   function down(e: PointerEvent, card: CardT) {
     if (!e.isPrimary || pending) return;
-    drag = { card, x: e.clientX, y: e.clientY, dx: 0, dy: 0, moved: false, vx: 0, vy: 0, t: e.timeStamp, lastX: e.clientX, lastY: e.clientY };
+    drag = { card, x: e.clientX, y: e.clientY, dx: 0, dy: 0, moved: false, vx: 0, vy: 0, t: e.timeStamp, lastX: e.clientX, lastY: e.clientY, peakUp: 0, peakDown: 0 };
     const el = e.currentTarget as HTMLElement;
     el.setPointerCapture(e.pointerId);
     // Pressing a card tips it toward your finger, like pressing on a real card's edge.
@@ -156,28 +179,36 @@
     const dt = Math.max(1, e.timeStamp - drag.t);
     drag.vx = drag.vx * 0.4 + ((e.clientX - drag.lastX) / dt) * 0.6;
     drag.vy = drag.vy * 0.4 + ((e.clientY - drag.lastY) / dt) * 0.6;
+    drag.peakUp = Math.min(drag.peakUp, drag.vy);
+    drag.peakDown = Math.max(drag.peakDown, drag.vy);
     drag.t = e.timeStamp;
     drag.lastX = e.clientX;
     drag.lastY = e.clientY;
     // Dragged, it leans into its motion: moving right turns its face right, moving up tips it back.
     if (drag.moved) lean = { card: drag.card, rx: clamp(-drag.vy * 22, 24), ry: clamp(drag.vx * 26, 24) };
-    // A card you can play follows your finger freely; others resist.
-    const free = playable(drag.card);
+    // A raised card you can play follows your finger freely; others resist (a raised card can
+    // still be pulled down a little, to lower it).
+    const free = isUp(drag.card) && playable(drag.card);
     drag.dx = free ? dx : dx * 0.15;
-    drag.dy = free ? dy : Math.min(0, dy) * 0.2;
+    drag.dy = free ? dy : isUp(drag.card) ? dy * 0.3 : Math.min(0, dy) * 0.2;
   }
 
   function release(e: PointerEvent) {
     if (!drag) return;
-    const d = drag;
+    // Judge the gesture by where the finger went, not where the (resisting) card was drawn.
+    const d = { ...drag, dx: e.clientX - drag.x, dy: e.clientY - drag.y };
     drag = null;
     lean = null;
     const el = e.currentTarget as HTMLElement;
     if (!d.moved) return tap(d.card, el);
-    if (willPlay(d)) {
-      // Measure where the card is now (under your finger) before it's hidden.
-      return play(d.card, el);
+    if (!isUp(d.card)) {
+      // Not raised: a swipe up only raises it (Ryan: it can't be swiped onto the table yet).
+      if (d.dy < -MOVE_SLOP && upward(d)) raise(d.card);
+      return;
     }
+    // Measure where the card is now (under your finger) before it's hidden.
+    if (willPlay(d)) return play(d.card, el);
+    if (willLower(d)) return lower();
     if (d.dy < -MOVE_SLOP && myTurnToPlay && !isLegal(d.card)) reject(d.card);
   }
 
@@ -212,22 +243,27 @@
         // Keyboard activation only; pointer taps are handled in release().
         if (e.detail === 0) tap(card, e.currentTarget as HTMLElement, true);
       }}
-      aria-label={up ? (tapStyle ? 'Tap again to play' : 'Swipe up to play') : 'Select card'}
+      aria-label={up ? (playable(card) ? 'Tap again or swipe up to play; swipe down to lower' : 'Swipe down to lower') : 'Select card'}
     >
-      {#key up ? nudge : 0}
-        <div class="lift" class:nudge={up && nudge > 0} class:idle={up && !l && !held}>
-          <div
-            class="glowable"
-            class:leaning={l !== null}
-            class:suit-start={i > 0 && deal.hand[i - 1]!.suit !== card.suit}
-            style="--rx: {l?.rx ?? 0}deg; --ry: {l?.ry ?? 0}deg; --sx: {50 + (l?.ry ?? 0) * 2.2}%; --sy: {50 - (l?.rx ?? 0) * 2.2}%"
-          >
-            <Card {card} width={cardWidth} dim={myTurnToPlay && !isLegal(card)} highlight={up || held} trump={card.suit === trumpSuit} />
-            <!-- A sheen of light that slides across the face as the card turns. -->
-            {#if l}<span class="sheen" aria-hidden="true"></span>{/if}
-          </div>
+      <div class="lift" class:idle={up && !l && !held}>
+        <div
+          class="glowable"
+          class:leaning={l !== null}
+          class:suit-start={i > 0 && deal.hand[i - 1]!.suit !== card.suit}
+          style="--rx: {l?.rx ?? 0}deg; --ry: {l?.ry ?? 0}deg; --sx: {50 + (l?.ry ?? 0) * 2.2}%; --sy: {50 - (l?.rx ?? 0) * 2.2}%"
+        >
+          <Card {card} width={cardWidth} dim={myTurnToPlay && !isLegal(card)} highlight={up || held} trump={card.suit === trumpSuit} />
+          <!-- A sheen of light that slides across the face as the card turns. -->
+          {#if l}<span class="sheen" aria-hidden="true"></span>{/if}
+          <!-- Raised and playable (Ryan): a blinking double chevron in the middle of the card. -->
+          {#if up && !held && playable(card)}
+            <svg class="go" viewBox="0 0 24 24" aria-hidden="true">
+              <path class="far" d="m6 11 6-6 6 6" />
+              <path class="near" d="m6 18 6-6 6 6" />
+            </svg>
+          {/if}
         </div>
-      {/key}
+      </div>
     </button>
   {/each}
 </div>
@@ -236,11 +272,6 @@
   <div class="ghost" style="left: {pending.rect.left}px; top: {pending.rect.top}px">
     <Card card={pending.card} width={pending.rect.width} highlight trump={pending.card.suit === trumpSuit} />
   </div>
-{/if}
-{#if raised && myTurnToPlay && !pending}
-  {#key nudge}
-    <p class="hint" class:flash={nudge > 0}>{tapStyle ? 'Tap it again, or drag it up, to play.' : 'Swipe it up to the table to play.'}</p>
-  {/key}
 {/if}
 
 <style>
@@ -312,15 +343,6 @@
     25% { transform: translate(-5px, -26px) scale(1.12); }
     75% { transform: translate(5px, -26px) scale(1.12); }
   }
-  /* Tapping a lifted card (drag style): it hops, as if to say "throw me". */
-  :global(.fx-full) .lift.nudge {
-    animation: hop calc(360ms * var(--speed)) cubic-bezier(0.3, 1.6, 0.6, 1);
-  }
-  @keyframes hop {
-    40% {
-      transform: translateY(-16px);
-    }
-  }
   /* A raised card sways gently while it waits, as if held in a hand. */
   :global(.fx-full) .lift.idle {
     animation: sway calc(2600ms * var(--speed)) ease-in-out infinite;
@@ -364,15 +386,36 @@
     pointer-events: none;
     filter: drop-shadow(0 0 14px var(--accent-glow));
   }
-  .hint {
-    text-align: center;
-    font-size: 14px;
-    color: var(--ink-dim);
-    margin: 4px 0 0;
+  /* The play cue (Ryan, round 19): a gold double chevron in the middle of the raised card, its
+     two halves blinking in turn, bottom then top, pointing the way to the table. No pill around
+     it: the whole card is the button. Plain gold, kept subtle (Ryan): the blinking catches the eye. */
+  .go {
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    width: 46%;
+    max-width: 32px;
+    transform: translate(-50%, -50%);
+    fill: none;
+    stroke: var(--accent);
+    stroke-width: 3;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+    pointer-events: none;
   }
-  .hint.flash {
-    color: var(--accent);
-    font-weight: 650;
-    animation: fade-in calc(200ms * var(--speed));
+  :global(.fx-full) .go .near {
+    animation: blink calc(1100ms * var(--speed)) ease-in-out infinite;
+  }
+  :global(.fx-full) .go .far {
+    animation: blink calc(1100ms * var(--speed)) ease-in-out calc(550ms * var(--speed)) infinite;
+  }
+  @keyframes blink {
+    0%,
+    100% {
+      opacity: 1;
+    }
+    50% {
+      opacity: 0.2;
+    }
   }
 </style>

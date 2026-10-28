@@ -32,10 +32,17 @@ export const TIMING = {
   /** The last-trick peek: each card's flip, and the gap between cards. */
   peekFlip: 260,
   peekGap: 70,
-  /** A dragged card must travel this far up (px), or be flicked this fast (px/ms), to be played. */
-  dragToPlay: 70,
-  flickSpeed: 0.6,
-  flickMin: 24,
+  /**
+   * Round 19 (Ryan): a raised card plays on a short swipe up, or on a flick of the thumb like
+   * flipping a coin: any quick upward move (peak speed in px/ms) of at least flickMin px. A swipe
+   * down, or a quick flick down, lowers it.
+   */
+  swipeToPlay: 24,
+  swipeToLower: 24,
+  flickSpeed: 0.35,
+  flickMin: 10,
+  /** A second tap this soon after the first is a double-tap slip, not a confirmation. */
+  doubleTapGuard: 250,
   /** The sweep of a finished trick toward its winner. */
   sweep: 280,
   /** A meter pip filling. */

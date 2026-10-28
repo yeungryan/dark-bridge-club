@@ -22,10 +22,20 @@ async function tap(locator: Locator): Promise<boolean> {
   );
 }
 
-/** Drag a card from the hand onto the middle of the table, like a thumb would. */
+/**
+ * Play a card like a thumb would (round 19): tap it to raise it (unless it already is), wait out
+ * the double-tap guard, then swipe the raised card up toward the table.
+ */
 async function dragToTable(page: Page, card: Locator): Promise<void> {
-  const from = (await card.boundingBox())!;
-  const area = (await page.locator('.area').boundingBox())!;
+  const raised = await card.evaluate((e) => e.classList.contains('up')).catch(() => false);
+  if (!raised) {
+    await card.click({ position: { x: 10, y: 30 } });
+    await page.waitForTimeout(300);
+  }
+  const up = page.locator('.hand .slot.up');
+  const from = await up.boundingBox();
+  const area = await page.locator('.area').boundingBox();
+  if (!from || !area) return;
   const x0 = from.x + 10;
   const y0 = from.y + 30;
   const x1 = area.x + area.width / 2;
@@ -90,7 +100,7 @@ test('the way back: the title screen links to the multiplayer table, and so does
   await expect(page.getByRole('link', { name: /Back to the multiplayer table/ })).toHaveAttribute('href', '/');
 });
 
-test('the bid ladder: tap a bid to see what it needs, then Bid; Pass is one tap', async ({ page }) => {
+test('the bid ladder: tap a bid to see what it needs, tap it again (now "Bid …") to bid; Pass is one tap', async ({ page }) => {
   await page.goto('/practice.html');
   await playUntil(page, () => page.locator('.box .ladder').isVisible());
   // Nothing picked yet: the bid to beat's suit is raised, as many as the top line counts.
@@ -106,8 +116,12 @@ test('the bid ladder: tap a bid to see what it needs, then Bid; Pass is one tap'
   await tile.tap();
   await expect(page.locator('.box .context')).toContainText(/you need \d+ sets, they need \d+/);
   await expect(page.locator('.hand .slot.preview')).toHaveCount(await page.locator(`.hand .card[aria-label$="of ${symbol}"]`).count());
-  await expect(page.locator('.confirm')).toContainText(/Bid\s*\d/);
-  await page.locator('.confirm').tap();
+  // Round 19 (Ryan): the picked tile itself turns gold and becomes the Bid button.
+  const picked = page.locator('.ladder .tile.on');
+  await expect(picked).toContainText(/Bid\s*\d/);
+  await expect(page.locator('.box .confirm')).toHaveCount(0);
+  await page.waitForTimeout(300); // past the double-tap guard
+  await picked.tap();
   // My bid lands on the table in front of me (Ryan: like a played card, so no name is needed).
   await expect(page.locator('.calls .at-bottom .tile').last()).toContainText(label);
   // Next time it's my call (this auction or the next game's), Pass goes straight in.
@@ -134,28 +148,57 @@ test('a whole deal by dragging cards: every beat of the feel ladder fires', asyn
   expect(attacks, 'no set-won attack was heard').toBeGreaterThan(0);
 });
 
-test('Tap twice style: the second tap plays the raised card', async ({ page }) => {
-  await page.addInitScript(() => localStorage.setItem('dark.main.settings', JSON.stringify({ playStyle: 'tap', v: 2 })));
+test('tap a card to raise it (a blinking double chevron appears on it), tap it again to play', async ({ page }) => {
   await page.goto(PRACTICE);
   await playUntil(page, () => page.locator('.table[data-turn="my-play"]').isVisible());
   const before = await page.locator('.hand .slot').count();
   const card = page.locator('.hand .slot').filter({ has: page.locator('.card:not(.dim)') }).first();
   await card.click({ position: { x: 10, y: 30 } });
   await expect(page.locator('.hand .slot.up')).toHaveCount(1);
+  await expect(page.locator('.hand .slot.up .go')).toHaveCount(1);
+  // No text hint under the hand any more (round 19): the chevron says it.
+  await expect(page.getByText(/to play\.$/)).toHaveCount(0);
+  await page.waitForTimeout(300); // past the double-tap guard
   await page.locator('.hand .slot.up').click({ position: { x: 10, y: 30 } });
   await expect(page.locator('.hand .slot')).toHaveCount(before - 1);
 });
 
-test('Drag style: a second tap does not play; it asks for a swipe', async ({ page }) => {
+test('swipes: an unraised card swiped up only rises; a raised card swiped down lowers, swiped up plays', async ({ page }) => {
   await page.goto(PRACTICE);
   await playUntil(page, () => page.locator('.table[data-turn="my-play"]').isVisible());
   const before = await page.locator('.hand .slot').count();
   const card = page.locator('.hand .slot').filter({ has: page.locator('.card:not(.dim)') }).first();
-  await card.click({ position: { x: 10, y: 30 } });
-  await page.locator('.hand .slot.up').click({ position: { x: 10, y: 30 } });
-  await expect(page.getByText('Swipe it up to the table to play.')).toBeVisible();
+  const swipe = async (dy: number) => {
+    const box = (await page.locator('.hand .slot.up').or(card).first().boundingBox())!;
+    const x = box.x + 10;
+    const y = box.y + 30;
+    await page.mouse.move(x, y);
+    await page.mouse.down();
+    await page.mouse.move(x, y + dy, { steps: 5 });
+    await page.mouse.up();
+    await page.waitForTimeout(250);
+  };
+  // Not raised: a long swipe up does not play it; it only raises it.
+  await swipe(-150);
   await expect(page.locator('.hand .slot')).toHaveCount(before);
-  await dragToTable(page, page.locator('.hand .slot.up'));
+  await expect(page.locator('.hand .slot.up')).toHaveCount(1);
+  // Raised: a swipe down lowers it.
+  await swipe(40);
+  await expect(page.locator('.hand .slot.up')).toHaveCount(0);
+  await expect(page.locator('.hand .slot')).toHaveCount(before);
+  // Raise it again; tapping anywhere else lowers it too.
+  await card.click({ position: { x: 10, y: 30 } });
+  await expect(page.locator('.hand .slot.up')).toHaveCount(1);
+  await page.locator('header').click();
+  await expect(page.locator('.hand .slot.up')).toHaveCount(0);
+  // Raised, then a tiny quick flick up (12 px, like flipping a coin) plays it.
+  await card.click({ position: { x: 10, y: 30 } });
+  await expect(page.locator('.hand .slot.up')).toHaveCount(1);
+  const box = (await page.locator('.hand .slot.up').boundingBox())!;
+  await page.mouse.move(box.x + 10, box.y + 30);
+  await page.mouse.down();
+  await page.mouse.move(box.x + 10, box.y + 18, { steps: 2 });
+  await page.mouse.up();
   await expect(page.locator('.hand .slot')).toHaveCount(before - 1);
 });
 

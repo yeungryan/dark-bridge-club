@@ -6,18 +6,22 @@
   import { buzz } from '../lib/juice/haptics';
   import { sound } from '../lib/juice/sound';
   import { bidPreview } from '../lib/bidPreview.svelte';
+  import { TIMING } from '../lib/juice/timing';
   import { onDestroy } from 'svelte';
 
   // Spec S12, the bid ladder (Ryan): every legal bid is its own little card, cheapest first,
   // two levels showing at a time; scroll for jumps and it snaps to a whole level. Tap a card to
-  // pick it (the line on top says what it needs), then Bid. Pass is one tap, and plain grey:
-  // the box doesn't nudge you toward it.
+  // pick it (the line on top says what it needs): it turns gold and reads "Bid 1♠" (round 19,
+  // Ryan), so tapping it again makes the bid. Pass is one tap, and plain grey: the box doesn't
+  // nudge you toward it.
   let { conn }: { conn: Connection } = $props();
 
   const view = $derived(conn.view!);
   const deal = $derived(view.deal!);
   const legal = $derived(deal.legalCalls);
   let picked = $state<{ level: Level; strain: Strain } | null>(null);
+  /** When the bid was picked: a second tap within the double-tap guard is a slip, not a bid. */
+  let pickedAt = 0;
 
   const isLegal = (level: Level, strain: Strain) => legal.some((c) => c.type === 'bid' && c.level === level && c.strain === strain);
   // Only the levels that still have a legal bid; the lowest one is at the top.
@@ -50,9 +54,14 @@
   const selected = $derived<Call | null>(picked && isLegal(picked.level, picked.strain) ? { type: 'bid', ...picked } : null);
 
   function pick(level: Level, strain: Strain) {
+    if (selected?.type === 'bid' && selected.level === level && selected.strain === strain) {
+      if (performance.now() - pickedAt < TIMING.doubleTapGuard) return;
+      return send(selected);
+    }
     sound.tap();
     buzz('tap');
-    picked = picked?.level === level && picked.strain === strain ? null : { level, strain };
+    picked = { level, strain };
+    pickedAt = performance.now();
   }
 
   function send(call: Call) {
@@ -91,13 +100,18 @@
         {#each levels as level (level)}
           <div class="level">
             {#each STRAINS as strain (strain)}
+              {@const on = picked?.level === level && picked.strain === strain}
               <button
                 class="tile"
                 class:nt={strain === 'NT'}
-                class:on={picked?.level === level && picked.strain === strain}
+                class:on
                 disabled={!isLegal(level, strain)}
-                aria-label="{level} {strain === 'NT' ? 'no trumps' : strain}"
-                onclick={() => pick(level, strain)}><CallText call={{ type: 'bid', level, strain }} red="var(--card-red)" /></button
+                aria-label="{on ? 'Bid ' : ''}{level} {strain === 'NT' ? 'no trumps' : strain}"
+                onclick={() => pick(level, strain)}
+                >{#if on}<span class="bid-word">Bid</span>{/if}<CallText
+                  call={{ type: 'bid', level, strain }}
+                  red={on ? 'currentColor' : 'var(--card-red)'}
+                /></button
               >
             {/each}
           </div>
@@ -106,15 +120,7 @@
     {:else}
       <p class="none">No bid is left above <CallText call={topBid!.call} />: only Pass.</p>
     {/if}
-    <div class="actions">
-      {#key selected ? JSON.stringify(selected) : ''}
-        <button class="primary confirm" class:ready={selected !== null} disabled={!selected} onclick={() => selected && send(selected)}>
-          <span>Bid</span>
-          {#if selected}<span class="what"><CallText call={selected} red="currentColor" /></span>{/if}
-        </button>
-      {/key}
-      <button class="pass" onclick={() => send({ type: 'pass' })}>Pass</button>
-    </div>
+    <button class="pass" onclick={() => send({ type: 'pass' })}>Pass</button>
   </div>
 </div>
 
@@ -143,8 +149,8 @@
   }
   .body {
     display: grid;
-    /* The ladder, then Bid, then Pass: two tall buttons to the right of NT (Ryan). */
-    grid-template-columns: minmax(0, 1fr) 62px 54px;
+    /* The ladder, then Pass: the picked bid is its own Bid button (round 19, Ryan). */
+    grid-template-columns: minmax(0, 1fr) 62px;
     gap: 6px;
   }
   /* Two levels showing, plus a faded peek of the third (Ryan) so it reads as scrollable; scrolling
@@ -205,12 +211,25 @@
     transform: translateY(3px);
     box-shadow: 0 0 0 rgba(0, 0, 0, 0.35);
   }
-  /* Picked: ringed and lifted a little (it stays inside its level). */
+  /* Picked: it turns gold, reads "Bid 1♠" and lifts a little (it stays inside its level). Tap it
+     again to bid. */
   .tile.on {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.22em;
+    background: var(--accent);
+    color: var(--accent-ink);
+    font-size: 0.82rem;
+    white-space: nowrap;
     transform: translateY(-2px);
     box-shadow:
-      0 0 0 3px var(--accent),
-      0 4px 10px var(--accent-glow);
+      0 0 0 2px rgba(255, 255, 255, 0.35),
+      0 4px 12px var(--accent-glow);
+  }
+  .bid-word {
+    font-family: var(--font);
+    font-weight: 800;
   }
   :global(.fx-full) .tile.on {
     animation: pick calc(var(--spring-pop-ms, 220ms) * var(--speed)) var(--spring-pop, cubic-bezier(0.3, 1.6, 0.6, 1));
@@ -231,38 +250,11 @@
     font-size: 13px;
     color: var(--ink-dim);
   }
-  .actions {
-    display: contents;
-  }
-  .confirm,
+  /* Pass: a plain grey button, one tap. */
   .pass {
     height: 72px;
     margin-top: 3px;
-    min-height: 0;
     padding: 0 4px;
-  }
-  .confirm {
-    display: grid;
-    place-content: center;
-    gap: 2px;
-    font-weight: 750;
-    font-size: 0.95rem;
-    line-height: 1.1;
-  }
-  .confirm .what {
-    font-family: var(--font-card);
-    font-size: 1.1rem;
-  }
-  :global(.fx-full) .confirm.ready {
-    animation: ready calc(var(--spring-pop-ms, 260ms) * var(--speed)) var(--spring-pop, cubic-bezier(0.3, 1.6, 0.6, 1));
-  }
-  @keyframes ready {
-    from {
-      transform: scale(0.9);
-    }
-  }
-  /* Pass: a plain grey button, one tap. */
-  .pass {
     min-height: 0;
     border-radius: 10px;
     border: 1px solid var(--line);
