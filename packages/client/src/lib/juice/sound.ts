@@ -509,15 +509,47 @@ export const sound = {
   passedOut() {
     play('passedOut', (e) => noise(e, 0.35, 0.2, { band: 2400, sweepTo: 700, q: 0.6, shape: 'swell', peak: 0.25, wet: 0.08, pan: [0.4, -0.4] }));
   },
-  /** A card lands on the table: a "thwip" as it slides, then a crisp "snap" as it lands. */
-  card(mine: boolean) {
+  /**
+   * A card lands on the table. Someone else's: a "thwip" as it slides in, then a crisp "snap".
+   * Yours sounds the way you played it (round 19, Ryan): flicked, it lands with a hard, bright
+   * slap; dragged or tapped, it's set down with a soft, papery pat.
+   */
+  card(mine: boolean, how?: 'flick' | 'place') {
     play('card', (e) => {
-      const v = (mine ? 1 : 0.45) * vary(0.03);
       const b = vary();
+      if (mine && how === 'flick') {
+        const v = vary(0.03);
+        noise(e, 0.025, 0.65 * v, { band: 3200 * b, q: 0.8, wet: 0.05 });
+        snap(e, 0.32 * v, 0, 3800);
+        knock(e, 430 * b, 0.32 * v, 0.004, 0.05);
+        return;
+      }
+      if (mine && how === 'place') {
+        const v = vary(0.03);
+        noise(e, 0.06, 0.26 * v, { band: 1500 * b, q: 0.7, shape: 'swell', peak: 0.35, wet: 0.04 });
+        tone(e, 560, 0.06, 0.12 * v, { type: 'triangle', glideTo: 450, delay: 0.012, bend: b, wet: 0.04 });
+        return;
+      }
+      const v = (mine ? 1 : 0.45) * vary(0.03);
       noise(e, 0.035, 0.22 * v, { band: 1800 * b, sweepTo: 4200 * b, q: 1.3, shape: 'swell', peak: 0.7, wet: 0.02 });
       noise(e, 0.03, 0.5 * v, { band: 2700 * b, q: 0.9, delay: 0.03, wet: 0.04 });
       snap(e, 0.18 * v, 0.03, 4000);
       tone(e, 640, 0.05, 0.2 * v, { type: 'triangle', glideTo: 470, delay: 0.03, bend: b, wet: 0.04 });
+    });
+  },
+  /** You flick a card off your hand (round 19): a quick, rising "fwip" through the air. */
+  flick() {
+    play('flick', (e) => {
+      const b = vary();
+      noise(e, 0.07, 0.3 * vary(0.03), { band: 2200 * b, sweepTo: 6500 * b, q: 1.6, shape: 'swell', peak: 0.3, wet: 0.03, pan: [0, 0.15] });
+      snap(e, 0.06, 0, 5000);
+    });
+  },
+  /** You drag or tap a card off your hand (round 19): a soft, low "shff" of card across card. */
+  slide() {
+    play('slide', (e) => {
+      const b = vary();
+      noise(e, 0.12, 0.16 * vary(0.03), { band: 1100 * b, sweepTo: 1900 * b, q: 0.8, shape: 'swell', peak: 0.55, wet: 0.03 });
     });
   },
   /** A card takes the lead of the trick. `n` = how many times the lead has changed (1–3). */

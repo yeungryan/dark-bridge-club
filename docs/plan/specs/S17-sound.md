@@ -54,3 +54,10 @@ Each set-win attack (S24) has its own sounds, built from the same synth parts an
 
 These replace the generic set-won chime (`lead`) and the trump-set brass (`trumpTrick`) whenever an attack plays.
 
+
+## Card play: flick and place (Ryan, round 20)
+A flick and a drag sound different, both when the card leaves your hand and when it lands on the table (the landing is timed to the card's flight).
+- **Flick:** a quick rising "fwip" as it leaves, then a crisp, bright slap on landing.
+- **Drag or tap:** a soft "shff" as it slides off, then a soft pat on landing.
+- Other players' cards keep the quieter landing sound.
+- The sound check page has "Flick a card" and "Drag or tap a card" to hear each pair.

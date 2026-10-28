@@ -46,3 +46,11 @@ Replaces the "Decision after the first M2 playtest" above and the Settings choic
 - **A card that isn't raised can't be swiped onto the table.** A swipe up on it only raises it.
 - A second tap within 250 ms of raising is ignored, so a quick double-tap can't raise and play in one go (the reason the M2 decision stopped the second tap playing).
 - Settings → "Play cards" is removed: everyone plays the same way. Keyboard Enter still plays the raised card.
+
+## Round 20 (Ryan): the flight is an extension of the flick
+- **The card leaves your hand the moment you let go** and keeps moving toward your spot on the table, without waiting for the server. When the server confirms the play, the table picks the card up from wherever it has got to, so the motion never stops and restarts.
+- **A flick carries the thumb's speed.** The card starts at the speed you let go at and slows into its spot (ease-out), arriving in 150–320 ms: a faster flick lands sooner. It picks up a small tilt (up to 14°) from any sideways movement, and lands with a firm squash.
+- **A drag or a tap places the card** more gently (200–300 ms) and settles with a light squash.
+- A flick is a quick, short upward move, or one still moving fast (0.5 px/ms) when let go. A slow drag to the table counts as placing.
+- **Short flicks register reliably:** the first movement of a gesture counts in full when measuring its speed (a quick flick may send only two or three moves, and the first is often the fastest).
+- **Fix:** when the last card of a set landed, the cards on the table blinked out for a frame and flew in again from the players' names. The finished set now stays put until it sweeps to the winner.

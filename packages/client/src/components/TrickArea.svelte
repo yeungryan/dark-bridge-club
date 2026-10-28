@@ -3,7 +3,7 @@
   import type { Connection } from '../lib/connection.svelte';
   import { spotOf } from '../lib/format';
   import { director } from '../lib/juice/director.svelte';
-  import { launch } from '../lib/juice/launch.svelte';
+  import { EASE_OUT, launch } from '../lib/juice/launch.svelte';
   import { settings } from '../lib/juice/settings.svelte';
   import { TIMING } from '../lib/juice/timing';
   import Card from './Card.svelte';
@@ -23,14 +23,9 @@
   let size = $state(180);
   const cardWidth = $derived(Math.max(34, Math.min(52, Math.floor(size * 0.29))));
 
-  let held = $state<CompletedTrick | null>(null);
-  let lastSeen = 0;
-  $effect(() => {
-    const count = deal.tricksPlayed;
-    if (count > lastSeen && deal.lastTrick) held = deal.lastTrick;
-    if (count === 0) held = null;
-    lastSeen = count;
-  });
+  // The trick just finished. Derived (not set in an effect) so the cards on the table never
+  // blink out for a frame when the last card lands: they'd remount and fly in again from the names.
+  const held = $derived<CompletedTrick | null>(deal.tricksPlayed > 0 ? deal.lastTrick : null);
 
   const fx = $derived(director.trickFx?.trick === deal.tricksPlayed ? director.trickFx : null);
   const live = $derived(deal.currentTrick !== null && deal.currentTrick.cards.length > 0);
@@ -58,21 +53,39 @@
   /** The page's wobble spring (lib/juice/spring.ts), or a plain overshoot where unsupported. */
   const wobble = () => getComputedStyle(document.documentElement).getPropertyValue('--spring-wobble').trim() || 'cubic-bezier(0.3, 1.6, 0.6, 1)';
 
-  /** Fly in from your finger (your card) or from the player's name (everyone else's). */
+  /**
+   * Fly in from your finger (your card) or from the player's name (everyone else's). Your card is
+   * already on its way when the server confirms it (round 19): it carries on from wherever it has
+   * got to, lands when its flight says, and settles. A flick lands with a firm squash; a placed
+   * card settles gently.
+   */
   function arrive(node: HTMLElement, play: PlayedCard) {
     if (!settings.motion) return;
-    const from = (play.seat === me ? launch.take(play.card) : null) ?? null;
-    const badge = document.querySelector(`[data-badge-seat="${play.seat}"]`)?.getBoundingClientRect() ?? null;
-    const origin = from ?? badge;
-    if (!origin) return;
+    const flight = play.seat === me ? launch.take(play.card) : null;
     const r = node.getBoundingClientRect();
-    const a = center(origin);
     const b = center(r);
-    const scale = from ? from.width / r.width : 0.55;
+    if (flight) {
+      const a = center(flight.rect);
+      const landIn = Math.max(60, flight.remaining);
+      const squash = flight.how === 'flick' ? 'scale(1.12, 0.86)' : 'scale(1.05, 0.95)';
+      node.animate(
+        [
+          { transform: `translate(${a.x - b.x}px, ${a.y - b.y}px) scale(${flight.rect.width / r.width}) rotate(${flight.spin}deg)` },
+          { transform: `translate(0, 0) ${squash}`, offset: LAND_AT, easing: wobble() },
+          { transform: 'none' },
+        ],
+        // The first part keeps the flight's own deceleration, so the hand-over is seamless.
+        { duration: Math.round(landIn / LAND_AT), easing: EASE_OUT, fill: 'backwards' },
+      );
+      return;
+    }
+    const origin = document.querySelector(`[data-badge-seat="${play.seat}"]`)?.getBoundingClientRect() ?? null;
+    if (!origin) return;
+    const a = center(origin);
     const spin = play.seat === me ? 0 : (play.seat % 2 ? 1 : -1) * 10;
     node.animate(
       [
-        { transform: `translate(${a.x - b.x}px, ${a.y - b.y}px) scale(${scale}) rotate(${spin}deg)`, opacity: from ? 1 : 0.2 },
+        { transform: `translate(${a.x - b.x}px, ${a.y - b.y}px) scale(0.55) rotate(${spin}deg)`, opacity: 0.2 },
         // Lands with a squash, then springs back to shape with a wobble.
         { transform: 'translate(0, 0) scale(1.12, 0.86)', opacity: 1, offset: LAND_AT, easing: wobble() },
         { transform: 'none', opacity: 1 },

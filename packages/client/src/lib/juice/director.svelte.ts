@@ -8,6 +8,7 @@ import { intensityOf, momentsFrom, streak, type Moment } from './moments';
 import { comet, elementBurst, elementStrike, elementWin, flash, freeze, glyphs, lightBurst, pop, puff, ring, screenFlash, sparks } from './particles';
 import { settings } from './settings.svelte';
 import { sound } from './sound';
+import { launch } from './launch.svelte';
 import { gameWon, setWon } from './setWin';
 import { streakName } from './streak';
 import { sweepOf, type Sweep, type SweepShow } from './sweep';
@@ -220,9 +221,11 @@ class Director {
       case 'cardPlayed':
         // A new card on the table: anything still to come for the last set's cards is moot.
         cancelBeats();
-        // The sound and the payoff land with the card, not when the message arrives.
+        // The sound and the payoff land with the card, not when the message arrives. Your own
+        // card lands when its flight says (round 19), and sounds the way it was thrown.
+        const thrown = m.mine && settings.motion ? launch.landing(m.card) : null;
         setTimeout(() => {
-          sound.card(m.mine);
+          sound.card(m.mine, thrown?.how);
           if (m.mine) buzz('card');
           const at = this.centerOf(`.area [data-seat="${m.seat}"]`);
           if (this.isTrumpAce(conn, m.card)) {
@@ -246,7 +249,7 @@ class Director {
             this.shake(RESPONSES[level].shakePx);
             if (at) sparks(at.x, at.y, RESPONSES[level].particles, [this.colorOf(conn, m.seat), gold(), '#fff6d8']);
           }
-        }, fly);
+        }, thrown ? Math.max(60, thrown.inMs) : fly);
         break;
       case 'trickWon':
         this.playTrick(m, conn, settles, fly);
