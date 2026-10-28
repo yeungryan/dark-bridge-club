@@ -33,13 +33,14 @@ export const TIMING = {
   peekFlip: 260,
   peekGap: 70,
   /**
-   * Round 19 (Ryan): a raised card plays on a short swipe up, or a flick this fast (px/ms) over
-   * at least flickMin px; a swipe down this far lowers it.
+   * Round 19 (Ryan): a raised card plays on a short swipe up, or on a flick of the thumb like
+   * flipping a coin: any quick upward move (peak speed in px/ms) of at least flickMin px. A swipe
+   * down, or a quick flick down, lowers it.
    */
-  swipeToPlay: 30,
+  swipeToPlay: 24,
   swipeToLower: 24,
-  flickSpeed: 0.6,
-  flickMin: 16,
+  flickSpeed: 0.35,
+  flickMin: 10,
   /** A second tap this soon after the first is a double-tap slip, not a confirmation. */
   doubleTapGuard: 250,
   /** The sweep of a finished trick toward its winner. */

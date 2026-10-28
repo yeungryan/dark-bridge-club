@@ -191,10 +191,14 @@ test('swipes: an unraised card swiped up only rises; a raised card swiped down l
   await expect(page.locator('.hand .slot.up')).toHaveCount(1);
   await page.locator('header').click();
   await expect(page.locator('.hand .slot.up')).toHaveCount(0);
-  // Raised, then a short swipe up plays it.
+  // Raised, then a tiny quick flick up (12 px, like flipping a coin) plays it.
   await card.click({ position: { x: 10, y: 30 } });
   await expect(page.locator('.hand .slot.up')).toHaveCount(1);
-  await swipe(-45);
+  const box = (await page.locator('.hand .slot.up').boundingBox())!;
+  await page.mouse.move(box.x + 10, box.y + 30);
+  await page.mouse.down();
+  await page.mouse.move(box.x + 10, box.y + 18, { steps: 2 });
+  await page.mouse.up();
   await expect(page.locator('.hand .slot')).toHaveCount(before - 1);
 });
 

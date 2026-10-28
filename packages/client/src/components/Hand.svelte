@@ -131,6 +131,9 @@
     t: number;
     lastX: number;
     lastY: number;
+    /** Fastest speed seen up (most negative) and down during the gesture: a flick can slow before lift-off. */
+    peakUp: number;
+    peakDown: number;
   } | null>(null);
   /**
    * The held card leans in 3D (Balatro): toward your finger when you press it, and into the
@@ -147,9 +150,9 @@
     isUp(d.card) &&
     playable(d.card) &&
     upward(d) &&
-    (d.dy <= -TIMING.swipeToPlay || (d.vy <= -TIMING.flickSpeed && d.dy <= -TIMING.flickMin));
+    (d.dy <= -TIMING.swipeToPlay || (d.peakUp <= -TIMING.flickSpeed && d.dy <= -TIMING.flickMin));
   const willLower = (d: NonNullable<typeof drag>) =>
-    isUp(d.card) && upward(d) && (d.dy >= TIMING.swipeToLower || (d.vy >= TIMING.flickSpeed && d.dy >= TIMING.flickMin));
+    isUp(d.card) && upward(d) && (d.dy >= TIMING.swipeToLower || (d.peakDown >= TIMING.flickSpeed && d.dy >= TIMING.flickMin));
 
   $effect(() => {
     launch.armed = drag !== null && drag.moved && willPlay(drag);
@@ -157,7 +160,7 @@
 
   function down(e: PointerEvent, card: CardT) {
     if (!e.isPrimary || pending) return;
-    drag = { card, x: e.clientX, y: e.clientY, dx: 0, dy: 0, moved: false, vx: 0, vy: 0, t: e.timeStamp, lastX: e.clientX, lastY: e.clientY };
+    drag = { card, x: e.clientX, y: e.clientY, dx: 0, dy: 0, moved: false, vx: 0, vy: 0, t: e.timeStamp, lastX: e.clientX, lastY: e.clientY, peakUp: 0, peakDown: 0 };
     const el = e.currentTarget as HTMLElement;
     el.setPointerCapture(e.pointerId);
     // Pressing a card tips it toward your finger, like pressing on a real card's edge.
@@ -176,6 +179,8 @@
     const dt = Math.max(1, e.timeStamp - drag.t);
     drag.vx = drag.vx * 0.4 + ((e.clientX - drag.lastX) / dt) * 0.6;
     drag.vy = drag.vy * 0.4 + ((e.clientY - drag.lastY) / dt) * 0.6;
+    drag.peakUp = Math.min(drag.peakUp, drag.vy);
+    drag.peakDown = Math.max(drag.peakDown, drag.vy);
     drag.t = e.timeStamp;
     drag.lastX = e.clientX;
     drag.lastY = e.clientY;
@@ -253,8 +258,8 @@
           <!-- Raised and playable (Ryan): a blinking double chevron in the middle of the card. -->
           {#if up && !held && playable(card)}
             <svg class="go" viewBox="0 0 24 24" aria-hidden="true">
-              <g class="far"><path class="edge" d="m6 11 6-6 6 6" /><path d="m6 11 6-6 6 6" /></g>
-              <g class="near"><path class="edge" d="m6 18 6-6 6 6" /><path d="m6 18 6-6 6 6" /></g>
+              <path class="far" d="m6 11 6-6 6 6" />
+              <path class="near" d="m6 18 6-6 6 6" />
             </svg>
           {/if}
         </div>
@@ -383,7 +388,7 @@
   }
   /* The play cue (Ryan, round 19): a gold double chevron in the middle of the raised card, its
      two halves blinking in turn, bottom then top, pointing the way to the table. No pill around
-     it: the whole card is the button. A dark edge keeps the gold readable on the card face. */
+     it: the whole card is the button. Plain gold, kept subtle (Ryan): the blinking catches the eye. */
   .go {
     position: absolute;
     left: 50%;
@@ -397,10 +402,6 @@
     stroke-linecap: round;
     stroke-linejoin: round;
     pointer-events: none;
-  }
-  .go .edge {
-    stroke: var(--accent-ink);
-    stroke-width: 5.5;
   }
   :global(.fx-full) .go .near {
     animation: blink calc(1100ms * var(--speed)) ease-in-out infinite;
