@@ -3,7 +3,7 @@
   import type { Connection } from '../lib/connection.svelte';
   import { sameCard } from '../lib/format';
   import { buzz } from '../lib/juice/haptics';
-  import { launch } from '../lib/juice/launch.svelte';
+  import { EASE_OUT, launch, type Throw } from '../lib/juice/launch.svelte';
   import { director } from '../lib/juice/director.svelte';
   import { leadHold } from '../lib/leadHold.svelte';
   import { bidPreview } from '../lib/bidPreview.svelte';
@@ -72,10 +72,27 @@
     setTimeout(() => (wobble = null), 300);
   }
 
-  function play(card: CardT, el: HTMLElement | null) {
+  /**
+   * Send the card toward the table at once, before the server confirms (round 19, Ryan: the
+   * flight is an extension of the flick). A flick keeps the thumb's speed and slows into its spot;
+   * a dragged or tapped card is placed, more gently. `speed` is the release speed in px/ms.
+   */
+  function play(card: CardT, el: HTMLElement | null, how: Throw = 'place', speed = 0, sideways = 0) {
     const rect = (el?.querySelector('.card') ?? el)?.getBoundingClientRect();
     if (rect) {
-      launch.set(card, rect);
+      const area = document.querySelector('.area')?.getBoundingClientRect();
+      // Your spot is at the bottom middle of the table, at the table's card size.
+      const tableW = area ? Math.max(34, Math.min(52, Math.floor(area.width * 0.29))) : rect.width * 0.7;
+      const toX = area ? area.left + area.width / 2 : rect.left + rect.width / 2;
+      const toY = area ? area.bottom - (tableW * 1.4) / 2 : rect.top - 200;
+      const dist = Math.hypot(toX - (rect.left + rect.width / 2), toY - (rect.top + rect.height / 2));
+      // An ease-out flight starts at twice its average speed: match that to the thumb's.
+      const v0 = Math.max(speed, how === 'flick' ? 1 : 0.7);
+      const dur = settings.ms(Math.round(Math.min(how === 'flick' ? 320 : 300, Math.max(how === 'flick' ? 150 : 200, (2 * dist) / v0))));
+      const spin = how === 'flick' ? Math.max(-14, Math.min(14, sideways * 12)) : 0;
+      launch.set({ card, from: rect, toX, toY, toScale: tableW / rect.width, spin, dur, how });
+      if (how === 'flick') sound.flick();
+      else sound.slide();
       pending = { card, rect };
       if (pendingTimer) clearTimeout(pendingTimer);
       // If the server never confirms (a lost message), give the card back.
@@ -104,7 +121,7 @@
     if (!myTurnToPlay) return lower();
     if (!isLegal(card)) return reject(card);
     if (!keyboard && performance.now() - raisedAt < TIMING.doubleTapGuard) return;
-    play(card, el);
+    play(card, el, 'place');
   }
 
   // Tapping anywhere outside your hand lowers a raised card.
@@ -175,10 +192,12 @@
     const dx = e.clientX - drag.x;
     const dy = e.clientY - drag.y;
     if (Math.abs(dx) > MOVE_SLOP || Math.abs(dy) > MOVE_SLOP) drag.moved = true;
-    // Speed, smoothed (px/ms; negative vy is up).
+    // Speed, smoothed (px/ms; negative vy is up). The first move counts in full: a quick flick
+    // may only send two or three moves, and the first is often the fastest.
     const dt = Math.max(1, e.timeStamp - drag.t);
-    drag.vx = drag.vx * 0.4 + ((e.clientX - drag.lastX) / dt) * 0.6;
-    drag.vy = drag.vy * 0.4 + ((e.clientY - drag.lastY) / dt) * 0.6;
+    const keep = drag.lastX === drag.x && drag.lastY === drag.y ? 0 : 0.4;
+    drag.vx = drag.vx * keep + ((e.clientX - drag.lastX) / dt) * (1 - keep);
+    drag.vy = drag.vy * keep + ((e.clientY - drag.lastY) / dt) * (1 - keep);
     drag.peakUp = Math.min(drag.peakUp, drag.vy);
     drag.peakDown = Math.max(drag.peakDown, drag.vy);
     drag.t = e.timeStamp;
@@ -207,9 +226,27 @@
       return;
     }
     // Measure where the card is now (under your finger) before it's hidden.
-    if (willPlay(d)) return play(d.card, el);
+    // A flick: a quick, short move, or still moving fast when let go. Otherwise it was dragged
+    // to the table and set down.
+    if (willPlay(d)) {
+      const flick = (d.peakUp <= -TIMING.flickSpeed && d.dy > -60) || d.vy <= -0.5;
+      return play(d.card, el, flick ? 'flick' : 'place', -Math.min(d.vy, d.peakUp), d.vx);
+    }
     if (willLower(d)) return lower();
     if (d.dy < -MOVE_SLOP && myTurnToPlay && !isLegal(d.card)) reject(d.card);
+  }
+
+  /** The ghost (your card in flight) follows its planned flight until the table takes it over. */
+  function fly(node: HTMLElement) {
+    const f = launch.current;
+    if (!f || !settings.motion) return;
+    const cx = f.from.left + f.from.width / 2;
+    const cy = f.from.top + f.from.height / 2;
+    node.animate([{ transform: 'none' }, { transform: `translate(${f.toX - cx}px, ${f.toY - cy}px) scale(${f.toScale}) rotate(${f.spin}deg)` }], {
+      duration: f.dur,
+      easing: EASE_OUT,
+      fill: 'forwards',
+    });
   }
 
   const dragging = (card: CardT) => drag !== null && drag.moved && sameCard(drag.card, card);
@@ -269,7 +306,7 @@
 </div>
 {#if pending}
   <!-- Your card, waiting where you let go until the table confirms it (a few tens of ms). -->
-  <div class="ghost" style="left: {pending.rect.left}px; top: {pending.rect.top}px">
+  <div class="ghost" style="left: {pending.rect.left}px; top: {pending.rect.top}px" use:fly>
     <Card card={pending.card} width={pending.rect.width} highlight trump={pending.card.suit === trumpSuit} />
   </div>
 {/if}

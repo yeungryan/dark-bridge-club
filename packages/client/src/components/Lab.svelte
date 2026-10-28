@@ -42,7 +42,8 @@
     {
       title: 'Cards',
       items: [
-        { label: 'Your card', play: () => sound.card(true), haptic: 'card' },
+        { label: 'Flick a card', play: () => (sound.flick(), setTimeout(() => sound.card(true, 'flick'), 220)), haptic: 'card' },
+        { label: 'Drag or tap a card', play: () => (sound.slide(), setTimeout(() => sound.card(true, 'place'), 260)), haptic: 'card' },
         { label: "Someone else's", play: () => sound.card(false) },
         { label: 'Takes the lead', play: () => (sound.card(true), sound.lead(1)), haptic: 'lead' },
         { label: '…takes it back', play: () => (sound.card(true), sound.lead(2)), haptic: 'lead' },

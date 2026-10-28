@@ -191,14 +191,23 @@ test('swipes: an unraised card swiped up only rises; a raised card swiped down l
   await expect(page.locator('.hand .slot.up')).toHaveCount(1);
   await page.locator('header').click();
   await expect(page.locator('.hand .slot.up')).toHaveCount(0);
-  // Raised, then a tiny quick flick up (12 px, like flipping a coin) plays it.
+  // Raised, then a tiny quick flick up (14 px in one quick motion, like flipping a coin) plays it.
   await card.click({ position: { x: 10, y: 30 } });
   await expect(page.locator('.hand .slot.up')).toHaveCount(1);
-  const box = (await page.locator('.hand .slot.up').boundingBox())!;
-  await page.mouse.move(box.x + 10, box.y + 30);
-  await page.mouse.down();
-  await page.mouse.move(box.x + 10, box.y + 18, { steps: 2 });
-  await page.mouse.up();
+  // Sent from inside the page with fixed timing: Playwright's own mouse can take 40+ ms between
+  // events on a busy machine, which turns a flick into a slow nudge.
+  await page.locator('.hand .slot.up').evaluate(async (slot) => {
+    const r = slot.getBoundingClientRect();
+    const at = (type: string, y: number) =>
+      slot.dispatchEvent(new PointerEvent(type, { bubbles: true, isPrimary: true, pointerId: 1, pointerType: 'mouse', clientX: r.left + 10, clientY: y }));
+    const wait = () => new Promise((done) => setTimeout(done, 16));
+    at('pointerdown', r.top + 30);
+    await wait();
+    at('pointermove', r.top + 23);
+    await wait();
+    at('pointermove', r.top + 16);
+    at('pointerup', r.top + 16);
+  });
   await expect(page.locator('.hand .slot')).toHaveCount(before - 1);
 });
 
