@@ -37,3 +37,12 @@ Playing a card should feel physical and be impossible to misclick (T3).
 - **Trumps marked (Ryan, option D):** once the contract is set, every trump in your hand and on the table carries a short purple bar along its top (inset from the card's edges, so in an overlapping hand each trump shows its own bar) and a faint purple tint, for the rest of the game. Nothing for NT.
 - **No glow on playable cards (Ryan):** the cards you can't play are dimmed on your turn; the ones you can are left plain.
 - **Team colours:** your pair is gold and the other pair silver in every theme (`--gold` and `--silver`): avatar rings, the scoreboard's set icons and the set-win effects.
+
+## Round 19 (Ryan): one way to play, cued on the card itself
+Replaces the "Decision after the first M2 playtest" above and the Settings choice.
+- **Tap a card** to raise it (gold border). If you can play it, a **gold double chevron** blinks in the middle of the card, its two halves in turn (bottom, then top). There is no pill or button around it: the whole card is the button. The old text hint under the hand is gone, so nothing shifts when you raise a card.
+- **Tap it again** to play it, or **swipe it up** a little (30 px, or a quick 16 px flick).
+- **Swipe it down** (24 px), or **tap anywhere outside your hand**, to lower it. Tapping another card raises that one instead.
+- **A card that isn't raised can't be swiped onto the table.** A swipe up on it only raises it.
+- A second tap within 250 ms of raising is ignored, so a quick double-tap can't raise and play in one go (the reason the M2 decision stopped the second tap playing).
+- Settings → "Play cards" is removed: everyone plays the same way. Keyboard Enter still plays the raised card.

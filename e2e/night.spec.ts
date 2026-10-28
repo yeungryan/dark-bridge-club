@@ -87,9 +87,18 @@ async function pickAvatar(page: Page): Promise<void> {
   await page.waitForTimeout(300);
 }
 
-/** Drag a card from the hand onto the middle of the table, like a thumb would. */
+/**
+ * Play a card like a thumb would (round 19): tap it to raise it (unless it already is), wait out
+ * the double-tap guard, then swipe the raised card up toward the table.
+ */
 async function dragToTable(page: Page, card: Locator): Promise<void> {
-  const from = await card.boundingBox();
+  const raised = await card.evaluate((e) => e.classList.contains('up')).catch(() => false);
+  if (!raised) {
+    await card.click({ position: { x: 10, y: 30 } });
+    await page.waitForTimeout(300);
+  }
+  const up = page.locator('.hand .slot.up');
+  const from = await up.boundingBox();
   const area = await page.locator('.area').boundingBox();
   if (!from || !area) return;
   const x0 = from.x + 10;
@@ -210,7 +219,7 @@ test.describe.serial('a night at the DARK table', () => {
     await expect(page.locator('.hand .slot')).toHaveCount(before - 1);
   });
 
-  test('dragging a playable card upward plays it; a short, slow drag springs back', async () => {
+  test('a card must be raised before a swipe plays it; then a short swipe up plays it', async () => {
     const page = ryan().page;
     await reachMyTurnToPlay(ryan());
     const before = await page.locator('.hand .slot').count();
@@ -219,21 +228,20 @@ test.describe.serial('a night at the DARK table', () => {
     const x = box.x + 10;
     const y = box.y + 30;
 
-    // A short, slow drag (not past the line, and not a flick) leaves the card in the hand.
-    await page.mouse.move(x, y);
-    await page.mouse.down();
-    for (let i = 1; i <= 6; i++) {
-      await page.mouse.move(x, y - i * 5);
-      await page.waitForTimeout(60);
-    }
-    await page.mouse.up();
-    await page.waitForTimeout(400);
-    await expect(page.locator('.hand .slot')).toHaveCount(before);
-
-    // A long drag plays it.
+    // Not raised (round 19, Ryan): even a long swipe up leaves it in the hand, now raised.
     await page.mouse.move(x, y);
     await page.mouse.down();
     await page.mouse.move(x, y - 120, { steps: 6 });
+    await page.mouse.up();
+    await page.waitForTimeout(400);
+    await expect(page.locator('.hand .slot')).toHaveCount(before);
+    await expect(page.locator('.hand .slot.up')).toHaveCount(1);
+
+    // Raised: a short swipe up plays it.
+    const up = (await page.locator('.hand .slot.up').boundingBox())!;
+    await page.mouse.move(up.x + 10, up.y + 30);
+    await page.mouse.down();
+    await page.mouse.move(up.x + 10, up.y - 15, { steps: 4 });
     await page.mouse.up();
     await expect(page.locator('.hand .slot')).toHaveCount(before - 1);
   });

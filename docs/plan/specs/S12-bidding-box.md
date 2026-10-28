@@ -41,3 +41,6 @@ Replaces the level and suit rows.
 **"1st", revised (Ryan):** smaller, lowercase "1st", in a neutral stone colour (white on black belongs to Team Black), on the top-right corner of the tile or card so it never covers the call or the rank.
 
 **"1st", final (Ryan, B4):** no text: a stone-coloured folded corner at the top-left of the opening bid's tile and of the card that leads each set, so the next call laid over it never hides it and it never covers a call or rank.
+
+## Round 19 (Ryan): the picked bid is the Bid button
+The separate yellow Bid button is gone. Tapping a bid tile picks it: it turns gold and reads **"Bid 1♠"**, and the line on top still says what it needs. Tapping the gold tile again makes the bid; tapping another tile moves the pick there. A second tap within 250 ms of picking is ignored, so a quick double-tap can't pick and bid in one go. Pass stays one tap. With the Bid column gone, every bid tile is wider.

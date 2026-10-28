@@ -1,10 +1,9 @@
 <script lang="ts">
   import Sparkles from '@lucide/svelte/icons/sparkles';
   import Gauge from '@lucide/svelte/icons/gauge';
-  import Hand from '@lucide/svelte/icons/hand';
   import Volume2 from '@lucide/svelte/icons/volume-2';
   import VolumeX from '@lucide/svelte/icons/volume-x';
-  import { settings, type EffectsMode, type PlayStyle, type SpeedMode } from '../lib/juice/settings.svelte';
+  import { settings, type EffectsMode, type SpeedMode } from '../lib/juice/settings.svelte';
   import { sound } from '../lib/juice/sound';
 
   // Spec S16/S17: each player's own feel settings. Also used for the M2 side-by-side check
@@ -15,10 +14,6 @@
     { value: 'full', label: 'Full' },
     { value: 'reduced', label: 'Calm' },
     { value: 'off', label: 'Off' },
-  ];
-  const styles: { value: PlayStyle; label: string }[] = [
-    { value: 'drag', label: 'Drag up' },
-    { value: 'tap', label: 'Tap twice' },
   ];
   const speeds: { value: SpeedMode; label: string }[] = [
     { value: 'normal', label: 'Normal' },
@@ -40,14 +35,6 @@
     <div class="seg">
       {#each speeds as s (s.value)}
         <button class:on={settings.speed === s.value} onclick={() => (settings.speed = s.value)}>{s.label}</button>
-      {/each}
-    </div>
-  </div>
-  <div class="row">
-    <span class="label"><Hand size={18} strokeWidth={1.75} aria-hidden="true" /> Play cards</span>
-    <div class="seg">
-      {#each styles as p (p.value)}
-        <button class:on={settings.playStyle === p.value} onclick={() => (settings.playStyle = p.value)}>{p.label}</button>
       {/each}
     </div>
   </div>
