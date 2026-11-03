@@ -49,11 +49,13 @@ import {
   leadHoldAfter,
   perSeat,
   type CompletedTrick,
+  effectiveFrom,
   emptyCarried,
   emptyChangeQueue,
   KEEP_GAMES,
   withoutMatchup,
   type Carried,
+  type NightSpan,
   type ChangeAction,
   type ChangeQueue,
   type ScoreOverride,
@@ -398,7 +400,20 @@ export class TableRoom extends DurableObject<Env> {
 
   private loadOverrides(): ScoreOverride[] {
     const row = this.sql.exec<{ v: string }>("SELECT v FROM kv WHERE k = 'scoreOverrides'").toArray()[0];
-    return row ? (JSON.parse(row.v) as ScoreOverride[]) : [];
+    if (!row) return [];
+    const spans = this.nightSpans();
+    return (JSON.parse(row.v) as ScoreOverride[]).map((o) => ({ ...o, from: effectiveFrom(o.from, spans) }));
+  }
+
+  /** Every night's start, end and first finished game, to place an agreed score or reset (effectiveFrom). */
+  private nightSpans(): NightSpan[] {
+    return this.sql
+      .exec<{ started_at: number; ended_at: number | null; first: number | null }>(
+        `SELECT s.started_at, s.ended_at, MIN(d.completed_at) AS first FROM sessions s
+           LEFT JOIN deals d ON d.session_id = s.id WHERE s.pairs_json IS NOT NULL GROUP BY s.id`,
+      )
+      .toArray()
+      .map((r) => ({ startedAt: r.started_at, endedAt: r.ended_at, firstGameAt: r.first }));
   }
 
   /** The reset waiting for approval, if any, for everyone's screen. */
@@ -896,7 +911,7 @@ export class TableRoom extends DurableObject<Env> {
   /** When the four of you last reset everything to 0–0: only nights begun since count. */
   private loadStatsFrom(): number | null {
     const row = this.sql.exec<{ v: string }>("SELECT v FROM kv WHERE k = 'statsFrom'").toArray()[0];
-    return row ? Number(row.v) : null;
+    return row ? effectiveFrom(Number(row.v), this.nightSpans()) : null;
   }
 
   /** Tonight's history so far, from the saved games (null before the pairs are set). */
