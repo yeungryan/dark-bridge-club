@@ -91,6 +91,26 @@ export function withoutMatchup(carried: Carried, override: ScoreOverride): Carri
   return { ...carried, matchups: { ...carried.matchups, [key]: { wins: {}, nights: 0, lastPlayed: old.lastPlayed } } };
 }
 
+/** When a night began (its partners were picked), ended, and finished its first game. */
+export interface NightSpan {
+  readonly startedAt: number;
+  readonly endedAt: number | null;
+  readonly firstGameAt: number | null;
+}
+
+/**
+ * When an agreed score or a reset to 0–0 takes effect. Agreed at the table after the partners
+ * were picked but before the first game finished, it counts from that night's start, so the
+ * night counts (Ryan: we reset to 0–0, then won 3–0, and the night didn't count). Otherwise it
+ * counts from when it was agreed.
+ */
+export function effectiveFrom(at: number, nights: readonly NightSpan[]): number {
+  const under = nights.find(
+    (n) => n.startedAt < at && (n.endedAt === null || n.endedAt > at) && (n.firstGameAt === null || n.firstGameAt > at),
+  );
+  return under ? under.startedAt : at;
+}
+
 /** The nights that count toward all-time stats: those begun since the last reset to 0–0. */
 export function countedNights(nights: readonly SavedNight[], statsFrom: number | null): SavedNight[] {
   return statsFrom === null ? [...nights] : nights.filter((n) => n.startedAt >= statsFrom);
