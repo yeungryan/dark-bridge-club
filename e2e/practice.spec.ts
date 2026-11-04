@@ -415,5 +415,5 @@ test('a new build shows a refresh bar; "add to home screen" sits by the links; t
   // The manifest opens the app at the private link, but only for someone who already has the key.
   expect((await (await request.get('/manifest.webmanifest?k=dev')).json()).start_url).toBe('/?k=dev');
   expect((await (await request.get('/manifest.webmanifest?k=wrong')).json()).start_url).toBe('/');
-  expect((await request.get('/icon-v2-192.png')).headers()['content-type']).toContain('image/png');
+  expect((await request.get('/icon-v3-192.png')).headers()['content-type']).toContain('image/png');
 });

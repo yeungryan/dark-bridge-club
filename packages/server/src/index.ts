@@ -43,8 +43,8 @@ function manifest(key: string | null): Response {
     background_color: '#0b1c24',
     theme_color: '#0b1c24',
     icons: [
-      { src: '/icon-v2-192.png', sizes: '192x192', type: 'image/png' },
-      { src: '/icon-v2-512.png', sizes: '512x512', type: 'image/png' },
+      { src: '/icon-v3-192.png', sizes: '192x192', type: 'image/png' },
+      { src: '/icon-v3-512.png', sizes: '512x512', type: 'image/png' },
     ],
   };
   return new Response(JSON.stringify(body), {
