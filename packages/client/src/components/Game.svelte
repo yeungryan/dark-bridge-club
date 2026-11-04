@@ -12,6 +12,7 @@
   import PartnerPick from './PartnerPick.svelte';
   import Particles from './Particles.svelte';
   import PauseBanner from './PauseBanner.svelte';
+  import PullToRefresh from './PullToRefresh.svelte';
   import ResetPrompt from './ResetPrompt.svelte';
   import SweepTakeover from './SweepTakeover.svelte';
   import Table from './Table.svelte';
@@ -80,6 +81,8 @@
 {/if}
 
 {#if conn.view && conn.room}<ResetPrompt {conn} />{/if}
+<!-- Pull down at the top to reload (Ryan, QoL): not at the table, where swipes play cards. -->
+<PullToRefresh active={!conn.view || conn.view.phase === 'lobby' || conn.view.phase === 'partnerPick' || conn.view.phase === 'ended'} />
 <!-- A sweep's takeover (round 15): over everything, straight after the game-winning effects. -->
 {#if director.sweepShow}{#key director.sweepShow.id}<SweepTakeover show={director.sweepShow} />{/key}{/if}
 {#if conn.error}<div class="toast" role="alert">{conn.error}</div>{/if}

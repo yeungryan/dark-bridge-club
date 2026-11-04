@@ -35,3 +35,18 @@ A table you can read at a glance on a phone while faces are talking in a floatin
 **No role tags (Ryan):** the seats no longer say Declarer / Partner / Defender under the names; the scoreboard shows who declared. Seat badges are 80px tall (was 96).
 
 **Team Red vs Team Black (Ryan):** partnership colour is red and black, like the cards' suits. Team Red is the pair Ryan sits in (Adrian & Ryan), the same on every phone; the other pair is Team Black. It shows on the cards-left badge, the bid tiles' bottom stripe, the scoreboard (initials and set animals) and the replay strip. Where Team Black sits on a dark panel it gets a thin light rim. **Gold means winning or leading only**, the same gold in every theme: the bid to beat, the card winning the set, the replay's winning card.
+
+## Pull to refresh (Ryan, QoL)
+- **What it does:** at the top of a screen, pull down and let go to reload the page.
+  - A circle with a refresh icon follows your thumb (or the mouse) down, reading "Pull to refresh".
+  - Past about 72 px it turns the accent colour, reads "Let go to refresh" and gives a light buzz.
+  - Letting go there reloads the page; letting go earlier cancels.
+- **Where it works:**
+  - the lobby, partner pick and end-of-night screens, and while still connecting;
+  - inside History and Next night wherever they are open, when scrolled to the top.
+- **Where it doesn't:**
+  - at the table (dealing, bidding, play), where swipes play and lower cards;
+  - on your hand and in a replay.
+  - The browser's own pull-to-refresh stays off (`overscroll-behavior: none`) for the same reason.
+- **Gestures it ignores:** a sideways swipe (player chips, award cards) or an upward scroll is not a pull.
+- **With a mouse:** the press doesn't select text, so a second pull can't turn into dragging the selection.
