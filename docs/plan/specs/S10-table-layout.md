@@ -68,4 +68,4 @@ A table you can read at a glance on a phone while faces are talking in a floatin
   - The steps add that you'll sign in with your PIN once: an iPhone home-screen app keeps its own storage.
 - **How the install works:**
   - The Worker serves `/manifest.webmanifest`. Its start address includes the private link's key, but only for a request that already carries the right key; anyone else gets `/`.
-  - The icon is the D A R K tiles in a 2 × 2 grid (`icon-192.png`, `icon-512.png`, `apple-touch-icon.png`).
+  - The icon is the D A R K tiles in a 2 × 2 grid (`icon-v2-192.png`, `icon-v2-512.png`, `apple-touch-icon-v2.png`; renamed when redrawn so phones fetch the new one).
