@@ -372,3 +372,48 @@ test('pull to refresh: pulling down at the top of the lobby reloads; at the tabl
   await expect(page.getByText(/to refresh/)).toHaveCount(0);
   await page.mouse.up();
 });
+
+test('a new build shows a refresh bar; "add to home screen" sits by the links; the screen stays on at the table', async ({ page, request }) => {
+  // A stand-in wake lock that records what the page asks for.
+  await page.addInitScript(() => {
+    const w = window as unknown as { __locks: number; __held: boolean };
+    w.__locks = 0;
+    w.__held = false;
+    Object.defineProperty(navigator, 'wakeLock', {
+      value: {
+        request: async () => {
+          w.__locks++;
+          w.__held = true;
+          const s = new EventTarget() as EventTarget & { release: () => Promise<void> };
+          s.release = async () => {
+            w.__held = false;
+            s.dispatchEvent(new Event('release'));
+          };
+          return s;
+        },
+      },
+    });
+  });
+  await page.route('**/version.json*', (route) => route.fulfill({ json: { build: 'newer · 2099-01-01' } }));
+  await page.goto(PRACTICE);
+  await expect(page.getByText('Who are you tonight?')).toBeVisible();
+  // The refresh bar: Refresh reloads, ✕ waves it away.
+  const bar = page.getByRole('status').filter({ hasText: 'A new version is ready' });
+  await expect(bar).toBeVisible();
+  await bar.getByRole('button', { name: 'Not now' }).click();
+  await expect(bar).toHaveCount(0);
+  // Add to home screen: a quiet link with the steps (headless Chromium has no install prompt).
+  const add = page.getByRole('button', { name: 'add to home screen' });
+  await expect(add).toBeVisible();
+  await add.click();
+  await expect(page.getByRole('note')).toContainText('Add to Home screen');
+  // The screen isn't held awake in the lobby, only once the night is under way.
+  const held = () => page.evaluate(() => (window as unknown as { __held: boolean }).__held);
+  expect(await held()).toBe(false);
+  await playUntil(page, () => page.locator('.table[data-turn]').isVisible());
+  await expect.poll(held).toBe(true);
+  // The manifest opens the app at the private link, but only for someone who already has the key.
+  expect((await (await request.get('/manifest.webmanifest?k=dev')).json()).start_url).toBe('/?k=dev');
+  expect((await (await request.get('/manifest.webmanifest?k=wrong')).json()).start_url).toBe('/');
+  expect((await request.get('/icon-192.png')).headers()['content-type']).toContain('image/png');
+});

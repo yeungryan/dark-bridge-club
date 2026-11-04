@@ -22,6 +22,32 @@ export default {
       const stub = env.TABLE.get(env.TABLE.idFromName('dark-bridge-club'));
       return stub.fetch(request);
     }
+    if (url.pathname === '/manifest.webmanifest') return manifest(url.searchParams.get('k') === env.ROOM_KEY ? env.ROOM_KEY : null);
     return env.ASSETS.fetch(request);
   },
 } satisfies ExportedHandler<Env>;
+
+/**
+ * Add to home screen (Ryan, QoL). The app opens at the private link, key included, but only for a
+ * request that already holds the right key: a stranger's manifest just opens the sign-in page.
+ */
+function manifest(key: string | null): Response {
+  const body = {
+    name: 'DARK Bridge Club',
+    short_name: 'DARK Bridge',
+    description: "Bridge time? Let's go.",
+    start_url: key ? `/?k=${encodeURIComponent(key)}` : '/',
+    scope: '/',
+    display: 'standalone',
+    orientation: 'portrait',
+    background_color: '#0b1c24',
+    theme_color: '#0b1c24',
+    icons: [
+      { src: '/icon-192.png', sizes: '192x192', type: 'image/png' },
+      { src: '/icon-512.png', sizes: '512x512', type: 'image/png' },
+    ],
+  };
+  return new Response(JSON.stringify(body), {
+    headers: { 'content-type': 'application/manifest+json', 'cache-control': 'no-store' },
+  });
+}

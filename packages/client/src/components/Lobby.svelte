@@ -1,4 +1,5 @@
 <script lang="ts">
+  import InstallLink from './InstallLink.svelte';
   import type { Connection } from '../lib/connection.svelte';
   import { tick } from 'svelte';
   import { avatarOf, crestOf } from '../lib/avatars';
@@ -102,6 +103,7 @@
       <a href="lab.html" target="_blank">sound check</a> ·
       <!-- At the practice table, the way back instead (Ryan: you're already practising). -->
       {#if conn.offline}<a href="/">multiplayer table</a>{:else}<a href="practice.html?as={conn.view!.me}" target="_blank">practice table</a>{/if}
+      <InstallLink />
     </p>
   {/if}
 </main>

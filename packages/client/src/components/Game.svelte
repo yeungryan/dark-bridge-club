@@ -13,6 +13,8 @@
   import Particles from './Particles.svelte';
   import PauseBanner from './PauseBanner.svelte';
   import PullToRefresh from './PullToRefresh.svelte';
+  import UpdateBanner from './UpdateBanner.svelte';
+  import { keepAwake } from '../lib/wakeLock';
   import ResetPrompt from './ResetPrompt.svelte';
   import SweepTakeover from './SweepTakeover.svelte';
   import Table from './Table.svelte';
@@ -38,6 +40,13 @@
     }
     lastPhase = phase;
   });
+
+  // The screen stays on from picking partners to the last game (Ryan, QoL), not in the lobby.
+  $effect(() => {
+    const phase = conn.view?.phase;
+    keepAwake(!!phase && phase !== 'lobby' && phase !== 'ended');
+  });
+  $effect(() => () => keepAwake(false));
 
   // Tonight's theme (S18) restyles every screen.
   $effect(() => {
@@ -82,6 +91,7 @@
 
 {#if conn.view && conn.room}<ResetPrompt {conn} />{/if}
 <!-- Pull down at the top to reload (Ryan, QoL): not at the table, where swipes play cards. -->
+<UpdateBanner />
 <PullToRefresh active={!conn.view || conn.view.phase === 'lobby' || conn.view.phase === 'partnerPick' || conn.view.phase === 'ended'} />
 <!-- A sweep's takeover (round 15): over everything, straight after the game-winning effects. -->
 {#if director.sweepShow}{#key director.sweepShow.id}<SweepTakeover show={director.sweepShow} />{/key}{/if}
