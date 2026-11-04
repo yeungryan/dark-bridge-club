@@ -35,3 +35,37 @@ A table you can read at a glance on a phone while faces are talking in a floatin
 **No role tags (Ryan):** the seats no longer say Declarer / Partner / Defender under the names; the scoreboard shows who declared. Seat badges are 80px tall (was 96).
 
 **Team Red vs Team Black (Ryan):** partnership colour is red and black, like the cards' suits. Team Red is the pair Ryan sits in (Adrian & Ryan), the same on every phone; the other pair is Team Black. It shows on the cards-left badge, the bid tiles' bottom stripe, the scoreboard (initials and set animals) and the replay strip. Where Team Black sits on a dark panel it gets a thin light rim. **Gold means winning or leading only**, the same gold in every theme: the bid to beat, the card winning the set, the replay's winning card.
+
+## Pull to refresh (Ryan, QoL)
+- **What it does:** at the top of a screen, pull down and let go to reload the page.
+  - A circle with a refresh icon follows your thumb (or the mouse) down, reading "Pull to refresh".
+  - Past about 72 px it turns the accent colour, reads "Let go to refresh" and gives a light buzz.
+  - Letting go there reloads the page; letting go earlier cancels.
+- **Where it works:**
+  - the lobby, partner pick and end-of-night screens, and while still connecting;
+  - inside History and Next night wherever they are open, when scrolled to the top.
+- **Where it doesn't:**
+  - at the table (dealing, bidding, play), where swipes play and lower cards;
+  - on your hand and in a replay.
+  - The browser's own pull-to-refresh stays off (`overscroll-behavior: none`) for the same reason.
+- **Gestures it ignores:** a sideways swipe (player chips, award cards) or an upward scroll is not a pull.
+- **With a mouse:** the press doesn't select text, so a second pull can't turn into dragging the selection.
+
+## Screen stays on, new-version bar, add to home screen (Ryan, QoL)
+- **Screen stays on during a night:**
+  - From picking partners to the last game, the page asks the browser to keep the screen awake (Screen Wake Lock), so phones don't dim and lock while you wait to bid or play.
+  - It's off in the lobby and on the end-of-night screen.
+  - The browser drops the lock whenever the page is hidden, so it's taken again when you come back.
+  - Browsers without it (iPhones before iOS 16.4) simply don't.
+- **"A new version is ready" bar:**
+  - Each build writes `version.json` with its build id.
+  - An open tab checks it every 5 minutes and whenever it comes back to the screen.
+  - When the build has changed, a slim bar at the top shows **Refresh** (reloads) and **✕** (not now, for this build).
+  - It never reloads by itself, so it can't interrupt a game.
+- **Add to home screen:**
+  - A quiet link, "add to home screen", sits after "sound check" and the practice or multiplayer table link on the title screen. It's hidden once the app runs from the home screen.
+  - Where the browser offers an install prompt (Android Chrome), the link opens it. Otherwise (iPhone) it shows the steps.
+  - The steps add that you'll sign in with your PIN once: an iPhone home-screen app keeps its own storage.
+- **How the install works:**
+  - The Worker serves `/manifest.webmanifest`. Its start address includes the private link's key, but only for a request that already carries the right key; anyone else gets `/`.
+  - The icon is the D A R K tiles in a 2 × 2 grid (`icon-192.png`, `icon-512.png`, `apple-touch-icon.png`).
