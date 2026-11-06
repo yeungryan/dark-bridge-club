@@ -313,6 +313,25 @@ class Director {
     const side = m.side;
     if (settles) {
       this.trickFx = { trick, winner: m.winner, kind: 'normal', phase: 'win' };
+      // Ryan (round 22): decided before the 13th set, the game waits for Play On. Once the
+      // finisher is over, the deciding set sweeps to its winner like any other, so its winning
+      // card doesn't linger through the choice (or into the sets played on).
+      if (deal?.phase !== 'awaitingPlayOn') return;
+      // Its own guard: the clinch moment bumps `seq`, which would cancel this.
+      const dealNumber = conn.view?.dealNumber;
+      const alive = () => this.trickFx?.trick === trick && conn.view?.dealNumber === dealNumber;
+      const scan = settings.animated ? settings.ms(TIMING.scan) : 0;
+      const pause = settings.animated ? settings.ms(RESPONSES[5].hitPauseMs) : 0;
+      const finished = fly + scan + pause + (settings.motion ? settings.ms(TIMING.gameWonFx) : 0);
+      const sweep = settings.motion ? settings.ms(TIMING.sweep) : 0;
+      setTimeout(() => {
+        if (!alive()) return;
+        this.trickFx = { ...this.trickFx!, phase: 'sweep' };
+        if (sweep > 0) sound.sweep();
+        setTimeout(() => {
+          if (alive()) this.trickFx = { ...this.trickFx!, phase: 'done' };
+        }, sweep);
+      }, finished);
       return;
     }
     const kind: TrickFx['kind'] = m.firstTrump ? 'first' : m.trump ? 'trump' : 'normal';
