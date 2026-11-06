@@ -112,15 +112,16 @@
             {#each STRAINS as strain (strain)}
               {@const on = picked?.level === level && picked.strain === strain}
               <button
-                class="tile"
+                class="tile chip"
                 class:nt={strain === 'NT'}
+                class:red={strain === 'H' || strain === 'D'}
                 class:on
                 disabled={!isLegal(level, strain)}
                 aria-label="{on ? 'Bid ' : ''}{level} {strain === 'NT' ? 'no trumps' : strain}"
                 onclick={() => pick(level, strain)}
                 >{#if on}<span class="bid-word">Bid</span>{/if}<CallText
                   call={{ type: 'bid', level, strain }}
-                  red={on ? 'currentColor' : 'var(--card-red)'}
+                  red={on ? 'currentColor' : 'var(--chip-red-ink)'}
                 /></button
               >
             {/each}
@@ -206,20 +207,15 @@
     min-height: 0;
     height: 32px;
     border: 0;
-    border-radius: 7px;
-    background: var(--card);
-    color: var(--card-ink);
-    font-family: var(--font-card);
-    font-size: 0.95rem;
-    font-weight: 750;
-    box-shadow: 0 3px 0 rgba(0, 0, 0, 0.35);
+    /* A bid chip (app.css), not a little playing card (Ryan, round 22). */
+    font-size: 0.92rem;
     transition:
       transform calc(90ms * var(--speed)),
       box-shadow calc(90ms * var(--speed));
   }
   .tile:active:not(:disabled) {
     transform: translateY(3px);
-    box-shadow: 0 0 0 rgba(0, 0, 0, 0.35);
+    box-shadow: inset 0 0 0 2px rgba(255, 255, 255, 0.2);
   }
   /* Picked: it turns gold, reads "Bid 1♠" and lifts a little (it stays inside its level). Tap it
      again to bid. */
@@ -237,6 +233,9 @@
       0 0 0 2px rgba(255, 255, 255, 0.35),
       0 4px 12px var(--accent-glow);
   }
+  .tile.on::before {
+    display: none;
+  }
   .bid-word {
     font-family: var(--font);
     font-weight: 800;
@@ -249,9 +248,15 @@
       transform: translateY(2px) scale(0.9);
     }
   }
+  /* Below the bid to beat: a faint empty ring. */
   .tile:disabled {
-    opacity: 0.16;
-    box-shadow: none;
+    background: transparent;
+    color: var(--ink-dim);
+    opacity: 0.35;
+    box-shadow: inset 0 0 0 1.5px rgba(255, 255, 255, 0.16);
+  }
+  .tile:disabled::before {
+    display: none;
   }
   .none {
     margin: 0;

@@ -47,3 +47,10 @@ The separate yellow Bid button is gone. Tapping a bid tile picks it: it turns go
 
 ## Tap outside to let go (Ryan, round 21)
 Tapping or clicking anywhere outside the bid box lets go of a picked bid: the tile goes back to normal and the hand's preview drops back to the bid to beat. Pick it again to bid.
+
+## Chips (Ryan, round 22)
+Bids no longer look like playing cards: every call is a **poker chip**, the same style everywhere (one shared `.chip` style in `app.css`).
+- **The chip:** a round-ended dark disc with a soft top highlight, a white rim and a dashed inner ring with only **six dashes** (Ryan: fewer dashes, simpler). ♥/♦ bids are wine-red chips with pink suit ink; NT is a slate chip; Pass is a plain dark chip with no ring.
+- **Bid box:** each tile is a chip. The picked chip still reads "Bid 1♠" in the theme's highlight colour, with no ring. Levels you can no longer bid fade to an outline.
+- **On the table:** each call is a chip ringed in its player's team colour; the bid to beat adds the gold ring and glow. The opening bid's "1st" folded corner becomes a small stone dot at the top-left, because a chip has no corner.
+- **The Bids list:** each call is a small chip.
