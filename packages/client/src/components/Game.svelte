@@ -6,6 +6,7 @@
   import { settings } from '../lib/juice/settings.svelte';
   import { TIMING } from '../lib/juice/timing';
   import { forgetLogin, options, rememberMe } from '../lib/session';
+  import { forgetSharedHistory } from '../lib/history';
   import { applyTheme } from '../lib/themes';
   import Lobby from './Lobby.svelte';
   import NightEnded from './NightEnded.svelte';
@@ -28,6 +29,16 @@
   director.attach(conn);
   const stopBot = options.bot ? startAutopilot(conn) : null;
   onDestroy(() => stopBot?.());
+
+  // A night ending or a new one opening changes the history: don't reuse a copy fetched before
+  // (the "Last time" card once came up empty after a quick "Start a new night").
+  // (`$effect.pre`: before the new screen's cards mount and load.)
+  let seenPhase: string | null = null;
+  $effect.pre(() => {
+    const phase = conn.view?.phase ?? null;
+    if (phase !== seenPhase && (phase === 'ended' || phase === 'lobby')) forgetSharedHistory();
+    seenPhase = phase;
+  });
 
   // When the night starts, the lobby stays up a moment so the completed crest can flare (S15).
   let flaring = $state(false);
