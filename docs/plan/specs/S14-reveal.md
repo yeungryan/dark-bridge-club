@@ -38,3 +38,8 @@ The result screen is now: one bold result ("WON +1", "LOST −2", "Conceded"; ro
 **Scrub, no arrows (Ryan):** drag along the set strip and the highlighted column follows your finger, set by set. The ◀ ▶ buttons are gone so the strip gets the full width: bigger columns and animals, with a little room around each column's number and animal, on a soft panel. Swiping the table and the arrow keys still step. The replay **opens on the set that decided the game** (★), or the last set played if none did.
 
 **Pause before the results (Ryan):** after a game's last card lands (the 13th set, or the end of a game played out after it was decided), the table stays up for 3 seconds before the results take over.
+
+## No overtrick count (Ryan, round 21)
+- **Removed:** the result no longer shows how many sets over or under the contract it went (the old "WON +2"). It read like a score, and it isn't one.
+- **Sweeps:** the only number beside WON or LOST now is a sweep's worth: **+10** when the declarers take all 13 sets, **+100** when the defenders do (`gameWorth`).
+- **Night log:** History's night log follows the same rule.

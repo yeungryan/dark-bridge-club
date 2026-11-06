@@ -120,6 +120,11 @@ test('the bid ladder: tap a bid to see what it needs, tap it again (now "Bid …
   const picked = page.locator('.ladder .tile.on');
   await expect(picked).toContainText(/Bid\s*\d/);
   await expect(page.locator('.box .confirm')).toHaveCount(0);
+  // Tapping outside the bid box lets go of it (Ryan); pick it again to bid.
+  await page.touchscreen.tap(12, 160);
+  await expect(page.locator('.ladder .tile.on')).toHaveCount(0);
+  await tile.tap();
+  await expect(picked).toContainText(/Bid\s*\d/);
   await page.waitForTimeout(300); // past the double-tap guard
   await picked.tap();
   // My bid lands on the table in front of me (Ryan: like a played card, so no name is needed).

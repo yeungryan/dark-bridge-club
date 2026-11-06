@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { hcp, next, partner, seatsFrom, sideOf, type Seat } from '@dark/engine';
+  import { gameWorth, hcp, next, partner, seatsFrom, sideOf, type Seat } from '@dark/engine';
   import type { Connection } from '../lib/connection.svelte';
   import { onMount } from 'svelte';
   import { cardText, isRed, pairNames, profileOf } from '../lib/format';
@@ -101,8 +101,8 @@
   <!-- The result (Ryan: trimmed): one bold line, one quiet line, then the hands. Tap to skip. -->
   <header class="result">
     <h3 bind:this={banner} class="banner {result.winner}">
-      {verdict}{#if result.overUnder !== null && result.overUnder !== 0}
-        <span class="margin">{result.overUnder > 0 ? `+${result.overUnder}` : `−${-result.overUnder}`}</span>{/if}
+      <!-- Ryan: no overtrick count (it read like a score). Only a sweep shows what it's worth. -->
+      {verdict}{#if gameWorth(result) > 1}<span class="margin">+{gameWorth(result)}</span>{/if}
     </h3>
     <p class="line">
       <span class="bid"><CallText call={{ type: 'bid', level: contract.level, strain: contract.strain }} /></span>

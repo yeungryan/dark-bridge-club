@@ -44,3 +44,6 @@ Replaces the level and suit rows.
 
 ## Round 19 (Ryan): the picked bid is the Bid button
 The separate yellow Bid button is gone. Tapping a bid tile picks it: it turns gold and reads **"Bid 1♠"**, and the line on top still says what it needs. Tapping the gold tile again makes the bid; tapping another tile moves the pick there. A second tap within 250 ms of picking is ignored, so a quick double-tap can't pick and bid in one go. Pass stays one tap. With the Bid column gone, every bid tile is wider.
+
+## Tap outside to let go (Ryan, round 21)
+Tapping or clicking anywhere outside the bid box lets go of a picked bid: the tile goes back to normal and the hand's preview drops back to the bid to beat. Pick it again to bid.

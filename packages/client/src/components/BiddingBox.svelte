@@ -64,6 +64,16 @@
     pickedAt = performance.now();
   }
 
+  // Tapping or clicking anywhere outside the bid box lets go of the picked bid (Ryan).
+  $effect(() => {
+    if (!picked) return;
+    const away = (e: PointerEvent) => {
+      if (!(e.target instanceof Element) || !e.target.closest('.box')) picked = null;
+    };
+    window.addEventListener('pointerdown', away, true);
+    return () => window.removeEventListener('pointerdown', away, true);
+  });
+
   function send(call: Call) {
     conn.intent({ type: 'deal', action: { type: 'call', call } });
     picked = null;
