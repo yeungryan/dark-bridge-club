@@ -35,6 +35,11 @@ export function loadHistoryShared(): Promise<HistoryData> {
   shared.data.catch(() => (shared = null));
   return shared.data;
 }
+
+/** The table moved on (a night ended or began): the next card to load fetches afresh. */
+export function forgetSharedHistory(): void {
+  shared = null;
+}
 export const loadNights = () => loadHistory().then((r) => r.nights);
 
 /** Propose, approve or turn down a new all-time score; resolves to the updated history. */
