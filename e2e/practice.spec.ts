@@ -16,7 +16,9 @@ const soundCount = (page: Page, name: string) =>
   page.evaluate((n) => (window as unknown as { __darkSoundCount: Record<string, number> }).__darkSoundCount[n] ?? 0, name);
 
 async function tap(locator: Locator): Promise<boolean> {
-  return locator.tap({ timeout: 3000 }).then(
+  // A desktop browser has no touch screen: click instead.
+  const touch = await locator.page().evaluate(() => navigator.maxTouchPoints > 0);
+  return (touch ? locator.tap({ timeout: 3000 }) : locator.click({ timeout: 3000 })).then(
     () => true,
     () => false,
   );
@@ -438,4 +440,66 @@ test('Play On: you ask, your bot partner agrees, and the game is played out (rou
   const sets = (await page.locator('.reveal .sets').textContent()) ?? '';
   const [a, b] = sets.match(/\d+/g)!.map(Number);
   expect(a! + b!).toBe(13);
+});
+
+test.describe('desktop', () => {
+  // A desktop browser with a mouse (not the phone the other tests emulate).
+  test.use({ viewport: { width: 1440, height: 900 }, isMobile: false, hasTouch: false });
+  test('Peek: moving the mouse across the hand brings each card to the front, with a soft tick (round 22)', async ({ page }) => {
+    await page.goto(PRACTICE);
+    await playUntil(page, () => page.locator('.side .box .ladder').isVisible(), { noPass: true });
+    const hand = (await page.locator('.hand').boundingBox())!;
+    const y = hand.y + hand.height - 30;
+    await page.mouse.move(hand.x + 10, y);
+    await expect(page.locator('.hand .slot.peek')).toHaveCount(1);
+    const first = await page.locator('.hand .slot.peek').getAttribute('style');
+    const before = await soundCount(page, 'peek');
+    for (let x = 10; x < hand.width - 10; x += 25) await page.mouse.move(hand.x + x, y);
+    await expect(page.locator('.hand .slot.peek')).toHaveCount(1);
+    expect(await page.locator('.hand .slot.peek').getAttribute('style')).not.toBe(first);
+    expect(await soundCount(page, 'peek')).toBeGreaterThan(before + 3);
+    // Off the hand, everything settles back.
+    await page.mouse.move(hand.x + hand.width / 2, hand.y - 200);
+    await expect(page.locator('.hand .slot.peek')).toHaveCount(0);
+  });
+
+  test('layout B: a side panel with the bids, the scoreboard, then the previous set or the bid box (round 22)', async ({ page }) => {
+    await page.goto(PRACTICE);
+    const heads = () => page.locator('.side .pnl-head').allTextContents();
+    // Bidding: the bids, the scoreboard, then the bid box (all seven levels, no scrolling needed).
+    await playUntil(page, () => page.locator('.side .box .ladder').isVisible(), { noPass: true });
+    const panels = page.locator('.side > .pnl');
+    await expect(panels.nth(0)).toContainText('The Bids');
+    await expect(panels.nth(2).locator('.box .ladder')).toBeVisible();
+    // No scoreboard or bid box floating over the table on desktop.
+    await expect(page.locator('.bottom .board .box')).toHaveCount(0);
+    // Play: the bids, the scoreboard, then the previous set once there is one.
+    await playUntil(page, async () => (await heads()).includes('Previous Set'));
+    expect(await heads()).toEqual(['The Bids', 'Previous Set']);
+    await expect(panels.nth(1).locator('.bug')).toBeVisible();
+    // Nothing spills off the screen.
+    expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(1440);
+  });
+});
+
+test('Peek: running a finger sideways through the hand brings each card up, with a soft tick; nothing is played or raised (round 22)', async ({ page }) => {
+  await page.goto(PRACTICE);
+  await playUntil(page, () => page.locator('.box .ladder').isVisible(), { noPass: true });
+  const count = await page.locator('.hand .slot').count();
+  const hand = (await page.locator('.hand').boundingBox())!;
+  const y = Math.round(hand.y + hand.height - 25);
+  const cdp = await page.context().newCDPSession(page);
+  const touch = (type: string, x: number) => cdp.send('Input.dispatchTouchEvent', { type, touchPoints: type === 'touchEnd' ? [] : [{ x: Math.round(x), y }] });
+  const before = await soundCount(page, 'peek');
+  await touch('touchStart', hand.x + 8);
+  for (let x = 8; x < hand.width - 8; x += 18) {
+    await touch('touchMove', hand.x + x);
+    await page.waitForTimeout(16);
+  }
+  await expect(page.locator('.hand .slot.peek')).toHaveCount(1);
+  expect(await soundCount(page, 'peek')).toBeGreaterThan(before + 3);
+  await touch('touchEnd', 0);
+  await expect(page.locator('.hand .slot.peek')).toHaveCount(0);
+  await expect(page.locator('.hand .slot.up')).toHaveCount(0);
+  await expect(page.locator('.hand .slot')).toHaveCount(count);
 });

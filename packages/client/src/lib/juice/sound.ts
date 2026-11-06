@@ -552,6 +552,15 @@ export const sound = {
       noise(e, 0.12, 0.16 * vary(0.03), { band: 1100 * b, sweepTo: 1900 * b, q: 0.8, shape: 'swell', peak: 0.55, wet: 0.03 });
     });
   },
+  /** Peek (round 22): a soft card tick as each card in your hand comes up under your finger or
+   *  mouse, a little higher the further right it is, like running a thumb along a fanned hand. */
+  peek(i: number) {
+    play('peek', (e) => {
+      const b = vary() * (1 + Math.min(12, Math.max(0, i || 0)) * 0.035);
+      noise(e, 0.035, 0.14 * vary(0.03), { band: 2600 * b, q: 1.2, shape: 'swell', peak: 0.2, wet: 0.02 });
+      snap(e, 0.035, 0, 4200 * b);
+    });
+  },
   /** A card takes the lead of the trick. `n` = how many times the lead has changed (1–3). */
   lead(n: number) {
     play('lead', (e) => {

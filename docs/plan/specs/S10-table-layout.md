@@ -69,3 +69,15 @@ A table you can read at a glance on a phone while faces are talking in a floatin
 - **How the install works:**
   - The Worker serves `/manifest.webmanifest`. Its start address includes the private link's key, but only for a request that already carries the right key; anyone else gets `/`.
   - The icon is the D A R K tiles in a 2 × 2 grid (`icon-v3-192.png`, `icon-v3-512.png`, `apple-touch-icon-v3.png`, all four letters filled; renamed when redrawn so phones fetch the new one).
+
+## Desktop layout B (Ryan, round 22)
+- **When it applies:** on a screen at least 1100 px wide and 620 px tall. Smaller screens keep the phone layout unchanged.
+- **The table:** the table and your hand take the left. The table grows to fit the height (up to 400 px), table cards up to 96 px and hand cards up to 100 px.
+- **The seats:** the four seats keep the phone's layout, with each name below its avatar.
+- **The side panel:** 400 px on the right, always in this order, with whatever applies:
+  1. **The Bids:** the calls so far.
+  2. **The scoreboard:** the contract and the race, or who deals before the contract is set.
+  3. **Previous Set:** the last set's four cards, once there is one. While it's your call, the bid box takes this place, with all seven levels showing.
+- **Wording:** the same as the phone ("The Bids", "Previous Set").
+- **No floats:** the scoreboard, bid box and sheets no longer float over the table on desktop. The Play On, concession and end-of-night prompts still appear above the hand.
+- **Implementation:** `lib/layout.svelte.ts` (`layout.wide`, `tableCardWidth`, `handCardWidth`).

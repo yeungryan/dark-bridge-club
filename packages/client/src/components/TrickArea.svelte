@@ -4,6 +4,7 @@
   import { spotOf } from '../lib/format';
   import { director } from '../lib/juice/director.svelte';
   import { EASE_OUT, launch } from '../lib/juice/launch.svelte';
+  import { tableCardWidth } from '../lib/layout.svelte';
   import { settings } from '../lib/juice/settings.svelte';
   import { TIMING } from '../lib/juice/timing';
   import Card from './Card.svelte';
@@ -21,7 +22,7 @@
   const me = $derived(view.mySeat!);
   // The area shrinks to fit between the side badges; cards scale with it so they never overlap them.
   let size = $state(180);
-  const cardWidth = $derived(Math.max(34, Math.min(52, Math.floor(size * 0.29))));
+  const cardWidth = $derived(tableCardWidth(size));
 
   // The trick just finished. Derived (not set in an effect) so the cards on the table never
   // blink out for a frame when the last card lands: they'd remount and fly in again from the names.

@@ -4,6 +4,7 @@
   import { sameCard } from '../lib/format';
   import { buzz } from '../lib/juice/haptics';
   import { EASE_OUT, launch, type Throw } from '../lib/juice/launch.svelte';
+  import { handCardWidth, tableCardWidth } from '../lib/layout.svelte';
   import { director } from '../lib/juice/director.svelte';
   import { leadHold } from '../lib/leadHold.svelte';
   import { bidPreview } from '../lib/bidPreview.svelte';
@@ -53,7 +54,7 @@
     wasDealing = dealing;
   });
 
-  const cardWidth = $derived(Math.min(76, Math.max(46, Math.floor(width / 6.2))));
+  const cardWidth = $derived(handCardWidth(width));
   const step = $derived(deal.hand.length > 1 ? Math.min(cardWidth * 0.82, (width - cardWidth) / (deal.hand.length - 1)) : 0);
   // The bid you've picked (or, before you pick, the bid to beat) raises the cards it's about:
   // its suit, or your honours for NT. Your screen only.
@@ -82,7 +83,7 @@
     if (rect) {
       const area = document.querySelector('.area')?.getBoundingClientRect();
       // Your spot is at the bottom middle of the table, at the table's card size.
-      const tableW = area ? Math.max(34, Math.min(52, Math.floor(area.width * 0.29))) : rect.width * 0.7;
+      const tableW = area ? tableCardWidth(area.width) : rect.width * 0.7;
       const toX = area ? area.left + area.width / 2 : rect.left + rect.width / 2;
       const toY = area ? area.bottom - (tableW * 1.4) / 2 : rect.top - 200;
       const dist = Math.hypot(toX - (rect.left + rect.width / 2), toY - (rect.top + rect.height / 2));
@@ -151,7 +152,35 @@
     /** Fastest speed seen up (most negative) and down during the gesture: a flick can slow before lift-off. */
     peakUp: number;
     peakDown: number;
+    /** Running your finger sideways through the hand: each card peeks as you pass it (round 22). */
+    scrub?: boolean;
   } | null>(null);
+
+  // Peek (Ryan, round 22): the card under your mouse (desktop) or your finger running sideways
+  // through the hand (phone) slides up to the front, and its neighbours step aside so the whole
+  // card shows, with a soft card tick each time it changes.
+  let handEl = $state<HTMLElement>();
+  /** A real mouse (desktop): Peek follows it. Touch screens use the sideways finger instead. */
+  const hoverable = typeof matchMedia !== 'undefined' && matchMedia('(hover: hover) and (pointer: fine)').matches;
+  let peek = $state<number | null>(null);
+  function peekAt(clientX: number) {
+    if (!handEl || deal.hand.length === 0 || director.dealing || pending) return;
+    const x = clientX - handEl.getBoundingClientRect().left;
+    const i = Math.max(0, Math.min(deal.hand.length - 1, step > 0 ? Math.floor(x / step) : 0));
+    if (i !== peek) {
+      peek = i;
+      sound.peek(i);
+    }
+  }
+  // A card played or a new hand: nothing is under the pointer any more.
+  $effect(() => {
+    void deal.hand.length;
+    peek = null;
+  });
+  /** How far the cards after the peeked one step aside, so it shows whole. */
+  const peekShift = $derived(Math.max(0, cardWidth - step) * 0.9);
+  const peekOffset = (i: number) =>
+    peek === null || !settings.motion ? '' : i === peek ? 'translate: 0 -16px;' : i > peek ? `translate: ${peekShift}px 0;` : `translate: ${-peekShift * 0.3}px 0;`;
   /**
    * The held card leans in 3D (Balatro): toward your finger when you press it, and into the
    * direction of travel while you drag it, catching the light as it turns.
@@ -191,7 +220,15 @@
     if (!drag) return;
     const dx = e.clientX - drag.x;
     const dy = e.clientY - drag.y;
-    if (Math.abs(dx) > MOVE_SLOP || Math.abs(dy) > MOVE_SLOP) drag.moved = true;
+    if (!drag.moved && (Math.abs(dx) > MOVE_SLOP || Math.abs(dy) > MOVE_SLOP)) {
+      drag.moved = true;
+      // Mostly sideways (and not a raised card you could drag to the table): scrub through the hand.
+      if (Math.abs(dx) > Math.abs(dy) * 1.2 && !(isUp(drag.card) && playable(drag.card))) drag.scrub = true;
+    }
+    if (drag.scrub) {
+      peekAt(e.clientX);
+      return;
+    }
     // Speed, smoothed (px/ms; negative vy is up). The first move counts in full: a quick flick
     // may only send two or three moves, and the first is often the fastest.
     const dt = Math.max(1, e.timeStamp - drag.t);
@@ -218,6 +255,10 @@
     const d = { ...drag, dx: e.clientX - drag.x, dy: e.clientY - drag.y };
     drag = null;
     lean = null;
+    if (d.scrub) {
+      peek = null;
+      return;
+    }
     const el = e.currentTarget as HTMLElement;
     if (!d.moved) return tap(d.card, el);
     if (!isUp(d.card)) {
@@ -253,7 +294,14 @@
   const isPending = (card: CardT) => pending !== null && sameCard(pending.card, card);
 </script>
 
-<div class="hand" class:dealing={director.dealing !== null} bind:clientWidth={width} style="height: {cardWidth * 1.4 + 22}px">
+<!-- svelte-ignore a11y_no_static_element_interactions -->
+<div
+  class="hand"
+  class:dealing={director.dealing !== null}
+  bind:this={handEl}
+  onpointermove={(e) => hoverable && e.pointerType === 'mouse' && !drag && peekAt(e.clientX)}
+  onpointerleave={(e) => e.pointerType === 'mouse' && (peek = null)}
+  bind:clientWidth={width} style="height: {cardWidth * 1.4 + 22}px">
   {#each deal.hand as card, i (card.suit + card.rank)}
     {@const up = raised !== null && sameCard(raised, card)}
     {@const held = dragging(card)}
@@ -268,13 +316,15 @@
       class:tilt={settings.motion}
       class:fan={fanning}
       class:preview={!up && !held && previewed(card)}
-      style="--i: {i}; --dx: {width / 2 - cardWidth / 2 - i * step}px; left: {i * step}px; {held ? `transform: translate(${drag!.dx}px, ${drag!.dy}px) rotate(${drag!.dx * 0.04}deg) scale(1.1)` : ''}"
+      class:peek={peek === i && !held}
+      style="--i: {i}; --dx: {width / 2 - cardWidth / 2 - i * step}px; left: {i * step}px; {held ? '' : peekOffset(i)} {held ? `transform: translate(${drag!.dx}px, ${drag!.dy}px) rotate(${drag!.dx * 0.04}deg) scale(1.1)` : ''}"
       onpointerdown={(e) => down(e, card)}
       onpointermove={move}
       onpointerup={release}
       onpointercancel={() => {
         drag = null;
         lean = null;
+        peek = null;
       }}
       onclick={(e) => {
         // Keyboard activation only; pointer taps are handled in release().
@@ -320,6 +370,7 @@
   .slot {
     position: absolute;
     bottom: 0;
+    translate: 0 0;
     padding: 0;
     border: 0;
     background: none;
@@ -328,6 +379,14 @@
     transition: transform calc(180ms * var(--speed)) cubic-bezier(0.34, 1.56, 0.64, 1);
     transition-duration: calc(var(--spring-pop-ms, 180ms) * var(--speed));
     transition-timing-function: var(--spring-pop, cubic-bezier(0.34, 1.56, 0.64, 1));
+    transition-property: transform, translate;
+  }
+  /* Peek: the card under your mouse or finger comes to the front (round 22). */
+  .slot.peek {
+    z-index: 30;
+  }
+  .slot.peek :global(.card) {
+    box-shadow: 0 10px 22px rgba(0, 0, 0, 0.5);
   }
   /* A lifted card rises, grows, and sits on top of its neighbours. */
   /* Raised for the bid you've picked. */
