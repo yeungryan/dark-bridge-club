@@ -62,6 +62,12 @@ export interface PendingConcession {
   readonly side: Side;
 }
 
+/** A player has asked to play on after the clinch; their partner has to agree (Ryan, round 21). */
+export interface PlayOnAsk {
+  readonly by: Seat;
+  readonly side: Side;
+}
+
 export interface DealState {
   readonly seed: Seed | null;
   readonly dealer: Seat;
@@ -76,6 +82,10 @@ export interface DealState {
   readonly clinch: Clinch | null;
   readonly playingOn: boolean;
   readonly concession: PendingConcession | null;
+  /** Waiting for the asker's partner to agree to play on (absent in games saved before round 21). */
+  readonly playOnAsk?: PlayOnAsk | null;
+  /** The side whose ask was turned down: now only the other side may ask. */
+  readonly playOnDeclined?: Side | null;
   readonly result: DealResult | null;
 }
 
@@ -83,6 +93,7 @@ export type DealAction =
   | { type: 'call'; seat: Seat; call: Call }
   | { type: 'play'; seat: Seat; card: Card }
   | { type: 'playOn'; seat: Seat }
+  | { type: 'declinePlayOn'; seat: Seat }
   | { type: 'endAtClinch' }
   | { type: 'proposeConcession'; seat: Seat }
   | { type: 'acceptConcession'; seat: Seat }
@@ -96,6 +107,8 @@ export type DealEvent =
   | { type: 'cardPlayed'; seat: Seat; card: Card }
   | { type: 'trickWon'; trickNumber: number; winner: Seat; card: Card; side: Side; tricksWon: DealState['tricksWon'] }
   | { type: 'clinched'; clinch: Clinch }
+  | { type: 'playOnAsked'; seat: Seat; side: Side }
+  | { type: 'playOnDeclined'; seat: Seat | null; side: Side }
   | { type: 'playOnChosen'; seat: Seat }
   | { type: 'concessionProposed'; seat: Seat; side: Side }
   | { type: 'concessionDeclined'; seat: Seat }
@@ -157,6 +170,8 @@ export function applyDealAction(state: DealState, action: DealAction): DealOutco
       return applyPlay(state, action.seat, action.card);
     case 'playOn':
       return applyPlayOn(state, action.seat);
+    case 'declinePlayOn':
+      return applyDeclinePlayOn(state, action.seat);
     case 'endAtClinch':
       return applyEndAtClinch(state);
     case 'proposeConcession':
@@ -254,19 +269,58 @@ function applyPlay(state: DealState, seat: Seat, card: Card): DealOutcome {
   return { ok: true, state: updated, events };
 }
 
-function applyPlayOn(state: DealState, seat: Seat): DealOutcome {
-  if (state.phase !== 'awaitingPlayOn') return fail('NO_CLINCH_CHOICE', 'There is nothing to play on from.');
-  const leader = state.tricks[state.tricks.length - 1]!.winner;
-  return {
-    ok: true,
-    state: { ...state, phase: 'play', playingOn: true, currentTrick: { leader, cards: [] } },
-    events: [{ type: 'playOnChosen', seat }],
-  };
+/** The "Play it out?" window after the clinch (R11), and the time to answer an ask (round 21). */
+export const PLAY_ON_MS = 5_000;
+export const PLAY_ON_ANSWER_MS = 10_000;
+
+/**
+ * Whether the side that won the game can still take every set (a sweep), or the side that lost can
+ * still be swept: the losers haven't won a set yet. Labels the Play On button (round 21).
+ */
+export function sweepStillOn(state: Pick<DealState, 'clinch' | 'tricksWon'>): boolean {
+  if (!state.clinch) return false;
+  return state.tricksWon[state.clinch.side === 'declarers' ? 'defenders' : 'declarers'] === 0;
 }
 
+/**
+ * Play On (Ryan, round 21): one player asks, and their partner has to agree. If the partner says
+ * no (or doesn't answer in time), the other pair gets their own chance to ask; if they turn it down
+ * too, the game ends where it was decided.
+ */
+function applyPlayOn(state: DealState, seat: Seat): DealOutcome {
+  if (state.phase !== 'awaitingPlayOn' || !state.contract) return fail('NO_CLINCH_CHOICE', 'There is nothing to play on from.');
+  const ask = state.playOnAsk ?? null;
+  if (ask) {
+    if (seat === ask.by) return fail('PLAY_ON_ASKED', 'Waiting for your partner to agree.');
+    if (seat !== partner(ask.by)) return fail('PLAY_ON_ASKED', 'The other pair is deciding whether to play on.');
+    const leader = state.tricks[state.tricks.length - 1]!.winner;
+    return {
+      ok: true,
+      state: { ...state, phase: 'play', playingOn: true, playOnAsk: null, playOnDeclined: null, currentTrick: { leader, cards: [] } },
+      events: [{ type: 'playOnChosen', seat }],
+    };
+  }
+  const side = sideOf(seat, state.contract);
+  if (state.playOnDeclined === side) return fail('PLAY_ON_DECLINED', 'Your pair already said no to playing on.');
+  return { ok: true, state: { ...state, playOnAsk: { by: seat, side } }, events: [{ type: 'playOnAsked', seat, side }] };
+}
+
+/** The asker's partner says no (or, from the timer, doesn't answer: `seat` null). */
+function applyDeclinePlayOn(state: DealState, seat: Seat | null): DealOutcome {
+  const ask = state.playOnAsk ?? null;
+  if (state.phase !== 'awaitingPlayOn' || !ask) return fail('NO_PLAY_ON_ASK', 'No one has asked to play on.');
+  if (seat !== null && seat !== partner(ask.by)) return fail('NOT_PARTNER', "Only the asker's partner can answer.");
+  const events: DealEvent[] = [{ type: 'playOnDeclined', seat, side: ask.side }];
+  // Both pairs have now turned it down: the game ends as it was decided.
+  if (state.playOnDeclined) return complete({ ...state, playOnAsk: null }, events, false);
+  return { ok: true, state: { ...state, playOnAsk: null, playOnDeclined: ask.side }, events };
+}
+
+/** The window ran out: an unanswered ask counts as a no; otherwise the game ends where it was decided. */
 function applyEndAtClinch(state: DealState): DealOutcome {
   if (state.phase !== 'awaitingPlayOn') return fail('NO_CLINCH_CHOICE', 'There is no clinch choice open.');
-  return complete(state, [], false);
+  if (state.playOnAsk) return applyDeclinePlayOn(state, null);
+  return complete({ ...state, playOnAsk: null }, [], false);
 }
 
 function complete(state: DealState, events: DealEvent[], playedOut: boolean): DealOutcome {

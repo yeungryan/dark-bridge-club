@@ -120,6 +120,11 @@ test('the bid ladder: tap a bid to see what it needs, tap it again (now "Bid …
   const picked = page.locator('.ladder .tile.on');
   await expect(picked).toContainText(/Bid\s*\d/);
   await expect(page.locator('.box .confirm')).toHaveCount(0);
+  // Tapping outside the bid box lets go of it (Ryan); pick it again to bid.
+  await page.touchscreen.tap(12, 160);
+  await expect(page.locator('.ladder .tile.on')).toHaveCount(0);
+  await tile.tap();
+  await expect(picked).toContainText(/Bid\s*\d/);
   await page.waitForTimeout(300); // past the double-tap guard
   await picked.tap();
   // My bid lands on the table in front of me (Ryan: like a played card, so no name is needed).
@@ -416,4 +421,19 @@ test('a new build shows a refresh bar; "add to home screen" sits by the links; t
   expect((await (await request.get('/manifest.webmanifest?k=dev')).json()).start_url).toBe('/?k=dev');
   expect((await (await request.get('/manifest.webmanifest?k=wrong')).json()).start_url).toBe('/');
   expect((await request.get('/icon-v3-192.png')).headers()['content-type']).toContain('image/png');
+});
+
+test('Play On: you ask, your bot partner agrees, and the game is played out (round 21)', async ({ page }) => {
+  await page.goto(PRACTICE);
+  const prompt = page.locator('.clinch-prompt');
+  await playUntil(page, () => prompt.isVisible());
+  // The button says what's at stake: a sweep for the winners, being swept for the losers.
+  const ask = prompt.getByRole('button', { name: /^(Play on|Go for a sweep|Ask to be swept) \(\d+\)$/ });
+  await ask.click();
+  // Your partner (a bot) agrees, and play goes on to the 13th set.
+  await expect(prompt).toBeHidden({ timeout: 5000 });
+  await playUntil(page, () => page.getByRole('button', { name: 'Next game' }).isVisible(), { stayOnReveal: true });
+  const sets = (await page.locator('.reveal .sets').textContent()) ?? '';
+  const [a, b] = sets.match(/\d+/g)!.map(Number);
+  expect(a! + b!).toBe(13);
 });

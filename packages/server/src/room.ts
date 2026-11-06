@@ -51,6 +51,8 @@ import {
   type CompletedTrick,
   effectiveFrom,
   emptyCarried,
+  PLAY_ON_ANSWER_MS,
+  PLAY_ON_MS,
   emptyChangeQueue,
   KEEP_GAMES,
   withoutMatchup,
@@ -69,7 +71,6 @@ import { isProfile, PROFILE_IDS, PROFILES, SWAP_ANCHOR, USUAL_PARTNER } from './
 // owns all timers, and saves everything to the Durable Object's SQLite storage.
 
 const GRACE_MS = 10_000; // S08: reconnecting → away
-const CLINCH_MS = 5_000; // R11: "Play it out?" window
 const CONCESSION_MS = 15_000; // S04: concession offer expiry
 const AUTO_CLOSE_MS = 30 * 60_000; // R13: away this long → the night closes
 const MAX_FAILED_PINS = 5;
@@ -508,6 +509,7 @@ export class TableRoom extends DurableObject<Env> {
           replayable: g.replayable === 1,
           seating: record.seating ?? null,
           setsBySeat,
+          voided: record.voided ?? false,
         };
       });
     const avatarRows = this.sql
@@ -692,12 +694,14 @@ export class TableRoom extends DurableObject<Env> {
     let timers = this.data.timers;
 
     // A fresh clinch or a fresh concession offer always gets a fresh deadline.
-    if (dealEvents.includes('clinched')) timers = timers.filter((t) => t.kind !== 'clinch');
+    // Asking to play on, or a pair saying no, restarts it with time to answer (round 21).
+    const playOnStep = dealEvents.includes('playOnAsked') || dealEvents.includes('playOnDeclined');
+    if (dealEvents.includes('clinched') || playOnStep) timers = timers.filter((t) => t.kind !== 'clinch');
     if (dealEvents.includes('concessionProposed')) timers = timers.filter((t) => t.kind !== 'concession');
 
     const wantClinch = session.deal?.phase === 'awaitingPlayOn';
     if (!wantClinch) timers = timers.filter((t) => t.kind !== 'clinch');
-    else if (!timers.some((t) => t.kind === 'clinch')) timers.push({ kind: 'clinch', at: now + CLINCH_MS });
+    else if (!timers.some((t) => t.kind === 'clinch')) timers.push({ kind: 'clinch', at: now + (playOnStep ? PLAY_ON_ANSWER_MS : PLAY_ON_MS) });
 
     const wantConcession = session.phase === 'inDeal' && !!session.deal?.concession;
     if (!wantConcession) timers = timers.filter((t) => t.kind !== 'concession');

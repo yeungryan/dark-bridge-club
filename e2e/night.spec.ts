@@ -280,6 +280,38 @@ test.describe.serial('a night at the DARK table', () => {
     expect(after.length).toBeGreaterThanOrEqual(before.length - 1);
   });
 
+  test('ending the game needs everyone; it counts for no one and the next game is dealt (round 21)', async () => {
+    const page = ryan().page;
+    const view = () => ryan().frames.filter((f) => f.type === 'state').at(-1)!.view;
+    // Get to a game in progress (Ryan may need to move on or deal).
+    await expect
+      .poll(
+        async () => {
+          if (view().phase === 'inDeal') return true;
+          await tap(page.getByRole('button', { name: 'Next game' }));
+          await tap(page.getByRole('button', { name: 'Deal', exact: true }));
+          return false;
+        },
+        { timeout: 60_000, intervals: [500] },
+      )
+      .toBe(true);
+    const { dealNumber, wins } = view();
+    await page.getByRole('button', { name: 'Menu' }).click();
+    await page.getByRole('button', { name: /^End the game/ }).click();
+    // The bots agree; the game is dropped and the next one is dealt (by Ryan, if it's his deal).
+    await expect
+      .poll(
+        async () => {
+          await tap(page.getByRole('button', { name: 'Deal', exact: true }));
+          return view().dealNumber;
+        },
+        { timeout: 30_000, intervals: [500] },
+      )
+      .toBeGreaterThan(dealNumber);
+    expect(view().wins).toEqual(wins);
+    expect(view().endGameVotes).toEqual([]);
+  });
+
   test('ending the night needs everyone, then shows the final score and the awards', async () => {
     const page = ryan().page;
     await page.getByRole('button', { name: 'Menu' }).click();

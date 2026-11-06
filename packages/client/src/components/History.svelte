@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { AWARDS, countedNights, pairKey, type MatchupRecord, emptyCarried, headToHead, momentsWall, partnershipRecords, winRate, type PendingChange, type ProfileInfo, type SavedNight, type ScoreOverride, type ThemeId, type Carried } from '@dark/engine';
+  import { AWARDS, countedNights, gameWorth, pairKey, type MatchupRecord, emptyCarried, headToHead, momentsWall, partnershipRecords, winRate, type PendingChange, type ProfileInfo, type SavedNight, type ScoreOverride, type ThemeId, type Carried } from '@dark/engine';
   import { profileOf } from '../lib/format';
   import { MAIN_PAIR } from '../lib/avatars';
   import { loadGame, loadHistory, nightLine, pairName, shortDate, type HistoryData } from '../lib/history';
@@ -226,11 +226,11 @@
                       <span class="what"
                         ><CallText call={{ type: 'bid', level: g.contract.level, strain: g.contract.strain }} />
                         {#if g.seating ?? night.seating}by {name((g.seating ?? night.seating)![g.contract.declarer])}{/if}
-                        · {g.result?.winner === 'declarers' ? 'won' : 'lost'}{#if g.result?.overUnder}
-                          ({g.result.overUnder > 0 ? '+' : ''}{g.result.overUnder}){/if}</span
+                        · {g.result?.winner === 'declarers' ? 'won' : 'lost'}{#if gameWorth(g.result) > 1}
+                          (+{gameWorth(g.result)}){/if}</span
                       >
                     {:else}
-                      <span class="what muted">Passed out</span>
+                      <span class="what muted">{g.voided ? 'Ended early · not counted' : 'Passed out'}</span>
                     {/if}
                     {#if g.replayable}
                       <button

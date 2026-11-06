@@ -21,6 +21,9 @@ import {
   type ThemeBag,
   type ThemeId,
   newSession,
+  partner,
+  PLAY_ON_ANSWER_MS,
+  PLAY_ON_MS,
   randomSeed,
   seatToAct,
   tableView,
@@ -39,7 +42,8 @@ import { TURBO, TURBO_SPEED } from './juice/timing';
 // The practice table: you against three bots, entirely in this browser. It runs the same
 // rules engine the server runs and plays the same table screens, but nothing is sent
 // anywhere, so it never touches the real night's records. Timers mirror the server's
-// (5 s "Play it out?" window, 15 s concession offer); bots never answer concessions.
+// (5 s "Play it out?" window, 10 s to answer a Play On ask, 15 s concession offer); bots never
+// answer concessions, never ask to play on, and always agree when their partner asks.
 
 export const PRACTICE_PROFILES: readonly ProfileInfo[] = [
   { id: 'darren', name: 'Darren', color: '#e0703a' },
@@ -50,7 +54,8 @@ export const PRACTICE_PROFILES: readonly ProfileInfo[] = [
 const IDS = PRACTICE_PROFILES.map((p) => p.id) as [ProfileId, ProfileId, ProfileId, ProfileId];
 const USUAL_PARTNER: Record<ProfileId, ProfileId> = { darren: 'kim', kim: 'darren', adrian: 'ryan', ryan: 'adrian' };
 
-const CLINCH_MS = TURBO ? 600 : 5000;
+const CLINCH_MS = TURBO ? 1500 : PLAY_ON_MS;
+const ANSWER_MS = TURBO ? 1500 : PLAY_ON_ANSWER_MS;
 const CONCESSION_MS = 15_000;
 /** How long bots "think"; a little random so the table doesn't feel mechanical. */
 const think = (base: number) => (TURBO ? 30 : base + Math.random() * base * 0.6);
@@ -194,10 +199,12 @@ export class PracticeTable extends Connection {
     const deal = this.session.deal;
     const fresh = (type: string) => events.some((e) => e.type === 'deal' && e.event.type === type);
     if (deal?.phase === 'awaitingPlayOn') {
-      if (this.clinchAt === null || fresh('clinched')) {
-        this.clinchAt = Date.now() + CLINCH_MS;
+      const step = fresh('playOnAsked') || fresh('playOnDeclined');
+      if (this.clinchAt === null || fresh('clinched') || step) {
+        const ms = step ? ANSWER_MS : CLINCH_MS;
+        this.clinchAt = Date.now() + ms;
         const at = this.clinchAt;
-        this.later(CLINCH_MS, () => {
+        this.later(ms, () => {
           if (this.clinchAt === at && this.session.deal?.phase === 'awaitingPlayOn') this.apply({ type: 'dealTimer', action: 'endAtClinch' });
         });
       }
@@ -223,8 +230,13 @@ export class PracticeTable extends Connection {
     let action: SessionAction | null = null;
 
     const voter = s.endNightVotes.length > 0 ? bots.find((b) => !s.endNightVotes.includes(b)) : undefined;
+    const gameVotes = s.endGameVotes ?? [];
+    const gameVoter = gameVotes.length > 0 ? bots.find((b) => !gameVotes.includes(b)) : undefined;
     if (voter) {
       action = { type: 'voteEndNight', by: voter };
+      delay = think(300);
+    } else if (gameVoter) {
+      action = { type: 'voteEndGame', by: gameVoter };
       delay = think(300);
     } else if (s.phase === 'partnerPick' && s.captain && s.captain !== this.me) {
       action = { type: 'pickPartner', by: s.captain, partner: s.suggestedPartner ?? bots.find((b) => b !== s.captain)! };
@@ -238,6 +250,13 @@ export class PracticeTable extends Connection {
       if (waiting) {
         action = { type: 'readyForNext', by: waiting };
         delay = think(500);
+      }
+    } else if (s.phase === 'inDeal' && s.deal?.phase === 'awaitingPlayOn' && s.deal.playOnAsk) {
+      // You asked to play on: your bot partner agrees.
+      const by = s.seating![partner(s.deal.playOnAsk.by)];
+      if (by !== this.me) {
+        action = { type: 'deal', by, action: { type: 'playOn' } };
+        delay = think(600);
       }
     } else if (s.phase === 'inDeal' && s.deal) {
       const seat = seatToAct(s.deal);

@@ -61,7 +61,7 @@ describe('S03 golden deals', () => {
     expect(s.clinch).toMatchObject({ side: 'declarers', trickNumber: 7, seat: 0 });
     for (const t of s.tricks) expect(t.leader === 1 || t.leader === 0).toBe(true);
 
-    s = act(s, { type: 'playOn', seat: 2 });
+    s = act(act(s, { type: 'playOn', seat: 2 }), { type: 'playOn', seat: 0 });
     s = playUntil(s, (x) => x.phase !== 'play');
     expect(s.phase).toBe('complete');
     expect(s.tricks).toHaveLength(13);

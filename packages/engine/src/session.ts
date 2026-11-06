@@ -39,6 +39,8 @@ export interface DealRecord {
   readonly winningPair: PairId | null;
   /** Who sat where for this game (seats can swap during a night); absent on older games. */
   readonly seating?: PerSeat<ProfileId>;
+  /** All four agreed to end this game early: it counts for no one (Ryan, round 21). */
+  readonly voided?: boolean;
 }
 
 export interface NightResult {
@@ -65,6 +67,8 @@ export interface SessionState {
   readonly passOuts: number;
   readonly readyForNext: readonly ProfileId[];
   readonly endNightVotes: readonly ProfileId[];
+  /** Who has agreed to end the game in progress early (round 21; absent in older saved nights). */
+  readonly endGameVotes?: readonly ProfileId[];
   readonly final: NightResult | null;
 }
 
@@ -73,6 +77,7 @@ export type PlayerDealAction =
   | { type: 'call'; call: Extract<DealAction, { type: 'call' }>['call'] }
   | { type: 'play'; card: Extract<DealAction, { type: 'play' }>['card'] }
   | { type: 'playOn' }
+  | { type: 'declinePlayOn' }
   | { type: 'proposeConcession' }
   | { type: 'acceptConcession' }
   | { type: 'declineConcession' };
@@ -89,6 +94,9 @@ export type SessionAction =
   | { type: 'dealCards'; by: ProfileId }
   | { type: 'voteEndNight'; by: ProfileId }
   | { type: 'cancelEndNight'; by: ProfileId }
+  /** End the game in progress early; it counts for no one once all four agree (round 21). */
+  | { type: 'voteEndGame'; by: ProfileId }
+  | { type: 'cancelEndGame'; by: ProfileId }
   /** Server: a player has been away for 30 minutes (S05, S08). */
   | { type: 'autoClose' };
 
@@ -105,6 +113,8 @@ export type SessionEvent =
   | { type: 'tallyUpdated'; wins: Record<PairId, number>; winningPair: PairId }
   | { type: 'readyChanged'; ready: ProfileId[] }
   | { type: 'endNightVotesChanged'; votes: ProfileId[] }
+  | { type: 'endGameVotesChanged'; votes: ProfileId[] }
+  | { type: 'gameVoided'; dealNumber: number; nextDealer: Seat }
   | { type: 'nightEnded'; final: NightResult };
 
 type SessionOutcome = Outcome<SessionState, SessionEvent>;
@@ -127,6 +137,7 @@ export function newSession(config: SessionConfig): SessionState {
     passOuts: 0,
     readyForNext: [],
     endNightVotes: [],
+    endGameVotes: [],
     final: null,
   };
 }
@@ -160,6 +171,10 @@ export function applySessionAction(state: SessionState, action: SessionAction): 
       return voteEndNight(state, action.by);
     case 'cancelEndNight':
       return cancelEndNight(state, action.by);
+    case 'voteEndGame':
+      return voteEndGame(state, action.by);
+    case 'cancelEndGame':
+      return cancelEndGame(state, action.by);
     case 'autoClose':
       return endNight(state, 'autoClosed', []);
   }
@@ -212,7 +227,7 @@ function pickPartner(state: SessionState, by: ProfileId, chosen: ProfileId): Ses
 /** The next game is ready to be dealt: its dealer shuffles until they tap Deal. */
 function awaitDeal(state: SessionState, dealer: Seat, events: SessionEvent[]): SessionOutcome {
   events.push({ type: 'awaitingDeal', dealer });
-  return { ok: true, state: { ...state, phase: 'awaitingDeal', dealer, deal: null, readyForNext: [] }, events };
+  return { ok: true, state: { ...state, phase: 'awaitingDeal', dealer, deal: null, readyForNext: [], endGameVotes: [] }, events };
 }
 
 /** Only the dealer can deal, and only when a game is waiting to be dealt. */
@@ -295,7 +310,7 @@ function applyToDeal(state: SessionState, action: DealAction): SessionOutcome {
     events.push({ type: 'tallyUpdated', wins, winningPair });
     return {
       ok: true,
-      state: { ...updated, phase: 'betweenDeals', wins, records: [...state.records, record], readyForNext: [] },
+      state: { ...updated, phase: 'betweenDeals', wins, records: [...state.records, record], readyForNext: [], endGameVotes: [] },
       events,
     };
   }
@@ -344,6 +359,40 @@ function voteEndNight(state: SessionState, by: ProfileId): SessionOutcome {
   const events: SessionEvent[] = [{ type: 'endNightVotesChanged', votes }];
   if (votes.length < 4) return { ok: true, state: { ...state, endNightVotes: votes }, events };
   return endNight({ ...state, endNightVotes: votes }, 'agreed', events);
+}
+
+/**
+ * Ryan (round 21): "End the game" needs all four. The game in progress then counts for no one:
+ * no winner, nothing added to the night's score or the all-time records, and the next dealer deals.
+ */
+function voteEndGame(state: SessionState, by: ProfileId): SessionOutcome {
+  if (state.phase !== 'inDeal' || !state.deal) return fail('NO_GAME', 'There is no game in progress to end.');
+  if (!isPlayer(state, by)) return fail('NOT_A_PLAYER', 'Unknown player.');
+  const current = state.endGameVotes ?? [];
+  if (current.includes(by)) return { ok: true, state, events: [] };
+  const votes = [...current, by];
+  const events: SessionEvent[] = [{ type: 'endGameVotesChanged', votes }];
+  if (votes.length < 4) return { ok: true, state: { ...state, endGameVotes: votes }, events };
+  const deal = state.deal;
+  const record: DealRecord = {
+    dealNumber: state.dealNumber,
+    dealer: deal.dealer,
+    seed: deal.seed!,
+    contract: null,
+    result: null,
+    winningPair: null,
+    seating: state.seating!,
+    voided: true,
+  };
+  const nextDealer = next(deal.dealer);
+  events.push({ type: 'endGameVotesChanged', votes: [] }, { type: 'gameVoided', dealNumber: state.dealNumber, nextDealer });
+  return awaitDeal({ ...state, records: [...state.records, record] }, nextDealer, events);
+}
+
+function cancelEndGame(state: SessionState, by: ProfileId): SessionOutcome {
+  if (!isPlayer(state, by)) return fail('NOT_A_PLAYER', 'Unknown player.');
+  if ((state.endGameVotes ?? []).length === 0) return { ok: true, state, events: [] };
+  return { ok: true, state: { ...state, endGameVotes: [] }, events: [{ type: 'endGameVotesChanged', votes: [] }] };
 }
 
 function cancelEndNight(state: SessionState, by: ProfileId): SessionOutcome {

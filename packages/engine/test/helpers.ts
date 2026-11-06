@@ -88,6 +88,8 @@ export function seatView(state: DealState, seat: Seat): DealView {
     clinch: state.clinch,
     playingOn: state.playingOn,
     concession: state.concession,
+    playOnAsk: state.playOnAsk ?? null,
+    playOnDeclined: state.playOnDeclined ?? null,
     result: state.result,
     legalCalls: myTurn && state.phase === 'auction' ? legalCalls(state.auction) : [],
     legalPlays: myTurn && state.phase === 'play' ? legalPlays(state.hands[seat], state.currentTrick!.cards) : [],

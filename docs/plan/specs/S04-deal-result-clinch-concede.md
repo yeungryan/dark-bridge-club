@@ -22,3 +22,25 @@ Decide who wins each deal and **the exact moment it's decided**. That moment is 
 
 ## Out of scope
 The reveal (S14). Session tally (S05).
+
+## Play On needs your partner (Ryan, round 21)
+- **The window:** when a game is decided before the 13th set, everyone gets the 5 s "Play the rest out?" window, as before. It's offered whether or not a sweep is still possible.
+- **The button says what's at stake:**
+  - **Go for a sweep:** the winners, while the losers haven't won a set yet (`sweepStillOn`).
+  - **Ask to be swept:** the losers, while the winners can still take every set.
+  - **Play on:** everyone, once a sweep is no longer possible.
+- **Asking:** tapping it asks; it doesn't play on yet. The asker's partner sees "Ryan wants to go for a sweep: No / Agree" and has 10 s. Agree, and play goes on; the trick winner leads.
+- **A no:** if the partner says no, or doesn't answer in time, the **other** pair gets a fresh 10 s window to ask in the same way. Only they can ask now; it rarely happens. If they also say no, or let it run out, the game ends where it was decided.
+- **No one asks:** when the first window runs out with no ask, the game ends as before.
+- **Bots** never ask to play on, but always agree when their partner asks.
+- **Engine and server:**
+  - Engine: `playOn` asks, or agrees when sent by the asker's partner. `declinePlayOn` says no. `endAtClinch` from the timer counts an unanswered ask as a no. State: `playOnAsk`, `playOnDeclined`.
+  - Server: an ask or a no restarts the window (`PLAY_ON_ANSWER_MS`).
+
+## End the game (Ryan, round 21)
+- **Where:** a menu option above "End the night", available while a game is being played.
+- **Voting:** all four have to agree. It pops up on everyone's screen with "Keep playing" / "Agree", and any "Keep playing" calls it off.
+- **What happens:** the game counts for no one. Nothing is added to the night's score or the all-time records, and the seat-swap count doesn't move. The next dealer deals.
+- **Night log:** History shows it as "Ended early · not counted".
+- **Bots** agree.
+- **Engine:** `voteEndGame` / `cancelEndGame`, and a `DealRecord` with `voided: true`.
