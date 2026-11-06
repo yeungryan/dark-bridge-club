@@ -427,6 +427,8 @@ test('Play On: you ask, your bot partner agrees, and the game is played out (rou
   await page.goto(PRACTICE);
   const prompt = page.locator('.clinch-prompt');
   await playUntil(page, () => prompt.isVisible());
+  // Round 22 (Ryan): the deciding set sweeps away after its finisher; nothing lingers on the table.
+  await expect(page.locator('.area .spot .fly')).toHaveCount(0, { timeout: 1200 });
   // The button says what's at stake: a sweep for the winners, being swept for the losers.
   const ask = prompt.getByRole('button', { name: /^(Play on|Go for a sweep|Ask to be swept) \(\d+\)$/ });
   await ask.click();

@@ -39,3 +39,8 @@ This is the heart of the game's tension. It's the bridge version of Balatro's cl
 - The header reads **"Game N"**, centred.
 - The table is the same square during bidding and play, and anchored to the top, so seats never move when the bidding box opens. The table shrinks on short phones so everything still fits.
 - **Revised (Ryan):** the table is anchored where it sits during play, centred between the header and the scoreboard, which leaves room above for the theme's scene. It is not pinned to the top. The scoreboard's slot is a fixed 64px in every phase. The bidding box is now two rows (levels + Pass, then suits + Confirm, with a one-line hint on top), and it floats up from that slot over the empty felt below my seat, so the middle area never resizes. Seat badges are a fixed 84×96, so a role tag or a wider name can't shift a seat or push the table off-centre. Measured at four phone sizes: no seat moves between bidding and play, and "Game N" is centred exactly over the table.
+
+## The deciding set sweeps away before Play On (Ryan, round 22)
+- **What changed:** a game decided before its 13th set pauses for the Play On choice. Once the game-winning finisher is over, the deciding set now sweeps to its winner like any other set.
+- **The bug:** the deciding set never swept, so its winning card stayed on the table through the choice, and on into the sets played on until the next card was played.
+- **Unchanged:** after a 13th set, the results take over as before.
