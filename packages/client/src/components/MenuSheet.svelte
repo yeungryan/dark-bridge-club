@@ -2,6 +2,7 @@
   import Flag from '@lucide/svelte/icons/flag';
   import Undo2 from '@lucide/svelte/icons/undo-2';
   import Moon from '@lucide/svelte/icons/moon';
+  import SquareX from '@lucide/svelte/icons/square-x';
   import History from '@lucide/svelte/icons/history';
   import AudioLines from '@lucide/svelte/icons/audio-lines';
   import Users from '@lucide/svelte/icons/users';
@@ -25,6 +26,9 @@
   const theme = $derived(themeOf(room.theme));
   const votes = $derived(view.endNightVotes.length);
   const voted = $derived(view.endNightVotes.includes(view.me));
+  const gameVotes = $derived(view.endGameVotes.length);
+  const votedGame = $derived(view.endGameVotes.includes(view.me));
+  const inGame = $derived(view.phase === 'inDeal');
   const page = $derived(start);
 
   function act(fn: () => void) {
@@ -55,6 +59,22 @@
       <span class="text"><strong>Concede the rest of this game</strong><small>{canConcede ? 'Your partner has to agree' : 'Only while cards are being played'}</small></span>
     </button>
 
+    <!-- Ryan (round 21): end just this game; it counts for no one once all four agree. -->
+    {#if votedGame}
+      <button class="row" onclick={() => act(() => conn.intent({ type: 'cancelEndGame' }))}>
+        <span class="icon" aria-hidden="true"><Undo2 size={22} strokeWidth={1.75} /></span>
+        <span class="text"><strong>Take back my vote to end this game</strong><small>{gameVotes}/4 want to end it</small></span>
+      </button>
+    {:else}
+      <button class="row" disabled={!inGame} onclick={() => act(() => conn.intent({ type: 'voteEndGame' }))}>
+        <span class="icon" aria-hidden="true"><SquareX size={22} strokeWidth={1.75} /></span>
+        <span class="text"
+          ><strong>End the game</strong><small
+            >{inGame ? `All four have to agree · it won't count${gameVotes ? ` · ${gameVotes}/4 so far` : ''}` : 'Only while a game is being played'}</small
+          ></span
+        >
+      </button>
+    {/if}
     {#if voted}
       <button class="row" onclick={() => act(() => conn.intent({ type: 'cancelEndNight' }))}>
         <span class="icon" aria-hidden="true"><Undo2 size={22} strokeWidth={1.75} /></span>

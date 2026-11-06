@@ -1,9 +1,9 @@
 import { declarerTarget, defenderTarget, legalCalls, type AuctionCall } from './auction';
-import { seatToAct, type Clinch, type DealPhase, type DealResult, type PendingConcession } from './deal';
+import { seatToAct, type Clinch, type DealPhase, type DealResult, type PendingConcession, type PlayOnAsk } from './deal';
 import { legalPlays, trumpSuit, type CompletedTrick, type PlayedCard } from './play';
 import { perSeat } from './seats';
 import { seatOf, type NightResult, type PairId, type ProfileId, type SessionPhase, type SessionState } from './session';
-import type { Call, Card, Contract, PerSeat, Seat } from './types';
+import type { Call, Card, Contract, PerSeat, Seat, Side } from './types';
 
 // Spec S06: what one player is allowed to see. The server sends only this, never SessionState.
 // - Other players' cards are never included until the deal is complete (the reveal, S14).
@@ -34,6 +34,9 @@ export interface DealView {
   readonly clinch: Clinch | null;
   readonly playingOn: boolean;
   readonly concession: PendingConcession | null;
+  /** Play On asked and waiting for the partner (round 21), and the pair that turned it down. */
+  readonly playOnAsk: PlayOnAsk | null;
+  readonly playOnDeclined: Side | null;
   readonly result: DealResult | null;
   /** Your legal options, only when it is your turn. */
   readonly legalCalls: readonly Call[];
@@ -60,6 +63,8 @@ export interface TableView {
   readonly passOuts: number;
   readonly readyForNext: readonly ProfileId[];
   readonly endNightVotes: readonly ProfileId[];
+  /** Who has agreed to end the game in progress early (round 21). */
+  readonly endGameVotes: readonly ProfileId[];
   readonly final: NightResult | null;
   readonly deal: DealView | null;
 }
@@ -81,6 +86,7 @@ export function tableView(state: SessionState, me: ProfileId): TableView {
     passOuts: state.passOuts,
     readyForNext: state.readyForNext,
     endNightVotes: state.endNightVotes,
+    endGameVotes: state.endGameVotes ?? [],
     final: state.final,
     deal: state.deal ? dealView(state, mySeat) : null,
   };
@@ -110,6 +116,8 @@ function dealView(state: SessionState, mySeat: Seat | null): DealView {
     clinch: deal.clinch,
     playingOn: deal.playingOn,
     concession: deal.concession,
+    playOnAsk: deal.playOnAsk ?? null,
+    playOnDeclined: deal.playOnDeclined ?? null,
     result: deal.result,
     legalCalls: myTurn && deal.phase === 'auction' ? legalCalls(deal.auction) : [],
     legalPlays: myTurn && deal.phase === 'play' ? legalPlays(deal.hands[mySeat], deal.currentTrick!.cards) : [],

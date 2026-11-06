@@ -45,7 +45,7 @@ function game(
     s = playUntil(s, (x) => x.phase !== 'play', highestLegal);
     if (s.phase === 'awaitingPlayOn') {
       if (opts.playOn) {
-        s = act(s, { type: 'playOn', seat: 0 });
+        s = act(act(s, { type: 'playOn', seat: 0 }), { type: 'playOn', seat: 2 });
         s = playUntil(s, (x) => x.phase !== 'play', highestLegal);
       } else {
         s = act(s, { type: 'endAtClinch' });

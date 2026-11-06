@@ -173,6 +173,24 @@ describe('S05 session', () => {
     expect(s.final).toEqual({ winner: 'tie', reason: 'agreed', wins: { A: 0, B: 0 }, discardedDeal: true });
   });
 
+  it('ending the game needs all four; it then counts for no one and the next dealer deals (round 21)', () => {
+    let s = seated();
+    const dealer = s.deal!.dealer;
+    for (const by of config.profiles.slice(0, 3)) s = apply(s, { type: 'voteEndGame', by });
+    expect(s.phase).toBe('inDeal');
+    expect(s.endGameVotes).toHaveLength(3);
+    s = apply(s, { type: 'cancelEndGame', by: 'kim' });
+    expect(s.endGameVotes).toEqual([]);
+    for (const by of config.profiles) s = apply(s, { type: 'voteEndGame', by }, false);
+    expect(s.phase).toBe('awaitingDeal');
+    expect(s.dealer).toBe((dealer + 1) % 4);
+    expect(s.wins).toEqual({ A: 0, B: 0 });
+    expect(s.records.at(-1)).toMatchObject({ voided: true, winningPair: null, result: null });
+    expect(s.endGameVotes).toEqual([]);
+    // Nothing to end between games.
+    expect(applySessionAction(s, { type: 'voteEndGame', by: 'kim' }).ok).toBe(false);
+  });
+
   it('auto-close after 30 minutes away keeps the tally and discards the unfinished deal', () => {
     let s = allReady(playDeal(seated()));
     s = call(s, bid(1, 'C'));

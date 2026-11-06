@@ -230,7 +230,7 @@
                           (+{gameWorth(g.result)}){/if}</span
                       >
                     {:else}
-                      <span class="what muted">Passed out</span>
+                      <span class="what muted">{g.voided ? 'Ended early · not counted' : 'Passed out'}</span>
                     {/if}
                     {#if g.replayable}
                       <button

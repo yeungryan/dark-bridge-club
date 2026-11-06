@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
   applyDealAction,
+  sweepStillOn,
   bid,
   cardId,
   declarerTarget,
@@ -53,7 +54,7 @@ describe('S04 clinch', () => {
   it('any seat may choose Play on, and the trick winner leads the next trick', () => {
     let s = runAuction(newDealWithHands(hands, 3), [bid(1, 'S'), PASS, PASS, PASS]);
     s = playUntil(s, toChoice);
-    s = act(s, { type: 'playOn', seat: 3 });
+    s = act(act(s, { type: 'playOn', seat: 3 }), { type: 'playOn', seat: 1 });
     expect(s.phase).toBe('play');
     expect(s.currentTrick!.leader).toBe(s.tricks[s.tricks.length - 1]!.winner);
   });
@@ -63,7 +64,7 @@ describe('S04 clinch', () => {
     // result stays "defeated".
     let s = runAuction(newDealWithHands(hands, 3), [bid(4, 'C'), PASS, PASS, PASS]);
     s = playUntil(s, toChoice);
-    s = act(s, { type: 'playOn', seat: 0 });
+    s = act(act(s, { type: 'playOn', seat: 0 }), { type: 'playOn', seat: 2 });
     s = playUntil(s, toChoice);
     expect(s.result).toMatchObject({ winner: 'defenders', reason: 'defeated', playedOut: true, overUnder: -10 });
   });
@@ -73,6 +74,51 @@ describe('S04 clinch', () => {
     s = playUntil(s, toChoice);
     expect(seatToAct(s)).toBeNull();
     expect(applyDealAction(s, { type: 'play', seat: 0, card: s.hands[0][0]! }).ok).toBe(false);
+  });
+});
+
+describe('Play On needs your partner (Ryan, round 21)', () => {
+  // 1♠ by seat 0: the declarers (0 and 2) take every set, so a sweep is still on at the clinch.
+  const decided = () => playUntil(runAuction(newDealWithHands(hands, 3), [bid(1, 'S'), PASS, PASS, PASS]), toChoice);
+
+  it('one asks, the partner agrees, and play goes on', () => {
+    let s = act(decided(), { type: 'playOn', seat: 0 });
+    expect(s.phase).toBe('awaitingPlayOn');
+    expect(s.playOnAsk).toEqual({ by: 0, side: 'declarers' });
+    // Only the partner can answer; the other pair waits.
+    expect(applyDealAction(s, { type: 'playOn', seat: 1 }).ok).toBe(false);
+    expect(applyDealAction(s, { type: 'declinePlayOn', seat: 3 }).ok).toBe(false);
+    s = act(s, { type: 'playOn', seat: 2 });
+    expect(s.phase).toBe('play');
+    expect(s.playOnAsk).toBeNull();
+  });
+
+  it('the partner says no: only the other pair may ask now; their partner agrees', () => {
+    let s = act(act(decided(), { type: 'playOn', seat: 0 }), { type: 'declinePlayOn', seat: 2 });
+    expect(s.phase).toBe('awaitingPlayOn');
+    expect(s.playOnDeclined).toBe('declarers');
+    expect(applyDealAction(s, { type: 'playOn', seat: 2 }).ok).toBe(false);
+    s = act(act(s, { type: 'playOn', seat: 1 }), { type: 'playOn', seat: 3 });
+    expect(s.phase).toBe('play');
+  });
+
+  it('both pairs say no: the game ends where it was decided', () => {
+    let s = act(act(decided(), { type: 'playOn', seat: 0 }), { type: 'declinePlayOn', seat: 2 });
+    s = act(act(s, { type: 'playOn', seat: 3 }), { type: 'declinePlayOn', seat: 1 });
+    expect(s.phase).toBe('complete');
+    expect(s.result).toMatchObject({ winner: 'declarers', playedOut: false });
+  });
+
+  it('the window runs out on an unanswered ask: a no, and the other pair gets their turn', () => {
+    let s = act(act(decided(), { type: 'playOn', seat: 1 }), { type: 'endAtClinch' });
+    expect(s.phase).toBe('awaitingPlayOn');
+    expect(s.playOnDeclined).toBe('defenders');
+    s = act(s, { type: 'endAtClinch' });
+    expect(s.phase).toBe('complete');
+  });
+
+  it('knows when a sweep is still on', () => {
+    expect(sweepStillOn(decided())).toBe(true);
   });
 });
 
@@ -140,7 +186,7 @@ describe('S03/S04 property test', () => {
       if (s.phase === 'passedOut') continue;
       s = playUntil(s, toChoice, randomLegal(rng));
       if (s.phase === 'awaitingPlayOn') {
-        s = act(s, { type: 'playOn', seat: 0 });
+        s = act(act(s, { type: 'playOn', seat: 0 }), { type: 'playOn', seat: 2 });
         s = playUntil(s, toChoice, randomLegal(rng));
       }
       expect(s.phase).toBe('complete');

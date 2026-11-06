@@ -12,7 +12,9 @@ export type ClientIntent =
   | { type: 'readyForNext' }
   | { type: 'dealCards' }
   | { type: 'voteEndNight' }
-  | { type: 'cancelEndNight' };
+  | { type: 'cancelEndNight' }
+  | { type: 'voteEndGame' }
+  | { type: 'cancelEndGame' };
 
 export type ClientMessage =
   | { type: 'intent'; intent: ClientIntent }

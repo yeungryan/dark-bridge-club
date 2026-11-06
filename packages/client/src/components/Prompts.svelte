@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { partner } from '@dark/engine';
+  import { partner, PLAY_ON_ANSWER_MS, PLAY_ON_MS, sideOf, sweepStillOn, type Seat } from '@dark/engine';
   import { onDestroy } from 'svelte';
   import type { Connection } from '../lib/connection.svelte';
   import { nameAtSeat } from '../lib/format';
@@ -22,16 +22,49 @@
   const iAnswer = $derived(concession !== null && view.mySeat === partner(concession.by));
   const iProposed = $derived(concession !== null && view.mySeat === concession.by);
   const votedEnd = $derived(view.endNightVotes.includes(view.me));
+
+  // Play On (Ryan, round 21): one asks, their partner agrees. With a sweep still possible, the
+  // winners "Go for a sweep" and the losers can "Ask to be swept".
+  const ask = $derived(deal?.playOnAsk ?? null);
+  const mySide = $derived(deal?.contract && view.mySeat !== null ? sideOf(view.mySeat, deal.contract) : null);
+  const sweepOn = $derived(!!deal && sweepStillOn(deal));
+  const playOnLabel = $derived(!sweepOn ? 'Play on' : mySide === deal?.clinch?.side ? 'Go for a sweep' : 'Ask to be swept');
+  const asked = (label: string) => (label === 'Play on' ? 'play on' : label === 'Go for a sweep' ? 'go for a sweep' : 'be swept');
+  const askLabel = $derived(
+    !ask || !deal?.clinch ? 'Play on' : !sweepOn ? 'Play on' : ask.side === deal.clinch.side ? 'Go for a sweep' : 'Ask to be swept',
+  );
+  const iDeclined = $derived(!!deal?.playOnDeclined && deal.playOnDeclined === mySide);
+  const otherDeclined = $derived(!!deal?.playOnDeclined && deal.playOnDeclined !== mySide);
+  const windowMs = $derived(ask || deal?.playOnDeclined ? PLAY_ON_ANSWER_MS : PLAY_ON_MS);
+  const pairOf = (seat: Seat) => `${nameAtSeat(view, profiles, seat)} & ${nameAtSeat(view, profiles, partner(seat))}`;
+  const otherPairSeat = $derived(view.mySeat === null ? null : ((view.mySeat + 1) % 4) as Seat);
 </script>
 
 {#if deal?.phase === 'awaitingPlayOn' && deal.clinch}
   <div class="prompt panel clinch-prompt" role="status">
     <strong>{deal.clinch.side === 'declarers' ? 'Contract WON!' : 'Contract LOST!'}</strong>
-    <span>Play the rest out?</span>
-    <div class="bar"><i style="width: {fraction(room.clinchDeadline, 5000) * 100}%"></i></div>
-    <button class="primary" onclick={() => conn.intent({ type: 'deal', action: { type: 'playOn' } })}>
-      Play on ({secondsLeft(room.clinchDeadline)})
-    </button>
+    <div class="bar"><i style="width: {fraction(room.clinchDeadline, windowMs) * 100}%"></i></div>
+    {#if ask && view.mySeat === partner(ask.by)}
+      <span>{nameAtSeat(view, profiles, ask.by)} wants to {asked(askLabel)}.</span>
+      <div class="two">
+        <button onclick={() => conn.intent({ type: 'deal', action: { type: 'declinePlayOn' } })}>No</button>
+        <button class="primary" onclick={() => conn.intent({ type: 'deal', action: { type: 'playOn' } })}>
+          Agree ({secondsLeft(room.clinchDeadline)})
+        </button>
+      </div>
+    {:else if ask && view.mySeat === ask.by}
+      <span>Waiting for {nameAtSeat(view, profiles, partner(ask.by))} to agree… ({secondsLeft(room.clinchDeadline)})</span>
+    {:else if ask}
+      <span>{nameAtSeat(view, profiles, ask.by)} wants to {asked(askLabel)}. Waiting for their partner… ({secondsLeft(room.clinchDeadline)})</span>
+    {:else if iDeclined}
+      <span>{otherPairSeat !== null ? pairOf(otherPairSeat) : 'The other pair'} can still choose to play on… ({secondsLeft(room.clinchDeadline)})</span>
+    {:else}
+      <span>{otherDeclined && otherPairSeat !== null ? `${pairOf(otherPairSeat)} said no. ` : ''}Play the rest out?</span>
+      <button class="primary" onclick={() => conn.intent({ type: 'deal', action: { type: 'playOn' } })}>
+        {playOnLabel} ({secondsLeft(room.clinchDeadline)})
+      </button>
+      <span class="muted small">Your partner has to agree.</span>
+    {/if}
   </div>
 {/if}
 
@@ -50,6 +83,17 @@
     {:else}
       <span>{nameAtSeat(view, profiles, concession.by)} offered to concede. Waiting for their partner… ({secondsLeft(room.concessionDeadline)})</span>
     {/if}
+  </div>
+{/if}
+
+{#if view.endGameVotes.length > 0}
+  <div class="prompt panel" role="status">
+    <strong>End this game? {view.endGameVotes.length}/4 agreed</strong>
+    <span class="muted">Everyone has to agree. It won't count for anyone, and the next dealer deals.</span>
+    <div class="two">
+      <button onclick={() => conn.intent({ type: 'cancelEndGame' })}>Keep playing</button>
+      {#if !view.endGameVotes.includes(view.me)}<button class="primary" onclick={() => conn.intent({ type: 'voteEndGame' })}>Agree</button>{/if}
+    </div>
   </div>
 {/if}
 

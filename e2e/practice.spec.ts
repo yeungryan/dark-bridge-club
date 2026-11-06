@@ -422,3 +422,18 @@ test('a new build shows a refresh bar; "add to home screen" sits by the links; t
   expect((await (await request.get('/manifest.webmanifest?k=wrong')).json()).start_url).toBe('/');
   expect((await request.get('/icon-v3-192.png')).headers()['content-type']).toContain('image/png');
 });
+
+test('Play On: you ask, your bot partner agrees, and the game is played out (round 21)', async ({ page }) => {
+  await page.goto(PRACTICE);
+  const prompt = page.locator('.clinch-prompt');
+  await playUntil(page, () => prompt.isVisible());
+  // The button says what's at stake: a sweep for the winners, being swept for the losers.
+  const ask = prompt.getByRole('button', { name: /^(Play on|Go for a sweep|Ask to be swept) \(\d+\)$/ });
+  await ask.click();
+  // Your partner (a bot) agrees, and play goes on to the 13th set.
+  await expect(prompt).toBeHidden({ timeout: 5000 });
+  await playUntil(page, () => page.getByRole('button', { name: 'Next game' }).isVisible(), { stayOnReveal: true });
+  const sets = (await page.locator('.reveal .sets').textContent()) ?? '';
+  const [a, b] = sets.match(/\d+/g)!.map(Number);
+  expect(a! + b!).toBe(13);
+});
