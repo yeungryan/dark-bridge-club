@@ -59,8 +59,13 @@
   {#each bySeat as { seat, calls: mine } (seat)}
     <ol class="spot at-{spotOf(seat, me)}" data-calls-seat={seat} style="--c: {color(seat)}">
       {#each mine as c (c.i)}
-        <li class="tile" data-call={c.i} class:pass={c.call.type === 'pass'} class:top={c.i === lastBid} class:first={c.i === firstBid} use:arrive={seat}>
-          <CallText call={c.call} red="var(--card-red)" />
+        <li
+          class="tile chip"
+          class:red={c.call.type === 'bid' && (c.call.strain === 'H' || c.call.strain === 'D')}
+          class:nt={c.call.type === 'bid' && c.call.strain === 'NT'}
+          data-call={c.i}
+          class:pass={c.call.type === 'pass'} class:top={c.i === lastBid} class:first={c.i === firstBid} use:arrive={seat}>
+          <CallText call={c.call} red="var(--chip-red-ink)" />
         </li>
       {/each}
     </ol>
@@ -103,21 +108,22 @@
   .at-right {
     right: 0;
   }
-  /* "1st" (Ryan's pick, B4): a stone-coloured folded corner on the opening bid, no text, at the
-     top-left where the next call laid over it never covers it. */
+  /* "1st" (Ryan's pick, B4): a stone-coloured mark on the opening bid, no text, at the top-left
+     where the next call laid over it never covers it. A folded corner on the cards; a small dot
+     now that bids are round chips (round 22). */
   .tile.first::after {
     content: '';
     position: absolute;
-    top: 0;
-    left: 0;
-    width: 0;
-    height: 0;
-    border-top: 9px solid #b8b09c;
-    border-right: 9px solid transparent;
-    border-top-left-radius: 4px;
+    top: 2px;
+    left: min(7px, 4.4cqw);
+    width: min(6px, 3.6cqw);
+    height: min(6px, 3.6cqw);
+    border-radius: 50%;
+    background: #b8b09c;
+    box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.35);
     pointer-events: none;
   }
-  /* A bidding card: card-white, its player's team colour along the bottom. */
+  /* A bid chip (app.css; Ryan, round 22), ringed in its player's team colour. */
   .tile {
     position: relative;
     display: grid;
@@ -125,18 +131,14 @@
     place-items: center start;
     /* Ryan (round 10, option A): 30% bigger than before so the calls read across the table; the
        "1st" fold stays its old size, and the call starts clear of it. */
-    padding-left: min(5px, 3.2cqw);
+    padding-left: min(9px, 5.6cqw);
     width: min(44px, 26cqw);
     height: min(31px, 18cqw);
     flex: none;
-    border-radius: 4px;
-    background: var(--card);
-    color: var(--card-ink);
-    border-bottom: 3px solid var(--c);
-    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.5);
-    font-family: var(--font-card);
-    font-weight: 800;
-    font-size: min(17px, 10.4cqw);
+    box-shadow:
+      inset 0 0 0 2px var(--c),
+      0 1px 3px rgba(0, 0, 0, 0.5);
+    font-size: min(15px, 9.2cqw);
     line-height: 1;
   }
   /* Each call overlaps the one before it; the latest is on top. */
@@ -156,17 +158,13 @@
   /* A pass looks like the bidding box's Pass button: a quiet dark tile, faintly lit. Solid, so
      overlapping passes don't show through each other. */
   .tile.pass {
-    background: color-mix(in srgb, #ffffff 12%, var(--sheet));
-    color: var(--ink);
-    box-shadow:
-      inset 0 0 0 1px var(--line),
-      0 1px 3px rgba(0, 0, 0, 0.5);
-    font-size: min(12.5px, 7.5cqw);
+    font-size: min(12px, 7.2cqw);
   }
   /* The bid to beat, in gold (gold means leading or winning, in every theme). */
   .tile.top {
     z-index: 1;
     box-shadow:
+      inset 0 0 0 2px var(--c),
       0 0 0 2px var(--win),
       0 0 12px var(--win-glow),
       0 2px 4px rgba(0, 0, 0, 0.5);

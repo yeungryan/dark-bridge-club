@@ -23,7 +23,12 @@
     {@const level = entry.call.type === 'bid' ? entry.call.level : 0}
     <span class="call" class:pass={level === 0} class:top={i === lastBid} style="--c: {teamColor(conn, entry.seat)}; --weight: {level}">
       <small><AnimalIcon animal={avatarAtSeat(conn, entry.seat)?.animal} /> {p.name}</small>
-      <strong><CallText call={entry.call} /></strong>
+      <strong
+        class="chip"
+        class:red={entry.call.type === 'bid' && (entry.call.strain === 'H' || entry.call.strain === 'D')}
+        class:nt={entry.call.type === 'bid' && entry.call.strain === 'NT'}
+        class:pass={entry.call.type === 'pass'}><CallText call={entry.call} red="var(--chip-red-ink)" /></strong
+      >
     </span>
   {:else}
     <span class="muted">No calls yet.</span>
@@ -75,6 +80,14 @@
   }
   .call.top {
     box-shadow: 0 0 0 1.5px var(--win);
+  }
+  /* The call itself is a bid chip (app.css; round 22), like the bidding box and the table. */
+  strong.chip {
+    min-width: 44px;
+    height: 26px;
+    margin-top: 3px;
+    padding: 0 8px;
+    font-size: 14px;
   }
   small {
     font-family: var(--font-name);
