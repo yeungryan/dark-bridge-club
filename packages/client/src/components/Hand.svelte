@@ -4,6 +4,7 @@
   import { sameCard } from '../lib/format';
   import { buzz } from '../lib/juice/haptics';
   import { EASE_OUT, launch, type Throw } from '../lib/juice/launch.svelte';
+  import { handCardWidth, tableCardWidth } from '../lib/layout.svelte';
   import { director } from '../lib/juice/director.svelte';
   import { leadHold } from '../lib/leadHold.svelte';
   import { bidPreview } from '../lib/bidPreview.svelte';
@@ -53,7 +54,7 @@
     wasDealing = dealing;
   });
 
-  const cardWidth = $derived(Math.min(76, Math.max(46, Math.floor(width / 6.2))));
+  const cardWidth = $derived(handCardWidth(width));
   const step = $derived(deal.hand.length > 1 ? Math.min(cardWidth * 0.82, (width - cardWidth) / (deal.hand.length - 1)) : 0);
   // The bid you've picked (or, before you pick, the bid to beat) raises the cards it's about:
   // its suit, or your honours for NT. Your screen only.
@@ -82,7 +83,7 @@
     if (rect) {
       const area = document.querySelector('.area')?.getBoundingClientRect();
       // Your spot is at the bottom middle of the table, at the table's card size.
-      const tableW = area ? Math.max(34, Math.min(52, Math.floor(area.width * 0.29))) : rect.width * 0.7;
+      const tableW = area ? tableCardWidth(area.width) : rect.width * 0.7;
       const toX = area ? area.left + area.width / 2 : rect.left + rect.width / 2;
       const toY = area ? area.bottom - (tableW * 1.4) / 2 : rect.top - 200;
       const dist = Math.hypot(toX - (rect.left + rect.width / 2), toY - (rect.top + rect.height / 2));

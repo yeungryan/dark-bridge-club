@@ -28,6 +28,7 @@
   import AnimalIcon from './AnimalIcon.svelte';
   import AllTimeScore from './AllTimeScore.svelte';
   import MenuIcon from '@lucide/svelte/icons/menu';
+  import { handCardWidth, layout } from '../lib/layout.svelte';
   import SettingsIcon from '@lucide/svelte/icons/settings';
 
   // Spec S10: you at the bottom, partner on top, the next player (counter-clockwise) on your right.
@@ -61,7 +62,7 @@
   });
   // The hand's space is kept while shuffling, so nothing moves when the cards arrive.
   let handWidth = $state(360);
-  const handHeight = $derived(Math.min(76, Math.max(46, Math.floor(handWidth / 6.2))) * 1.4 + 22);
+  const handHeight = $derived(handCardWidth(handWidth) * 1.4 + 22);
   const pairOf = (seat: Seat) => `${nameAtSeat(view, profiles, seat)} & ${nameAtSeat(view, profiles, partner(seat))}`;
 
   // The menu, or (from the gear, top-right) straight into Settings.
@@ -98,7 +99,7 @@
   });
 </script>
 
-<div class="table" class:decider data-turn={iDeal ? 'my-deal' : deal?.turn === me ? (deal.phase === 'auction' ? 'my-call' : deal.phase === 'play' && !leadHold.waiting ? 'my-play' : '') : ''}>
+<div class="table" class:decider class:wide={layout.wide} data-turn={iDeal ? 'my-deal' : deal?.turn === me ? (deal.phase === 'auction' ? 'my-call' : deal.phase === 'play' && !leadHold.waiting ? 'my-play' : '') : ''}>
   <header>
     <button class="ghost menu" aria-label="Menu" onclick={() => (menuOpen = menuOpen ? null : 'menu')}><MenuIcon size={22} strokeWidth={2} /></button>
     <div class="title">
@@ -199,13 +200,15 @@
             <p class="waiting-deal">{view.dealer !== null ? nameAtSeat(view, profiles, view.dealer) : 'The dealer'} is shuffling…</p>
           {/if}
         </div>
-      {:else}
+      {:else if !layout.wide}
         <Scoreboard {conn} onPeek={() => ((peek = !peek), (showAuction = false))} onAuction={() => ((showAuction = !showAuction), (peek = false))} />
       {/if}
       <!-- Decisions that interrupt play ("Play the rest out?", concessions, ending the night) float
            above the scoreboard too: in the flow they pushed the whole table up (Ryan's rule). -->
       <div class="float prompts"><Prompts {conn} /></div>
-      {#if myTurnToCall}
+      {#if layout.wide}
+        <!-- Desktop: the bid box, the bids, the scoreboard and the previous set are in the side panel. -->
+      {:else if myTurnToCall}
         <div class="float"><BiddingBox {conn} /></div>
       {:else if showAuction && deal && deal.phase !== 'auction'}
         <!-- Ryan (round 15): a quiet heading on each sheet, and a tap anywhere on it closes it. -->
@@ -237,6 +240,30 @@
       {#key director.dealing.id}<DealFlight dealer={director.dealing.dealer} me={view.mySeat} />{/key}
     {/if}
   </section>
+
+  {#if layout.wide}
+    <!-- Desktop layout B (Ryan, round 22): always in this order, with whatever applies right now:
+         the bids, the scoreboard, then the previous set (or, while it's your call, the bid box). -->
+    <aside class="side" aria-label="Game details">
+      {#if deal && !shuffling}
+        <section class="pnl">
+          <h2 class="pnl-head">The Bids</h2>
+          <AuctionStrip {conn} />
+        </section>
+        <section class="pnl board-pnl"><Scoreboard {conn} onPeek={() => {}} onAuction={() => {}} /></section>
+        {#if myTurnToCall}
+          <section class="pnl bid-pnl"><BiddingBox {conn} /></section>
+        {:else if deal.lastTrick && deal.phase !== 'auction'}
+          <section class="pnl">
+            <h2 class="pnl-head">Previous Set</h2>
+            {#key deal.tricksPlayed}
+              <LastTrickPeek trick={deal.lastTrick} {view} {profiles} trump={trumpSuit(deal.contract?.strain ?? 'NT')} />
+            {/key}
+          </section>
+        {/if}
+      {/if}
+    </aside>
+  {/if}
 </div>
 
 <style>
@@ -249,6 +276,59 @@
     margin: 0 auto;
     padding: 6px 16px max(8px, env(safe-area-inset-bottom));
     overflow: hidden;
+  }
+  /* Desktop layout B (Ryan, round 22): the table and hand on the left, the side panel on the right. */
+  .table.wide {
+    max-width: 1440px;
+    grid-template-columns: minmax(0, 1fr) 400px;
+    column-gap: 28px;
+    padding: 12px 24px 16px;
+  }
+  .table.wide > :not(.side) {
+    grid-column: 1;
+  }
+  .side {
+    grid-column: 2;
+    min-width: 0;
+    grid-row: 1 / -1;
+    display: grid;
+    align-content: start;
+    gap: 14px;
+    min-height: 0;
+    overflow-y: auto;
+    padding-block: 8px;
+  }
+  .pnl {
+    min-width: 0;
+    display: grid;
+    gap: 10px;
+    padding: 14px 16px;
+    border-radius: var(--radius);
+    background: var(--sheet);
+    border: 1px solid var(--line);
+  }
+  .pnl-head {
+    margin: 0;
+    font-size: 0.72rem;
+    font-weight: 700;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--ink-dim);
+  }
+  .board-pnl {
+    justify-items: center;
+  }
+  .bid-pnl {
+    padding: 10px;
+  }
+  /* All seven levels at once: there's room beside the table (the phone scrolls three). */
+  .bid-pnl :global(.ladder) {
+    height: auto;
+    max-height: 290px;
+  }
+  .wide .cluster {
+    grid-template-columns: auto min(400px, max(220px, calc(100dvh - 540px))) auto;
+    gap: 26px;
   }
   /* The menu top-left and Settings top-right (Ryan); the rest of the top belongs to the theme's
      scene. (Messenger's floating video bubble can be dragged off the gear.) */

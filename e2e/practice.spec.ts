@@ -439,3 +439,24 @@ test('Play On: you ask, your bot partner agrees, and the game is played out (rou
   const [a, b] = sets.match(/\d+/g)!.map(Number);
   expect(a! + b!).toBe(13);
 });
+
+test.describe('desktop', () => {
+  test.use({ viewport: { width: 1440, height: 900 } });
+  test('layout B: a side panel with the bids, the scoreboard, then the previous set or the bid box (round 22)', async ({ page }) => {
+    await page.goto(PRACTICE);
+    const heads = () => page.locator('.side .pnl-head').allTextContents();
+    // Bidding: the bids, the scoreboard, then the bid box (all seven levels, no scrolling needed).
+    await playUntil(page, () => page.locator('.side .box .ladder').isVisible(), { noPass: true });
+    const panels = page.locator('.side > .pnl');
+    await expect(panels.nth(0)).toContainText('The Bids');
+    await expect(panels.nth(2).locator('.box .ladder')).toBeVisible();
+    // No scoreboard or bid box floating over the table on desktop.
+    await expect(page.locator('.bottom .board .box')).toHaveCount(0);
+    // Play: the bids, the scoreboard, then the previous set once there is one.
+    await playUntil(page, async () => (await heads()).includes('Previous Set'));
+    expect(await heads()).toEqual(['The Bids', 'Previous Set']);
+    await expect(panels.nth(1).locator('.bug')).toBeVisible();
+    // Nothing spills off the screen.
+    expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(1440);
+  });
+});
