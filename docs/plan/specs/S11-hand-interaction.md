@@ -54,3 +54,10 @@ Replaces the "Decision after the first M2 playtest" above and the Settings choic
 - A flick is a quick, short upward move, or one still moving fast (0.5 px/ms) when let go. A slow drag to the table counts as placing.
 - **Short flicks register reliably:** the first movement of a gesture counts in full when measuring its speed (a quick flick may send only two or three moves, and the first is often the fastest).
 - **Fix:** when the last card of a set landed, the cards on the table blinked out for a frame and flew in again from the players' names. The finished set now stays put until it sweeps to the winner.
+
+## Peek (Ryan, round 22)
+- **What it does:** the card you're pointing at slides up 16 px, comes to the front, and the cards after it step aside so the whole card shows. Each time a new card comes up there's a soft card tick, a little higher the further right it is.
+- **Desktop (a real mouse):** follows the mouse as it moves across your hand. Moving off the hand settles everything back.
+- **Phone:** run your finger sideways through your hand. A mostly sideways move becomes a scrub instead of a drag. Letting go plays nothing, raises nothing and changes nothing.
+- **Unchanged:** taps and up or down swipes work as before. A raised card you can play still follows your finger to the table.
+- **Reduced effects:** without card motion, the peeked card comes to the front without moving.
