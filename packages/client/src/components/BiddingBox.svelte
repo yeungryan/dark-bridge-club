@@ -176,6 +176,8 @@
   </p>
   <div
     class="body"
+    role="group"
+    aria-label="Your call"
     onpointerdown={onDown}
     onpointermove={onMove}
     onpointerup={onUp}
