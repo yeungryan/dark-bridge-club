@@ -321,11 +321,6 @@
   .bid-pnl {
     padding: 10px;
   }
-  /* All seven levels at once: there's room beside the table (the phone scrolls three). */
-  .bid-pnl :global(.ladder) {
-    height: auto;
-    max-height: 290px;
-  }
   .wide .cluster {
     grid-template-columns: auto min(400px, max(220px, calc(100dvh - 540px))) auto;
     gap: 26px;

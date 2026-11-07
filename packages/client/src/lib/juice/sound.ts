@@ -561,6 +561,15 @@ export const sound = {
       snap(e, 0.035, 0, 4200 * b);
     });
   },
+  /** A bid chip comes up under your mouse or finger (round 23): a soft clack, lower and rounder
+   *  than the card tick, a little higher for each strain to the right. */
+  chip(i: number) {
+    play('chip', (e) => {
+      const b = vary() * (1 + Math.min(5, Math.max(0, i || 0)) * 0.05);
+      noise(e, 0.03, 0.12 * vary(0.03), { band: 1500 * b, q: 1.6, shape: 'swell', peak: 0.2, wet: 0.02 });
+      snap(e, 0.03, 0, 2600 * b);
+    });
+  },
   /** A card takes the lead of the trick. `n` = how many times the lead has changed (1–3). */
   lead(n: number) {
     play('lead', (e) => {

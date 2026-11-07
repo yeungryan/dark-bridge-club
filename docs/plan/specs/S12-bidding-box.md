@@ -43,7 +43,7 @@ Replaces the level and suit rows.
 **"1st", final (Ryan, B4):** no text: a stone-coloured folded corner at the top-left of the opening bid's tile and of the card that leads each set, so the next call laid over it never hides it and it never covers a call or rank.
 
 ## Round 19 (Ryan): the picked bid is the Bid button
-The separate yellow Bid button is gone. Tapping a bid tile picks it: it turns gold and reads **"Bid 1♠"**, and the line on top still says what it needs. Tapping the gold tile again makes the bid; tapping another tile moves the pick there. A second tap within 250 ms of picking is ignored, so a quick double-tap can't pick and bid in one go. Pass stays one tap. With the Bid column gone, every bid tile is wider.
+The separate yellow Bid button is gone. Tapping a bid tile picks it: it turns the theme's highlight colour (gold in some themes; Ryan, round 22: the highlight colour stays) and reads **"Bid 1♠"**, and the line on top still says what it needs. Tapping the picked tile again makes the bid; tapping another tile moves the pick there. A second tap within 250 ms of picking is ignored, so a quick double-tap can't pick and bid in one go. Pass stays one tap. With the Bid column gone, every bid tile is wider.
 
 ## Tap outside to let go (Ryan, round 21)
 Tapping or clicking anywhere outside the bid box lets go of a picked bid: the tile goes back to normal and the hand's preview drops back to the bid to beat. Pick it again to bid.
@@ -54,3 +54,8 @@ Bids no longer look like playing cards: every call is a **poker chip**, the same
 - **Bid box:** each tile is a chip. The picked chip still reads "Bid 1♠" in the theme's highlight colour, with no ring. Levels you can no longer bid fade to an outline.
 - **On the table:** each call is a chip ringed in its player's team colour; the bid to beat adds the gold ring and glow. The opening bid's "1st" folded corner becomes a small stone dot at the top-left, because a chip has no corner.
 - **The Bids list:** each call is a small chip.
+
+## Hover and finger-slide (Ryan, round 23)
+- **Desktop:** the chip or Pass under the mouse lifts 2 px, brightens and gets a bright rim, with a soft clack (a little higher for each strain to the right). Hovering picks nothing.
+- **Phone:** run your finger sideways through the box and each chip (or Pass) lifts as you pass it, with the same clack. Letting go on a chip **picks** it ("Bid 3♥"), never bids it; letting go on Pass does nothing. Up and down still scroll the ladder.
+- **Desktop bid box:** like the phone, two levels show with the third peeking and fading, and it scrolls a level at a time (it used to show all seven levels, faded past the second).

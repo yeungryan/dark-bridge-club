@@ -463,10 +463,29 @@ test.describe('desktop', () => {
     await expect(page.locator('.hand .slot.peek')).toHaveCount(0);
   });
 
+  test('Bid chips: the chip or Pass under the mouse lifts with a soft clack (round 23)', async ({ page }) => {
+    await page.goto(PRACTICE);
+    await playUntil(page, () => page.locator('.side .box .ladder').isVisible(), { noPass: true });
+    // Like the phone: two levels showing, the third peeking (Ryan, round 23).
+    expect((await page.locator('.side .ladder').boundingBox())!.height).toBeLessThan(110);
+    const before = await soundCount(page, 'chip');
+    const chips = page.locator('.side .ladder .tile:not([disabled])');
+    for (let i = 0; i < 3; i++) {
+      await chips.nth(i).hover();
+      await expect(page.locator('.side .tile.hot')).toHaveCount(1);
+    }
+    expect(await soundCount(page, 'chip')).toBeGreaterThanOrEqual(before + 3);
+    await page.locator('.side .box .pass').hover();
+    await expect(page.locator('.side .pass.hot')).toHaveCount(1);
+    await expect(page.locator('.side .tile.hot')).toHaveCount(0);
+    // Hovering picks nothing.
+    await expect(page.locator('.side .tile.on')).toHaveCount(0);
+  });
+
   test('layout B: a side panel with the bids, the scoreboard, then the previous set or the bid box (round 22)', async ({ page }) => {
     await page.goto(PRACTICE);
     const heads = () => page.locator('.side .pnl-head').allTextContents();
-    // Bidding: the bids, the scoreboard, then the bid box (all seven levels, no scrolling needed).
+    // Bidding: the bids, the scoreboard, then the bid box.
     await playUntil(page, () => page.locator('.side .box .ladder').isVisible(), { noPass: true });
     const panels = page.locator('.side > .pnl');
     await expect(panels.nth(0)).toContainText('The Bids');
@@ -482,7 +501,7 @@ test.describe('desktop', () => {
   });
 });
 
-test('Peek: running a finger sideways through the hand brings each card up, with a soft tick; nothing is played or raised (round 22)', async ({ page }) => {
+test('Peek: running a finger sideways through the hand brings each card up, with a soft tick; letting go raises the last one and plays nothing (rounds 22-23)', async ({ page }) => {
   await page.goto(PRACTICE);
   await playUntil(page, () => page.locator('.box .ladder').isVisible(), { noPass: true });
   const count = await page.locator('.hand .slot').count();
@@ -500,6 +519,32 @@ test('Peek: running a finger sideways through the hand brings each card up, with
   expect(await soundCount(page, 'peek')).toBeGreaterThan(before + 3);
   await touch('touchEnd', 0);
   await expect(page.locator('.hand .slot.peek')).toHaveCount(0);
-  await expect(page.locator('.hand .slot.up')).toHaveCount(0);
+  await expect(page.locator('.hand .slot.up')).toHaveCount(1);
   await expect(page.locator('.hand .slot')).toHaveCount(count);
+});
+
+test('Bid chips: running a finger sideways through the bid box lifts each chip with a soft clack; letting go picks it and bids nothing (round 23)', async ({ page }) => {
+  await page.goto(PRACTICE);
+  await playUntil(page, () => page.locator('.box .ladder').isVisible(), { noPass: true });
+  const calls = await page.locator('.calls .tile').count();
+  const row = (await page.locator('.ladder .level').first().boundingBox())!;
+  const y = Math.round(row.y + row.height / 2);
+  const cdp = await page.context().newCDPSession(page);
+  const touch = (type: string, x: number) => cdp.send('Input.dispatchTouchEvent', { type, touchPoints: type === 'touchEnd' ? [] : [{ x: Math.round(x), y }] });
+  const before = await soundCount(page, 'chip');
+  await touch('touchStart', row.x + 6);
+  for (let x = 6; x < row.width - 6; x += 12) {
+    await touch('touchMove', row.x + x);
+    await page.waitForTimeout(16);
+  }
+  await expect(page.locator('.ladder .tile.hot')).toHaveCount(1);
+  expect(await soundCount(page, 'chip')).toBeGreaterThan(before + 2);
+  await touch('touchEnd', 0);
+  await expect(page.locator('.ladder .tile.hot')).toHaveCount(0);
+  // The last chip under the finger is picked ("Bid …"), and nothing was bid.
+  await expect(page.locator('.ladder .tile.on')).toHaveCount(1);
+  await expect(page.locator('.ladder .tile.on')).toContainText('Bid');
+  await page.waitForTimeout(400);
+  await expect(page.locator('.box .ladder')).toBeVisible();
+  expect(await page.locator('.calls .tile').count()).toBe(calls);
 });

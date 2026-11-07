@@ -77,7 +77,7 @@ A table you can read at a glance on a phone while faces are talking in a floatin
 - **The side panel:** 400 px on the right, always in this order, with whatever applies:
   1. **The Bids:** the calls so far.
   2. **The scoreboard:** the contract and the race, or who deals before the contract is set.
-  3. **Previous Set:** the last set's four cards, once there is one. While it's your call, the bid box takes this place, with all seven levels showing.
+  3. **Previous Set:** the last set's four cards, once there is one. While it's your call, the bid box takes this place, scrolling two levels at a time like the phone (round 23).
 - **Wording:** the same as the phone ("The Bids", "Previous Set").
 - **No floats:** the scoreboard, bid box and sheets no longer float over the table on desktop. The Play On, concession and end-of-night prompts still appear above the hand.
 - **Implementation:** `lib/layout.svelte.ts` (`layout.wide`, `tableCardWidth`, `handCardWidth`).
