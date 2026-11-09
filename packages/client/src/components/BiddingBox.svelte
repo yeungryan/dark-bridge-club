@@ -92,6 +92,76 @@
     }
   }
   const moreBelow = $derived(topRow + 2 < levels.length);
+
+  // Hover (Ryan, round 23): the chip under your mouse, or under your finger as you run it through
+  // the box, lifts and lights up with a soft clack. Stopping on a chip and letting go picks it
+  // (never bids); letting go on Pass does nothing.
+  const hoverable = typeof matchMedia !== 'undefined' && matchMedia('(hover: hover) and (pointer: fine)').matches;
+  /** The chip (e.g. "3H") or "pass" under the pointer. */
+  let hot = $state<string | null>(null);
+  const SLOP = 8;
+  let scrub: { id: number; x: number; y: number; on: boolean } | null = null;
+  /** A scrub just ended: the click the browser may send after it isn't a tap. */
+  let swallowClick = false;
+
+  function hotAt(el: Element | null) {
+    const t = el?.closest<HTMLElement>('[data-chip]');
+    const key = t && !(t as HTMLButtonElement).disabled ? t.dataset.chip! : null;
+    if (key === hot) return;
+    hot = key;
+    if (key) sound.chip(key === 'pass' ? 5 : STRAINS.indexOf(key.slice(1) as Strain));
+  }
+  function onMove(e: PointerEvent) {
+    if (e.pointerType === 'mouse') {
+      if (hoverable) hotAt(e.target as Element);
+      return;
+    }
+    if (!scrub || e.pointerId !== scrub.id) return;
+    const dx = e.clientX - scrub.x;
+    const dy = e.clientY - scrub.y;
+    // A mostly sideways move becomes a scrub; up or down scrolls the ladder as before.
+    if (!scrub.on && (Math.abs(dx) > SLOP || Math.abs(dy) > SLOP)) {
+      if (Math.abs(dx) > Math.abs(dy) * 1.2) scrub.on = true;
+      else return (scrub = null);
+    }
+    if (scrub.on) hotAt(document.elementFromPoint(e.clientX, e.clientY));
+  }
+  function onDown(e: PointerEvent) {
+    if (e.pointerType === 'mouse' || !e.isPrimary) return;
+    scrub = { id: e.pointerId, x: e.clientX, y: e.clientY, on: false };
+    // Touch sends the rest of the gesture to the chip it started on; let it go, so the moves
+    // can be hit-tested anywhere in the box.
+    (e.target as Element).releasePointerCapture?.(e.pointerId);
+  }
+  function onUp(e: PointerEvent) {
+    if (e.pointerType === 'mouse' || !scrub || e.pointerId !== scrub.id) return;
+    const was = scrub.on;
+    scrub = null;
+    if (!was) return (hot = null);
+    const key = hot;
+    hot = null;
+    swallowClick = true;
+    setTimeout(() => (swallowClick = false), 0);
+    if (!key || key === 'pass') return;
+    const level = Number(key[0]) as Level;
+    const strain = key.slice(1) as Strain;
+    if (!isLegal(level, strain)) return;
+    if (picked?.level === level && picked.strain === strain) return;
+    sound.tap();
+    buzz('tap');
+    picked = { level, strain };
+    pickedAt = performance.now();
+  }
+  function onCancel() {
+    scrub = null;
+    hot = null;
+  }
+  function onClickCapture(e: MouseEvent) {
+    if (!swallowClick) return;
+    swallowClick = false;
+    e.stopPropagation();
+    e.preventDefault();
+  }
   const moreAbove = $derived(topRow > 0);
 </script>
 
@@ -104,7 +174,17 @@
         &nbsp;· {holding}{#if topBid.call.type === 'bid' && topBid.call.strain !== 'NT'}&nbsp;<CallText strain={topBid.call.strain} />{/if}{/if}
     {:else}No bids yet: you can open{/if}
   </p>
-  <div class="body">
+  <div
+    class="body"
+    role="group"
+    aria-label="Your call"
+    onpointerdown={onDown}
+    onpointermove={onMove}
+    onpointerup={onUp}
+    onpointercancel={onCancel}
+    onpointerleave={(e) => e.pointerType === 'mouse' && (hot = null)}
+    onclickcapture={onClickCapture}
+  >
     {#if levels.length > 0}
       <div class="ladder" class:more-below={moreBelow} class:more-above={moreAbove} bind:this={ladder} onscroll={scrolled} aria-label="Bids">
         {#each levels as level (level)}
@@ -116,6 +196,8 @@
                 class:nt={strain === 'NT'}
                 class:red={strain === 'H' || strain === 'D'}
                 class:on
+                class:hot={hot === `${level}${strain}`}
+                data-chip="{level}{strain}"
                 disabled={!isLegal(level, strain)}
                 aria-label="{on ? 'Bid ' : ''}{level} {strain === 'NT' ? 'no trumps' : strain}"
                 onclick={() => pick(level, strain)}
@@ -131,7 +213,7 @@
     {:else}
       <p class="none">No bid is left above <CallText call={topBid!.call} />: only Pass.</p>
     {/if}
-    <button class="pass" onclick={() => send({ type: 'pass' })}>Pass</button>
+    <button class="pass" class:hot={hot === 'pass'} data-chip="pass" onclick={() => send({ type: 'pass' })}>Pass</button>
   </div>
 </div>
 
@@ -168,6 +250,11 @@
      snaps a whole level to the top. Each level is 34px of cards plus 5px of space. */
   .ladder {
     height: 96px;
+    /* A little room at the sides so a lifted chip's glow isn't cut off. */
+    padding: 0 3px;
+    margin: 0 -3px;
+    /* Up and down scroll the ladder; sideways runs your finger through the chips (round 23). */
+    touch-action: pan-y;
     align-self: start;
     overflow-y: auto;
     overscroll-behavior: contain;
@@ -212,6 +299,18 @@
     transition:
       transform calc(90ms * var(--speed)),
       box-shadow calc(90ms * var(--speed));
+  }
+  /* Hover (round 23): the chip under the mouse or finger lifts and lights up. */
+  .tile.hot:not(.on) {
+    transform: translateY(-2px);
+    filter: brightness(1.25);
+    box-shadow:
+      inset 0 0 0 2px rgba(255, 255, 255, 0.55),
+      0 0 10px rgba(255, 255, 255, 0.22),
+      0 4px 0 rgba(0, 0, 0, 0.45);
+  }
+  .tile.on.hot {
+    filter: brightness(1.12);
   }
   .tile:active:not(:disabled) {
     transform: translateY(3px);
@@ -277,5 +376,17 @@
     color: var(--ink);
     font-weight: 700;
     font-size: 0.95rem;
+    touch-action: pan-y;
+    transition:
+      transform calc(90ms * var(--speed)),
+      background calc(90ms * var(--speed)),
+      box-shadow calc(90ms * var(--speed));
+  }
+  .pass.hot {
+    transform: translateY(-2px);
+    background: rgba(255, 255, 255, 0.18);
+    box-shadow:
+      inset 0 0 0 1.5px rgba(255, 255, 255, 0.5),
+      0 0 10px rgba(255, 255, 255, 0.18);
   }
 </style>

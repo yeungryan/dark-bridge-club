@@ -256,7 +256,10 @@
     drag = null;
     lean = null;
     if (d.scrub) {
+      // Stopping on a card and letting go raises it, never plays it (Ryan, round 23).
+      const card = peek !== null ? deal.hand[peek] : null;
       peek = null;
+      if (card && !isUp(card)) raise(card);
       return;
     }
     const el = e.currentTarget as HTMLElement;
