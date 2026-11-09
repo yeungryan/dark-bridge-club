@@ -527,7 +527,9 @@ test('Bid chips: running a finger sideways through the bid box lifts each chip w
   await page.goto(PRACTICE);
   await playUntil(page, () => page.locator('.box .ladder').isVisible(), { noPass: true });
   const calls = await page.locator('.calls .tile').count();
-  const row = (await page.locator('.ladder .level').first().boundingBox())!;
+  // The second row: a whole level above the bid to beat, so all five chips can be bid (the first
+  // row may hold only one, depending on the bots' bids).
+  const row = (await page.locator('.ladder .level').nth(1).boundingBox())!;
   const y = Math.round(row.y + row.height / 2);
   const cdp = await page.context().newCDPSession(page);
   const touch = (type: string, x: number) => cdp.send('Input.dispatchTouchEvent', { type, touchPoints: type === 'touchEnd' ? [] : [{ x: Math.round(x), y }] });
