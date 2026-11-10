@@ -123,15 +123,13 @@
     box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.35);
     pointer-events: none;
   }
-  /* A bid chip (app.css; Ryan, round 22), ringed in its player's team colour. */
+  /* A bid chip (app.css; Ryan, round 22), ringed in its player's team colour. The call sits in
+     the middle of the chip (Ryan, round 23); the next call overlaps less, so it still reads. */
   .tile {
     position: relative;
     display: grid;
-    /* The call sits at the tile's leading corner, so it still reads when the next call overlaps. */
-    place-items: center start;
-    /* Ryan (round 10, option A): 30% bigger than before so the calls read across the table; the
-       "1st" fold stays its old size, and the call starts clear of it. */
-    padding-left: min(9px, 5.6cqw);
+    place-items: center;
+    padding: 0;
     width: min(44px, 26cqw);
     height: min(31px, 18cqw);
     flex: none;
@@ -144,16 +142,11 @@
   /* Each call overlaps the one before it; the latest is on top. */
   .at-top .tile + .tile,
   .at-bottom .tile + .tile {
-    margin-left: max(-17px, -9.9cqw);
-  }
-  .at-left .tile,
-  .at-right .tile {
-    align-items: start;
-    padding-top: min(5px, 3.1cqw);
+    margin-left: max(-9px, -5.2cqw);
   }
   .at-left .tile + .tile,
   .at-right .tile + .tile {
-    margin-top: max(-11px, -6.4cqw);
+    margin-top: max(-5px, -2.9cqw);
   }
   /* A pass looks like the bidding box's Pass button: a quiet dark tile, faintly lit. Solid, so
      overlapping passes don't show through each other. */

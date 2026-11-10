@@ -41,12 +41,11 @@ A table you can read at a glance on a phone while faces are talking in a floatin
   - A circle with a refresh icon follows your thumb (or the mouse) down, reading "Pull to refresh".
   - Past about 72 px it turns the accent colour, reads "Let go to refresh" and gives a light buzz.
   - Letting go there reloads the page; letting go earlier cancels.
-- **Where it works:**
-  - the lobby, partner pick and end-of-night screens, and while still connecting;
-  - inside History and Next night wherever they are open, when scrolled to the top.
+- **Where it works:** every screen, the table included (Ryan, round 23: during a game too), and inside History and Next night wherever they are open, when scrolled to the top. Reloading mid-game is safe: the game lives on the server and you come straight back to your seat.
 - **Where it doesn't:**
-  - at the table (dealing, bidding, play), where swipes play and lower cards;
-  - on your hand and in a replay.
+  - starting on your hand, where swipes play and lower cards;
+  - starting in the bid box, which scrolls;
+  - in a replay.
   - The browser's own pull-to-refresh stays off (`overscroll-behavior: none`) for the same reason.
 - **Gestures it ignores:** a sideways swipe (player chips, award cards) or an upward scroll is not a pull.
 - **With a mouse:** the press doesn't select text, so a second pull can't turn into dragging the selection.

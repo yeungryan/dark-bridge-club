@@ -5,8 +5,9 @@
 
   // Ryan (QoL): at the top of a screen, pull down and let go to reload the page, like most apps.
   // The browser's own pull-to-refresh is off (app.css: overscroll-behavior), so it can't fire by
-  // accident at the table; this one works on the lobby, partner pick and end-of-night screens, and
-  // inside History and Next night wherever they're open. Never on your hand or in a replay.
+  // accident; this one works on every screen, the table included (Ryan, round 23), and inside
+  // History and Next night wherever they're open. Never on your hand (swipes play cards), in the
+  // bid box (it scrolls) or in a replay.
   let { active }: { active: boolean } = $props();
 
   /** How far (px) the circle has to come down before letting go reloads. */
@@ -28,7 +29,7 @@
   /** Whether a pull may start here; if so, it's tracked from this point. */
   function begin(target: EventTarget | null, x: number, y: number): boolean {
     if (refreshing || !(target instanceof Element)) return false;
-    if (target.closest('.hand, .replay, input, textarea, select')) return false;
+    if (target.closest('.hand, .box, .replay, input, textarea, select')) return false;
     if (!active && !target.closest('.history, .scheduler')) return false;
     if (!at_top(target)) return false;
     start = { x, y };
