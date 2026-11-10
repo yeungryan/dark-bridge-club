@@ -103,7 +103,7 @@
 {#if conn.view && conn.room}<ResetPrompt {conn} />{/if}
 <!-- Pull down at the top to reload (Ryan, QoL): not at the table, where swipes play cards. -->
 <UpdateBanner />
-<PullToRefresh active={!conn.view || conn.view.phase === 'lobby' || conn.view.phase === 'partnerPick' || conn.view.phase === 'ended'} />
+<PullToRefresh active />
 <!-- A sweep's takeover (round 15): over everything, straight after the game-winning effects. -->
 {#if director.sweepShow}{#key director.sweepShow.id}<SweepTakeover show={director.sweepShow} />{/key}{/if}
 {#if conn.error}<div class="toast" role="alert">{conn.error}</div>{/if}

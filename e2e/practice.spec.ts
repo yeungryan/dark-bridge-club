@@ -352,13 +352,13 @@ test('each game waits for its dealer: shuffle, tap Deal, and 52 cards fly out', 
   await expect.poll(async () => (await sounds(page)).includes('fan')).toBe(true);
 });
 
-test('pull to refresh: pulling down at the top of the lobby reloads; at the table it does nothing', async ({ page }) => {
+test('pull to refresh: pulling down reloads, in the lobby and at the table (round 23), but never from your hand or the bid box', async ({ page }) => {
   await page.goto(PRACTICE);
   await expect(page.getByText('Who are you tonight?')).toBeVisible();
-  const pull = async (dy: number) => {
-    await page.mouse.move(200, 300);
+  const pull = async (dy: number, x = 200, y = 300) => {
+    await page.mouse.move(x, y);
     await page.mouse.down();
-    for (let i = 1; i <= 10; i++) await page.mouse.move(200, 300 + (dy * i) / 10);
+    for (let i = 1; i <= 10; i++) await page.mouse.move(x, y + (dy * i) / 10);
   };
   // A short pull shows the circle but lets go without reloading.
   await pull(80);
@@ -373,11 +373,24 @@ test('pull to refresh: pulling down at the top of the lobby reloads; at the tabl
   await page.mouse.up();
   await reloaded;
   expect(await page.evaluate(() => (window as unknown as { __stay?: boolean }).__stay)).toBeUndefined();
-  // At the table it never starts: swipes there play and lower cards.
-  await playUntil(page, () => page.locator('.table[data-turn]').isVisible());
-  await pull(220);
+  // At the table: never from the bid box (it scrolls) or your hand (swipes play cards)...
+  await playUntil(page, () => page.locator('.box .ladder').isVisible(), { noPass: true });
+  const box = (await page.locator('.box .ladder').boundingBox())!;
+  await pull(120, box.x + 20, box.y + 5);
   await expect(page.getByText(/to refresh/)).toHaveCount(0);
   await page.mouse.up();
+  const hand = (await page.locator('.hand').boundingBox())!;
+  await pull(120, hand.x + 20, hand.y + 10);
+  await expect(page.getByText(/to refresh/)).toHaveCount(0);
+  await page.mouse.up();
+  // ...but anywhere else on the table screen, a long pull reloads.
+  await page.evaluate(() => ((window as unknown as { __stay: boolean }).__stay = true));
+  await pull(220, 200, 120);
+  await expect(page.getByText('Let go to refresh')).toBeVisible();
+  const again = page.waitForEvent('load');
+  await page.mouse.up();
+  await again;
+  expect(await page.evaluate(() => (window as unknown as { __stay?: boolean }).__stay)).toBeUndefined();
 });
 
 test('a new build shows a refresh bar; "add to home screen" sits by the links; the screen stays on at the table', async ({ page, request }) => {

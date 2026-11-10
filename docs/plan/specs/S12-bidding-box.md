@@ -59,3 +59,5 @@ Bids no longer look like playing cards: every call is a **poker chip**, the same
 - **Desktop:** the chip or Pass under the mouse lifts 2 px, brightens and gets a bright rim, with a soft clack (a little higher for each strain to the right). Hovering picks nothing.
 - **Phone:** run your finger sideways through the box and each chip (or Pass) lifts as you pass it, with the same clack. Letting go on a chip **picks** it ("Bid 3♥"), never bids it; letting go on Pass does nothing. Up and down still scroll the ladder.
 - **Desktop bid box:** like the phone, two levels show with the third peeking and fading, and it scrolls a level at a time (it used to show all seven levels, faded past the second).
+
+**Calls on the table, centred (Ryan, round 23):** each call sits in the middle of its chip, Pass included (it used to sit at the chip's leading edge). The next call overlaps a little less (about 9 px along the top and bottom, 5 px down the sides) so the covered call still reads.
