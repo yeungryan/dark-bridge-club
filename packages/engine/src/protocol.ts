@@ -23,7 +23,9 @@ export type ClientMessage =
   /** After a night has ended: open a fresh lobby. */
   | { type: 'newNight' }
   /** In the lobby: lock in or change your avatar (S24). */
-  | { type: 'avatar'; action: AvatarAction };
+  | { type: 'avatar'; action: AvatarAction }
+  /** Round 23: whether the game is on your screen (hidden: another tab, app or window). */
+  | { type: 'screen'; hidden: boolean };
 
 export type Presence = 'connected' | 'reconnecting' | 'away';
 
@@ -36,6 +38,8 @@ export interface ProfileInfo {
 export interface RoomInfo {
   readonly profiles: readonly ProfileInfo[];
   readonly presence: Readonly<Record<ProfileId, Presence>>;
+  /** Round 23: connected, but the game isn't on their screen (another tab, app or window). */
+  readonly elsewhere: Readonly<Record<ProfileId, boolean>>;
   /** True while play is frozen because someone is away (S08). */
   readonly paused: boolean;
   /** Epoch ms when the night auto-closes if the away player doesn't return (R13). */

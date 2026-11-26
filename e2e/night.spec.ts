@@ -13,6 +13,8 @@ interface Player {
   context: BrowserContext;
   page: Page;
   frames: Frame[];
+  /** Heartbeat answers received (round 23). */
+  pongs?: number;
 }
 
 /** The login token a page saved (each test seat uses its own storage slot). */
@@ -50,7 +52,13 @@ async function openPlayer(browser: Browser, seat: (typeof SEATS)[number]): Promi
 }
 
 function watchFrames(player: Player, page: Page): void {
-  page.on('websocket', (ws) => ws.on('framereceived', (f) => player.frames.push(JSON.parse(String(f.payload)))));
+  // Heartbeat replies ("pong", round 23) aren't JSON.
+  page.on('websocket', (ws) =>
+    ws.on('framereceived', (f) => {
+      if (String(f.payload) === 'pong') player.pongs = (player.pongs ?? 0) + 1;
+      else player.frames.push(JSON.parse(String(f.payload)));
+    }),
+  );
 }
 
 /** A tap that gives up after a moment if the screen changed underneath it, like a person tapping again. */
@@ -460,6 +468,31 @@ test.describe.serial('a night at the DARK table', () => {
     await history.getByRole('tab', { name: 'Nights' }).click();
     await expect(history.locator('.night-head').first()).toBeVisible();
     await history.getByRole('button', { name: 'Close the history' }).click();
+  });
+
+  test('the lobby names who the night is waiting for, and a dropped player\'s letter dims (round 23)', async ({ browser }) => {
+    // History's "Start a new night" (above) opened a fresh lobby; the bots have picked, Ryan hasn't.
+    const page = ryan().page;
+    // The heartbeat: Ryan's phone has been pinging all night, and the server answers.
+    expect(ryan().pongs ?? 0).toBeGreaterThan(0);
+    const kimIndex = SEATS.findIndex((s) => s.id === 'kim');
+    const kim = players[kimIndex]!;
+    const crest = (id: string) => page.locator(`.crest [data-crest="${id}"]`);
+    await expect(crest('kim')).toHaveClass(/ready/, { timeout: 15_000 });
+    await expect(crest('kim')).not.toHaveClass(/gone/);
+    // Kim's phone drops: her letter dims at once, but she isn't "away" yet.
+    await kim.context.close();
+    await expect(crest('kim')).toHaveClass(/gone/, { timeout: 10_000 });
+    // Once she's away (2 minutes in a real night; 4 s in this test), Ryan picks and the night
+    // waits for her by name instead of starting.
+    await expect.poll(() => ryan().frames.filter((f) => f.type === 'state').at(-1)?.room?.presence?.kim, { timeout: 15_000 }).toBe('away');
+    await pickAvatar(page);
+    await expect(page.getByRole('status').filter({ hasText: 'Waiting for Kim to come back' })).toBeVisible();
+    await expect(page.locator('.crest.complete')).toHaveCount(0);
+    // She comes back: the night starts.
+    players[kimIndex] = await openPlayer(browser, SEATS[kimIndex]!);
+    await expect(page.getByText('Waiting for Kim')).toBeHidden({ timeout: 15_000 });
+    await expect.poll(() => ryan().frames.filter((f) => f.type === 'state').at(-1)?.view?.phase, { timeout: 15_000 }).not.toBe('lobby');
   });
 
   test('the admin page can set a player\'s PIN (and only with the admin key)', async ({ request }) => {

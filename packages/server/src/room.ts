@@ -70,13 +70,19 @@ import { isProfile, PROFILE_IDS, PROFILES, SWAP_ANCHOR, USUAL_PARTNER } from './
 // Runs the engine, holds every hand, sends each player only their own view,
 // owns all timers, and saves everything to the Durable Object's SQLite storage.
 
-const GRACE_MS = 10_000; // S08: reconnecting → away
+// S08, round 23 (Ryan): a lost connection is "reconnecting" for 2 minutes, then "away" (which
+// pauses a game). Locking a phone or switching apps for less than that changes nothing.
+const AWAY_MS = 2 * 60_000;
+// Heartbeat (round 23): each phone sends "ping" every 15 s and the runtime answers "pong" for us.
+// A phone silent this long has vanished without closing its connection (battery, lost signal).
+const SILENT_MS = 45_000;
+const HEARTBEAT_CHECK_MS = 20_000;
 const CONCESSION_MS = 15_000; // S04: concession offer expiry
 const AUTO_CLOSE_MS = 30 * 60_000; // R13: away this long → the night closes
 const MAX_FAILED_PINS = 5;
 const LOCKOUT_MS = 10 * 60_000;
 
-type TimerKind = 'clinch' | 'concession' | 'grace' | 'autoClose';
+type TimerKind = 'clinch' | 'concession' | 'grace' | 'autoClose' | 'heartbeat';
 interface Timer {
   kind: TimerKind;
   at: number;
@@ -86,6 +92,8 @@ interface Timer {
 interface PresenceEntry {
   status: Presence;
   since: number;
+  /** Connected, but the game isn't on their screen (round 23). */
+  hidden?: boolean;
 }
 
 interface Stored {
@@ -118,6 +126,8 @@ export class TableRoom extends DurableObject<Env> {
   constructor(ctx: DurableObjectState, env: Env) {
     super(ctx, env);
     this.sql = ctx.storage.sql;
+    // Answered by the runtime without waking the table, so heartbeats cost nothing.
+    ctx.setWebSocketAutoResponse(new WebSocketRequestResponsePair('ping', 'pong'));
     ctx.blockConcurrencyWhile(async () => {
       this.migrate();
       this.data = this.load();
@@ -556,7 +566,7 @@ export class TableRoom extends DurableObject<Env> {
     const [client, server] = [pair[0], pair[1]];
     this.ctx.acceptWebSocket(server, [profile]);
 
-    this.data.presence[profile] = { status: 'connected', since: Date.now() };
+    this.data.presence[profile] = { status: 'connected', since: Date.now(), hidden: false };
     this.data.timers = this.data.timers.filter((t) => !(t.profile === profile && (t.kind === 'grace' || t.kind === 'autoClose')));
     const events = this.maybeStartNight();
     await this.commit(events);
@@ -591,6 +601,13 @@ export class TableRoom extends DurableObject<Env> {
       this.data.gameMoments = [];
       this.data.awards = null;
       return this.commit(this.maybeStartNight());
+    }
+
+    if (message.type === 'screen') {
+      const presence = this.data.presence[profile]!;
+      if (presence.status !== 'connected' || !!presence.hidden === !!message.hidden) return;
+      presence.hidden = !!message.hidden;
+      return this.commit([]);
     }
 
     if (message.type === 'avatar') {
@@ -635,13 +652,34 @@ export class TableRoom extends DurableObject<Env> {
   private async socketGone(ws: WebSocket): Promise<void> {
     const profile = this.ctx.getTags(ws)[0];
     if (!profile || this.openSockets(profile).some((s) => s !== ws)) return;
+    // Already counted as gone (a silent phone, closed by the heartbeat check): keep its clock.
+    if (this.data.presence[profile]!.status !== 'connected') return;
     this.markReconnecting(profile, Date.now());
     await this.commit([]);
   }
 
-  private markReconnecting(profile: ProfileId, now: number): void {
-    this.data.presence[profile] = { status: 'reconnecting', since: now };
-    this.data.timers.push({ kind: 'grace', at: now + GRACE_MS, profile });
+  /** `since`: when they were last heard from (earlier than now for a phone that went silent). */
+  private markReconnecting(profile: ProfileId, now: number, since = now): void {
+    this.data.presence[profile] = { status: 'reconnecting', since };
+    this.data.timers = this.data.timers.filter((t) => !(t.kind === 'grace' && t.profile === profile));
+    this.data.timers.push({ kind: 'grace', at: Math.max(now, since + this.awayMs()), profile });
+  }
+
+  private awayMs(): number {
+    return Number(this.env.TEST_AWAY_MS) || AWAY_MS;
+  }
+
+  /** Close the connections of phones that stopped sending heartbeats (round 23). */
+  private dropSilent(now: number): void {
+    for (const id of PROFILE_IDS) {
+      const sockets = this.openSockets(id);
+      if (sockets.length === 0) continue;
+      // A phone that has never sent a heartbeat (an older version of the app) is left alone.
+      const heard = sockets.map((ws) => this.ctx.getWebSocketAutoResponseTimestamp(ws)?.getTime() ?? null);
+      if (heard.some((t) => t === null || now - t <= SILENT_MS)) continue;
+      for (const ws of sockets) ws.close(4002, 'silent');
+      if (this.data.presence[id]!.status === 'connected') this.markReconnecting(id, now, Math.max(...(heard as number[])));
+    }
   }
 
   // ------------------------------------------------------------------ timers
@@ -659,6 +697,7 @@ export class TableRoom extends DurableObject<Env> {
       }
     };
 
+    if (due.some((t) => t.kind === 'heartbeat')) this.dropSilent(now);
     for (const timer of due) {
       const session = this.data.session;
       switch (timer.kind) {
@@ -717,6 +756,10 @@ export class TableRoom extends DurableObject<Env> {
       if (!want) timers = timers.filter((t) => !(t.kind === 'autoClose' && t.profile === id));
       else if (!has) timers.push({ kind: 'autoClose', at: Math.max(now, presence.since) + AUTO_CLOSE_MS, profile: id });
     }
+    // While anyone is connected, check every so often for phones that went silent.
+    const anyoneHere = PROFILE_IDS.some((id) => this.data.presence[id]!.status === 'connected');
+    if (!anyoneHere) timers = timers.filter((t) => t.kind !== 'heartbeat');
+    else if (!timers.some((t) => t.kind === 'heartbeat')) timers.push({ kind: 'heartbeat', at: now + HEARTBEAT_CHECK_MS });
     this.data.timers = timers;
   }
 
@@ -728,12 +771,15 @@ export class TableRoom extends DurableObject<Env> {
 
   // ------------------------------------------------------------------ session flow
 
-  /** The night starts once all four are connected (S05) and have locked in an avatar (S24). */
+  /**
+   * The night starts once all four have locked in an avatar (S24) and nobody is away (round 23,
+   * Ryan): someone who stepped out a moment ago, still "reconnecting", doesn't hold it up.
+   */
   private maybeStartNight(): SessionEvent[] {
     const session = this.data.session;
-    const allHere = PROFILE_IDS.every((id) => this.data.presence[id]!.status === 'connected');
+    const noneAway = PROFILE_IDS.every((id) => this.data.presence[id]!.status !== 'away');
     const allPicked = lockedIn(this.data.avatars).length === PROFILE_IDS.length;
-    if (session.phase !== 'lobby' || !allHere || !allPicked) return [];
+    if (session.phase !== 'lobby' || !noneAway || !allPicked) return [];
     const outcome = applySessionAction(session, { type: 'start' });
     if (!outcome.ok) return [];
     this.data.session = outcome.state;
@@ -980,6 +1026,7 @@ export class TableRoom extends DurableObject<Env> {
     return {
       profiles: PROFILES,
       presence: Object.fromEntries(PROFILE_IDS.map((id) => [id, this.data.presence[id]!.status])),
+      elsewhere: Object.fromEntries(PROFILE_IDS.map((id) => [id, this.data.presence[id]!.status === 'connected' && !!this.data.presence[id]!.hidden])),
       paused: this.isPaused(),
       autoCloseAt: autoClose.length ? Math.min(...autoClose) : null,
       clinchDeadline: timer('clinch'),

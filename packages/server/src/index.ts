@@ -12,6 +12,8 @@ export interface Env {
   TEST_SEED?: string;
   /** Local checks only: keep this many games instead of KEEP_GAMES. */
   TEST_KEEP_GAMES?: string;
+  /** Tests only: how long a lost connection lasts before the player is away (instead of AWAY_MS). */
+  TEST_AWAY_MS?: string;
 }
 
 export default {

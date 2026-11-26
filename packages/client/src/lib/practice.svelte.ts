@@ -177,6 +177,7 @@ export class PracticeTable extends Connection {
       room: {
         profiles: PRACTICE_PROFILES,
         presence: Object.fromEntries(IDS.map((id) => [id, 'connected'])),
+        elsewhere: Object.fromEntries(IDS.map((id) => [id, false])),
         paused: false,
         autoCloseAt: null,
         clinchDeadline: this.clinchAt,
