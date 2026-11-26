@@ -22,7 +22,7 @@
   const mine = $derived(seat === view.mySeat);
 </script>
 
-<div class="seat" class:turn class:waiting class:mine data-badge-seat={seat} title={presence !== 'connected' ? `${profile.name} is ${presence}` : undefined}>
+<div class="seat" class:turn class:waiting class:mine data-badge-seat={seat} title={presence !== 'connected' ? `${profile.name} is ${presence === 'reconnecting' ? 'stepping out' : presence}` : conn.room!.elsewhere?.[profile.id] ? `${profile.name} is on another screen` : undefined}>
   <Avatar
     avatar={avatarAtSeat(conn, seat)}
     initial={profile.name[0]}

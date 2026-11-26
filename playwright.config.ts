@@ -16,12 +16,13 @@ export default defineConfig({
     baseURL: `http://127.0.0.1:${PORT}`,
     ...devices['Pixel 7'],
     // Like a real phone: no sound until the player has tapped something.
-    launchOptions: { args: ['--autoplay-policy=user-gesture-required'] },
+    // PW_CHROMIUM: a local browser to use when it differs from this Playwright's own (CI leaves it unset).
+    launchOptions: { args: ['--autoplay-policy=user-gesture-required'], executablePath: process.env.PW_CHROMIUM || undefined },
     trace: 'retain-on-failure',
   },
   webServer: {
     // A fresh, throwaway table every run. Keys are passed explicitly because .dev.vars is not committed.
-    command: `rm -rf .e2e-state && cd packages/server && WRANGLER_SEND_METRICS=false npx wrangler dev --port ${PORT} --ip 127.0.0.1 --persist-to ../../.e2e-state --var ROOM_KEY:dev --var ADMIN_KEY:dev-admin --var TEST_SEED:${TEST_SEED}`,
+    command: `rm -rf .e2e-state && cd packages/server && WRANGLER_SEND_METRICS=false npx wrangler dev --port ${PORT} --ip 127.0.0.1 --persist-to ../../.e2e-state --var ROOM_KEY:dev --var ADMIN_KEY:dev-admin --var TEST_SEED:${TEST_SEED} --var TEST_AWAY_MS:4000`,
     url: `http://127.0.0.1:${PORT}/api/profiles?k=dev`,
     reuseExistingServer: false,
     timeout: 120_000,

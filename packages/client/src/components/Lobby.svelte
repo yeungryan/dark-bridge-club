@@ -28,6 +28,41 @@
   const here = $derived(room.profiles.filter((p) => room.presence[p.id] === 'connected').length);
   const picked = $derived(room.profiles.filter((p) => room.avatarReady?.[p.id]).length);
 
+  // Round 23 (Ryan, option C): who the night is waiting for, once you've picked. The night starts
+  // when all four have picked and nobody is away, so those are the only people it names: someone
+  // still picking, or someone who picked but has been gone 2 minutes or more. A player who just
+  // stepped out doesn't hold anyone up; their letter's check only dims and pulses.
+  const waitingLine = $derived.by(() => {
+    const me = conn.view!.me;
+    if (!room.avatarReady?.[me]) return '';
+    const toPick: string[] = [];
+    const toJoin: string[] = [];
+    const toReturn: string[] = [];
+    for (const p of room.profiles) {
+      if (p.id === me) continue;
+      const presence = room.presence[p.id];
+      if (room.avatarReady?.[p.id]) {
+        if (presence === 'away') toReturn.push(p.name);
+      } else if (presence === 'connected') toPick.push(room.elsewhere?.[p.id] ? `${p.name} (on another screen)` : p.name);
+      else if (presence === 'away') toJoin.push(p.name);
+      else toPick.push(p.name);
+    }
+    const and = (names: string[]) => (names.length < 2 ? names.join('') : `${names.slice(0, -1).join(', ')} and ${names.at(-1)}`);
+    const parts = [
+      toPick.length ? `${and(toPick)} to pick` : '',
+      toJoin.length ? `${and(toJoin)} to join` : '',
+      toReturn.length ? `${and(toReturn)} to come back` : '',
+    ].filter(Boolean);
+    return parts.length ? `Waiting for ${parts.join(' · ')}` : '';
+  });
+  const statusOf = (id: string, name: string) => {
+    const presence = room.presence[id];
+    const ready = !!room.avatarReady?.[id];
+    if (presence === 'connected') return `${name}: ${ready ? 'ready' : 'picking'}${room.elsewhere?.[id] ? ' (on another screen)' : ''}`;
+    if (presence === 'reconnecting') return `${name}: ${ready ? 'ready, ' : ''}stepped out`;
+    return `${name}: ${ready ? 'ready, but away' : 'not here yet'}`;
+  };
+
   // A rising note each time a letter lights or fills; a flourish when the crest is complete.
   let lastHere = -1;
   let lastPicked = -1;
@@ -65,8 +100,10 @@
         class="slot"
         class:lit={isHere}
         class:ready
-        title="{p.name}: {!isHere ? 'not here yet' : ready ? 'ready' : 'picking'}"
-        aria-label="{p.name}: {!isHere ? 'not here yet' : ready ? 'ready' : 'picking'}"
+        class:gone={ready && !isHere}
+        data-crest={p.id}
+        title={statusOf(p.id, p.name)}
+        aria-label={statusOf(p.id, p.name)}
       >
         <CrestTile letter={p.name[0]!} suit={c.suit} team={c.team} state={ready ? 'ready' : isHere ? 'lit' : 'off'}>
           {#if ready}<i class="check" aria-hidden="true">✓</i>{/if}
@@ -74,6 +111,7 @@
       </span>
     {/each}
   </div>
+  {#if waitingLine && !complete}<p class="waiting" role="status">{waitingLine}</p>{/if}
   <h2>Bridge Club</h2>
   <!-- The all-time score (Ryan, S1); the practice table has no history. -->
   {#if !conn.offline}<AllTimeScore profiles={room.profiles} refresh={JSON.stringify(room.pendingReset)} />{/if}
@@ -160,6 +198,29 @@
     font-size: 12px;
     font-weight: 800;
     box-shadow: 0 0 0 2px var(--line);
+  }
+  /* Picked, but their connection dropped (round 23): the letter fades and the check dims and
+     pulses slowly, so it no longer looks like everyone's ready. */
+  .slot.gone :global(.tile) {
+    filter: grayscale(0.85) brightness(0.7);
+  }
+  .slot.gone .check {
+    color: var(--ink-dim);
+    animation: dropped calc(2000ms * var(--speed)) ease-in-out infinite;
+  }
+  @keyframes dropped {
+    50% {
+      opacity: 0.35;
+    }
+  }
+  :global(.fx-reduced) .slot.gone .check {
+    animation: none;
+    opacity: 0.5;
+  }
+  .waiting {
+    margin: 10px 0 0;
+    font-size: 13px;
+    color: var(--ink-dim);
   }
   @keyframes light {
     0% {
